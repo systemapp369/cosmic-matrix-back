@@ -1,7 +1,7 @@
 class InfrastructureMonitor {
     constructor() {
         // Datos base del clúster (30 registros)
-        this.apiClient = new FetchManager('https://tu-app.onrender.com');
+        this.apiClient = new FetchManager('https://cosmic-matrix-back.onrender.com');
         this.projects = [];
         this.bsCrudModal = null;
         this.bsConfirmModal = null;
@@ -19,7 +19,7 @@ class InfrastructureMonitor {
     /**
      * Inicializa el monitor acoplándolo al ciclo de vida y eventos del DOM
      */
-    init() {
+    async init() {
         this.bsCrudModal = new bootstrap.Modal(document.getElementById('crudModal'));
         this.bsConfirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
         this.bsToast = new bootstrap.Toast(document.getElementById('toastNotification'), { delay: 2500 });
@@ -56,11 +56,11 @@ class InfrastructureMonitor {
      */
     async loadProjectsFromRemote() {
         try {
+            console.log("loadProjectsFromRemote ****");
             this.showToast("Mapeando clúster central...");
 
             // --- USO DEL MANAGER ---
             this.projects = await this.apiClient.getAllProjects();
-
             this.renderDashboard();
             this.showToast("Sistema sincronizado con Cosmic_Matrix");
         } catch (err) {
@@ -85,6 +85,9 @@ class InfrastructureMonitor {
             selected: true
         };
 
+        console.log("handleFormSubmit---------");
+        console.log(data);
+
         if (idx === "NEW") {
             const nextId = this.projects.length > 0 ? Math.max(...this.projects.map(p => parseInt(p.id.split('-')[1]))) + 1 : 1;
             data.id = `NODE-${String(nextId).padStart(3, '0')}`;
@@ -92,11 +95,21 @@ class InfrastructureMonitor {
             data.id = this.projects[idx].id;
         }
 
+
+        console.log("handleFormSubmit---------");
+        console.log(data);
+
         try {
+
+            console.log("handleFormSubmit---------1");
             this.showToast("Sincronizando cambios en la nube...");
 
+            console.log("handleFormSubmit--------2");
             // --- USO DEL MANAGER (UPSERT) ---
             const result = await this.apiClient.upsertProject(data);
+
+            console.log(result);
+
 
             if (result.success) {
                 this.closeModal();
@@ -505,6 +518,8 @@ class InfrastructureMonitor {
         this.bsCrudModal.hide();
     }
 
+    /*
+
     handleFormSubmit(e) {
         e.preventDefault();
         const idx = document.getElementById('nodeIndex').value;
@@ -529,6 +544,7 @@ class InfrastructureMonitor {
         this.closeModal();
         this.renderDashboard();
     }
+    */
 
     confirmDeleteNode() {
         this.indexToDelete = document.getElementById('nodeIndex').value;

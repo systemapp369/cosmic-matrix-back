@@ -24,6 +24,8 @@ class FetchManager {
     async _request(endpoint, options = {}) {
         const url = `${this.baseUrl}/${endpoint.replace(/^\//, '')}`;
 
+        console.log(url);
+
         // Unir headers base con los específicos de la petición
         const config = {
             ...options,
@@ -33,8 +35,12 @@ class FetchManager {
             }
         };
 
+        console.log(config);
+
         try {
             const response = await fetch(url, config);
+
+            console.log(response);
 
             // Manejo estricto de errores HTTP (404, 500, etc.)
             if (!response.ok) {
@@ -50,7 +56,10 @@ class FetchManager {
             if (response.status === 204) return null;
 
             // Devolver los datos parseados a JSON
-            return await response.json();
+
+            var respuesta = await response.json();
+            console.log(respuesta);
+            return respuesta;
 
         } catch (err) {
             // Re-lanzar el error enriquecido para que la UI lo maneje
