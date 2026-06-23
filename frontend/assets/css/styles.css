@@ -1,0 +1,110 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+
+:root,
+[data-bs-theme="light"] {
+  --ts-body-bg: #f8fafc;
+  --ts-card-bg: #ffffff;
+  --ts-border-color: #e2e8f0;
+  --ts-text-main: #0f172a;
+  --ts-text-muted: #64748b;
+}
+
+[data-bs-theme="dark"] {
+  --ts-body-bg: #0f172a;
+  --ts-card-bg: #1e293b;
+  --ts-border-color: #334155;
+  --ts-text-main: #f8fafc;
+  --ts-text-muted: #94a3b8;
+
+  /* Override Bootstrap dark mode defaults for crisp SaaS look */
+  --bs-body-bg: #0f172a;
+  --bs-body-color: #f8fafc;
+
+  .card {
+    background-color: #1e293b;
+    border-color: #334155;
+  }
+
+  .table {
+    --bs-table-bg: #1e293b;
+    --bs-table-border-color: #334155;
+    color: #f8fafc;
+  }
+
+  .modal-content {
+    background-color: #1e293b;
+    border-color: #334155;
+    color: #f8fafc;
+  }
+
+  .form-control,
+  .form-select {
+    background-color: #0f172a;
+    border-color: #334155;
+    color: #f8fafc;
+  }
+
+  .form-control:focus,
+  .form-select:focus {
+    background-color: #0f172a;
+    color: #f8fafc;
+  }
+}
+
+body {
+  font-family: "Inter", sans-serif;
+  background-color: var(--ts-body-bg);
+  color: var(--ts-text-main);
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+
+.card-stat {
+  border-left: 4px solid transparent;
+}
+
+.stat-critica {
+  border-left-color: #ef4444;
+}
+
+.stat-alta {
+  border-left-color: #f59e0b;
+}
+
+.stat-normal {
+  border-left-color: #10b981;
+}
+
+.stat-global {
+  border-left-color: #3b82f6;
+}
+
+.badge-md {
+  font-size: 0.75rem;
+  padding: 0.35em 0.65em;
+  font-weight: 600;
+}
+
+.progress-sm {
+  height: 6px;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  #reportView {
+    display: block !important;
+  }
+}
+
+/* Agrega esto a tu archivo assets/css/styles.css */
+[data-bs-theme="dark"] .card.border-secondary-subtle {
+  border-color: #334155 !important; /* Gris slate nítido estilo Tabler */
+  background-color: #111c2e !important; /* Un tono un poco más oscuro para dar profundidad */
+}
+
+.card {
+}

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaaS Core Infrastructure Monitor</title>
+    <link href="./vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="./vendor/tabler-icons/tabler-icons.min.css">
+    <link rel="stylesheet" href="./assets/css/styles.css">
+    <script src="./vendor/echarts/echarts.js"></script>
+    <script src="./vendor/xlsx/js/xlsx.full.min.js"></script>
+    <script src="./assets/modules/FetchManager.js"></script>
+
+</head>
+
+<body>
+    <div id="canvas-container"
+        style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; overflow: hidden; pointer-events: none;">
+    </div>
+    <div class="container-xl py-4 flex-grow-1 d-flex flex-column min-vh-100">
+        <header class="card p-4 mb-4 border shadow-sm no-print">
+            <div class="row align-items-center justify-content-between g-3">
+                <div class="col-12 col-md-auto d-flex align-items-center gap-3">
+                    <div class="bg-primary rounded text-white d-flex align-items-center justify-content-center"
+                        style="width: 40px; height: 40px; box-shadow: 0 4px 12px rgba(37,99,235,0.25)">
+                        <i class="ti ti-components fs-4"></i>
+                    </div>
+                    <div>
+                        <h1 class="h5 mb-0 fw-bold tracking-tight">Cosmic_Matrix <span class="text-primary">v4.5</span>
+                        </h1>
+                        <p class="small text-muted mb-0">Monitor de Infraestructura de Proyectos Corporativos</p>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-auto d-flex flex-wrap gap-2 justify-content-md-end align-items-center">
+                    <button onclick="monitor.toggleTheme()"
+                        class="btn btn-icon btn-ghost-secondary text-muted border-0 p-2 me-2" title="Cambiar Tema">
+                        <i id="theme-icon" class="ti ti-sun fs-4"></i>
+                    </button>
+
+                    <button onclick="monitor.openCreateModal()"
+                        class="btn btn-dark btn-sm d-flex align-items-center gap-1">
+                        <i class="ti ti-plus fs-6"></i> Nuevo Proyecto
+                    </button>
+                    <button onclick="monitor.toggleSelectAll()" id="selectAllBtn"
+                        class="btn btn-outline-secondary btn-sm">
+                        Desmarcar Todos
+                    </button>
+                    <button onclick="monitor.exportToExcel()"
+                        class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
+                        <i class="ti ti-file-spreadsheet fs-6"></i> Excel
+                    </button>
+                    <button onclick="monitor.generateReport()"
+                        class="btn btn-primary btn-sm d-flex align-items-center gap-1">
+                        <i class="ti ti-report-analytics fs-6"></i> Reporte (<span id="selectedCount">0</span>)
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="row g-3 mb-4 no-print">
+            <div class="col-12">
+                <div id="statsContainer" class="row g-3">
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4 no-print flex-grow-1">
+            <div class="col-12 col-xl-12 d-flex">
+                <div
+                    class="card shadow-sm flex-grow-1 d-flex flex-row align-items-center gap-2 p-3 border border-secondary-subtle bg-body-tertiary">
+                    <button onclick="monitor.prevPage()"
+                        class="btn btn-icon btn-ghost-secondary text-muted border-0 p-2 fs-3" id="prevBtn"
+                        style="cursor: pointer;">
+                        <i class="ti ti-chevron-compact-left"></i>
+                    </button>
+
+                    <div id="nodesGrid" class="row g-3 flex-grow-1">
+                    </div>
+
+                    <button onclick="monitor.nextPage()"
+                        class="btn btn-icon btn-ghost-secondary text-muted border-0 p-2 fs-3" id="nextBtn"
+                        style="cursor: pointer;">
+                        <i class="ti ti-chevron-compact-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <footer
+            class="mt-auto py-3 border-top d-flex justify-content-between align-items-center small text-muted no-print">
+            <div>Uptime Global: <span class="fw-semibold text-success">99.998%</span> // Total Activos: <span
+                    id="nodeTotalSpan" class="fw-semibold">0</span></div>
+            <div class="d-flex align-items-center gap-1">
+                <i class="ti ti-clock"></i> <span id="system-clock">00:00:00</span>
+            </div>
+        </footer>
+    </div>
+
+    <div class="modal fade" id="crudModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow-lg border-0">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <div>
+                        <h5 class="modal-title fw-bold" id="modalTitle">Modificar Parámetros</h5>
+                        <p class="small text-muted mb-0" id="modalSub">Edición de nodo centralizado</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+                        onclick="monitor.closeModal()"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="nodeForm" class="row g-3">
+                        <input type="hidden" id="nodeIndex">
+                        <div class="col-12">
+                            <label class="form-label small fw-medium text-muted">Nombre del Proyecto</label>
+                            <input type="text" id="nodeName" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium text-muted">Nivel de Criticidad</label>
+                            <select id="nodeLevel" class="form-select form-select-sm">
+                                <option value="NORMAL">Normal</option>
+                                <option value="ALTA">Alta</option>
+                                <option value="CRÍTICA">Crítica</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-medium text-muted">Progreso (%)</label>
+                            <input type="number" id="nodeProgress" min="0" max="100"
+                                class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-medium text-muted">Responsable Técnico</label>
+                            <input type="text" id="nodeLead" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-12 d-flex gap-2 pt-2 border-top mt-3">
+                            <button type="button" id="deleteBtn" onclick="monitor.confirmDeleteNode()"
+                                class="btn id-delete-btn btn-sm btn-outline-danger">Eliminar</button>
+                            <div class="flex-grow-1"></div>
+                            <button type="button" onclick="monitor.closeModal()"
+                                class="btn btn-sm btn-light">Cancelar</button>
+                            <button type="submit" id="submitBtn" class="btn btn-sm btn-primary">Guardar Cambios</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true" style="z-index: 1065;">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content text-center p-3 shadow-lg">
+                <div class="modal-body">
+                    <i class="ti ti-alert-triangle text-danger fs-1 mb-2"></i>
+                    <h6 class="fw-bold mb-1">¿Confirmar Acción?</h6>
+                    <p class="small text-muted mb-4">Esta acción desmantelará por completo el nodo del sistema de forma
+                        permanente.</p>
+                    <div class="d-flex gap-2">
+                        <button onclick="monitor.closeConfirmModal()"
+                            class="btn btn-sm btn-light flex-fill">Cancelar</button>
+                        <button onclick="monitor.executeDeleteNode()"
+                            class="btn btn-sm btn-danger flex-fill">Desconectar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="position-fixed bottom-0 start-0 p-4" style="z-index: 1100;">
+        <div id="toastNotification" class="toast align-items-center text-bg-dark border-0 shadow" role="alert"
+            aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body d-flex align-items-center gap-2 small">
+                    <div class="spinner-grow spinner-grow-sm text-info" role="status"></div>
+                    <span id="toastMessage">Sistema Sincronizado</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="reportView" class="d-none bg-white text-dark p-5 position-absolute top-0 start-0 w-100 min-vh-100 z-3">
+    </div>
+    <div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content shadow-lg border-0">
+                <div class="modal-header border-bottom">
+                    <div>
+                        <h5 class="modal-title fw-bold" id="reportModalTitle">
+                            <i class="ti ti-report-analytics text-primary me-1"></i> Reporte de Infraestructura
+                        </h5>
+                        <p class="small text-muted mb-0">Ecosistema Global Corporativo v4.5</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="reportModalBody">
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="button" onclick="window.print()" class="btn btn-sm btn-primary">
+                        <i class="ti ti-printer me-1"></i> Imprimir / PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="./vendor/bootstrap/bootstrap.bundle.min.js"></script>
+    <script src="./assets/modules/app.js"></script>
+</body>
+
+</html>
