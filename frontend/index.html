@@ -8,12 +8,12 @@
     <link href="./vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="./vendor/tabler-icons/tabler-icons.min.css">
     <link rel="stylesheet" href="./assets/css/styles.css">
-    <link rel="icon" href="Images/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="Images/favicon.ico" type="image/x-icon"> <!-- Se agrego esta linea para evitar error de favicon-->
     <script src="./vendor/echarts/echarts.js"></script>
     <script src="./vendor/xlsx/js/xlsx.full.min.js"></script>
     <script src="./assets/modules/FetchManager.js"></script>
 
-
+    
 </head>
 
 <body>
@@ -26,7 +26,7 @@
                 <div class="col-12 col-md-auto d-flex align-items-center gap-3">
                     <div class="col-12 col-md-auto d-flex align-items-center gap-3">
                       <img src="Images/form.png" alt="No imagen" width="5%"> 
-                <div>
+                    <div>
                     <div>
                         <h1 class="h5 mb-0 fw-bold tracking-tight">Project Admin <span class="text-primary">v1.0</span>
                         </h1>
@@ -56,6 +56,7 @@
                         class="btn btn-primary btn-sm d-flex align-items-center gap-1">
                         <i class="ti ti-report-analytics fs-6"></i> Reporte (<span id="selectedCount">0</span>)
                     </button>
+                    
                 </div>
             </div>
         </header>
@@ -105,7 +106,7 @@
                 <div class="modal-header border-bottom-0 pb-0">
                     <div>
                         <h5 class="modal-title fw-bold" id="modalTitle">Modificar Parámetros</h5>
-                        <p class="small text-muted mb-0" id="modalSub">Edición de nodo centralizado</p>
+                        <p class="small text-muted mb-0" id="modalSub">Editor de Proyecto</p>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
                         onclick="monitor.closeModal()"></button>
@@ -120,9 +121,10 @@
                         <div class="col-md-6">
                             <label class="form-label small fw-medium text-muted">Nivel de Criticidad</label>
                             <select id="nodeLevel" class="form-select form-select-sm">
+                                <option value="BAJA">Bajo</option>
                                 <option value="NORMAL">Normal</option>
-                                <option value="ALTA">Alta</option>
-                                <option value="CRÍTICA">Crítica</option>
+                                <option value="ALTA">Alto</option>
+                                <option value="CRÍTICA">Crítico</option>
                             </select>
                         </div>
                         <div class="col-md-6">
@@ -131,7 +133,7 @@
                                 class="form-control form-control-sm" required>
                         </div>
                         <div class="col-12">
-                            <label class="form-label small fw-medium text-muted">Responsable Técnico</label>
+                            <label class="form-label small fw-medium text-muted">Responsables de Proyecto</label>
                             <input type="text" id="nodeLead" class="form-control form-control-sm">
                         </div>
                         <div class="col-12 d-flex gap-2 pt-2 border-top mt-3">
@@ -189,7 +191,7 @@
                         <h5 class="modal-title fw-bold" id="reportModalTitle">
                             <i class="ti ti-report-analytics text-primary me-1"></i> Reporte de Infraestructura
                         </h5>
-                        <p class="small text-muted mb-0">Ecosistema Global Corporativo v4.5</p>
+                        <p class="small text-muted mb-0">Ecosistema Global de los Proyectos v1.0</p>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>

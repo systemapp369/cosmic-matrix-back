@@ -314,13 +314,21 @@ class InfrastructureMonitor {
         paginatedProjects.forEach((p) => {
             const originalIndex = this.projects.findIndex(proj => proj.id === p.id);
 
-            let colorHex = '#10b981';
+            let colorHex = '#108fb9';
             let borderClass = 'border-start border-success border-1';
 
             if (p.level === 'CRÍTICA') {
                 colorHex = '#ef4444';
-                borderClass = 'border-start border-danger border-1';
-            } else if (p.level === 'ALTA') {
+                borderClass = 'border-start border-danger border-1';}
+                if(p.level === 'NORMAL') {
+                    colorHex='#10b981';
+                    borderClass='border-start border-success border-1';
+                }
+                if(p.level === 'BAJA'){
+                    colorHex='#8443c0';
+                    borderClass='border-start border-success border-1';
+                }
+             else if (p.level === 'ALTA') {
                 colorHex = '#f59e0b';
                 borderClass = 'border-start border-warning border-1';
             }
@@ -413,14 +421,15 @@ class InfrastructureMonitor {
     }
 
     updateStats() {
-        const counts = { CRÍTICA: 0, ALTA: 0, NORMAL: 0 };
+        const counts = { CRÍTICA: 0, ALTA: 0, NORMAL: 0, BAJA: 0 };
         this.projects.forEach(p => counts[p.level]++);
 
         const cardsData = [
-            { label: 'Nodos Críticos', count: counts.CRÍTICA, style: 'stat-critica', icon: 'ti-alert-hexagon text-danger' },
-            { label: 'Riesgo Alto', count: counts.ALTA, style: 'stat-alta', icon: 'ti-alert-triangle text-warning' },
-            { label: 'Nodos Estables', count: counts.NORMAL, style: 'stat-normal', icon: 'ti-circle-check text-success' },
-            { label: 'Activos Globales', count: this.projects.length, style: 'stat-global', icon: 'ti-server text-primary' }
+            { label: 'Proyectos Críticos', count: counts.CRÍTICA, style: 'stat-critica', icon: 'ti-alert-hexagon text-danger' },
+            { label: 'Proyectos Advertencia', count: counts.ALTA, style: 'stat-alta', icon: 'ti-alert-triangle text-warning' },
+            { label: 'Proyectos Estables', count: counts.NORMAL, style: 'stat-normal', icon: 'ti-circle-check text-success' },
+            { label: 'Proyectos Bajo', count: counts.BAJA, style: 'stat-baja', icon: 'ti-circle-check text-success'},
+            { label: 'Total de Proyectos Activos', count: this.projects.length, style: 'stat-global', icon: 'ti-server text-primary' }
         ];
 
         const container = document.getElementById('statsContainer');
@@ -444,7 +453,7 @@ class InfrastructureMonitor {
     updateChartData() {
         if (!this.distributionChart) return;
         const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
-        const counts = { CRÍTICA: 0, ALTA: 0, NORMAL: 0 };
+        const counts = { CRÍTICA: 0, ALTA: 0, NORMAL: 0 , BAJA: 0};
         this.projects.forEach(p => counts[p.level]++);
 
         const option = {
@@ -459,7 +468,9 @@ class InfrastructureMonitor {
                 data: [
                     { value: counts.CRÍTICA, name: 'Crítica', itemStyle: { color: '#ef4444' } },
                     { value: counts.ALTA, name: 'Alta', itemStyle: { color: '#f59e0b' } },
-                    { value: counts.NORMAL, name: 'Normal', itemStyle: { color: '#10b981' } }
+                    { value: counts.NORMAL, name: 'Normal', itemStyle: { color: '#10b981' } },
+                    { value: counts.BAJA, name: 'Baja', itemStyle: {color:' #7010b9'} } 
+
                 ]
             }]
         };
@@ -493,7 +504,7 @@ class InfrastructureMonitor {
 
     openModal(index) {
         const p = this.projects[index];
-        document.getElementById('modalTitle').textContent = "Editar Proyecto";
+        document.getElementById('modalTitle').textContent = "Módulo de Edición";
         document.getElementById('nodeIndex').value = index;
         document.getElementById('nodeName').value = p.name;
         document.getElementById('nodeLevel').value = p.level;
@@ -598,7 +609,7 @@ class InfrastructureMonitor {
         // ya que ahora viven de forma fija en el footer y el header del modal del HTML)
         modalBody.innerHTML = `
             <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
-                <span class="small fw-bold text-uppercase tracking-wider text-primary">Resumen de Activos Seleccionados</span>
+                <span class="small fw-bold text-uppercase tracking-wider text-primary">Resumen de Proyectos Seleccionados</span>
                 <span class="small font-monospace badge bg-secondary-subtle text-secondary-emphasis p-2">${new Date().toLocaleDateString()}</span>
             </div>
             <div class="table-responsive">
