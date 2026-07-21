@@ -1,7 +1,7 @@
 class InfrastructureMonitor {
     constructor() {
         // Datos base del clúster (30 registros)
-        this.apiClient = new FetchManager('https://cosmic-matrix-back-h69f6g89l-systemapps369-3155s-projects.vercel.app');
+        this.apiClient = new FetchManager('cosmic-matrix-back-h69f6g89l-systemapps369-3155s-projects.vercel.app');
         this.projects = [];
         this.bsCrudModal = null;
         this.bsConfirmModal = null;
