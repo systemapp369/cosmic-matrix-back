@@ -1,7 +1,7 @@
 class InfrastructureMonitor {
     constructor() {
         // Datos base del clúster (30 registros)
-        this.apiClient = new FetchManager('https://cosmic-matrix-back.onrender.com');
+        this.apiClient = new FetchManager('https://cosmic-matrix-back-h69f6g89l-systemapps369-3155s-projects.vercel.app');
         this.projects = [];
         this.bsCrudModal = null;
         this.bsConfirmModal = null;
@@ -319,16 +319,17 @@ class InfrastructureMonitor {
 
             if (p.level === 'CRÍTICA') {
                 colorHex = '#ef4444';
-                borderClass = 'border-start border-danger border-1';}
-                if(p.level === 'NORMAL') {
-                    colorHex='#10b981';
-                    borderClass='border-start border-success border-1';
-                }
-                if(p.level === 'BAJA'){
-                    colorHex='#8443c0';
-                    borderClass='border-start border-success border-1';
-                }
-             else if (p.level === 'ALTA') {
+                borderClass = 'border-start border-danger border-1';
+            }
+            if (p.level === 'NORMAL') {
+                colorHex = '#10b981';
+                borderClass = 'border-start border-success border-1';
+            }
+            if (p.level === 'BAJA') {
+                colorHex = '#8443c0';
+                borderClass = 'border-start border-success border-1';
+            }
+            else if (p.level === 'ALTA') {
                 colorHex = '#f59e0b';
                 borderClass = 'border-start border-warning border-1';
             }
@@ -428,7 +429,7 @@ class InfrastructureMonitor {
             { label: 'Proyectos Críticos', count: counts.CRÍTICA, style: 'stat-critica', icon: 'ti-alert-hexagon text-danger' },
             { label: 'Proyectos Advertencia', count: counts.ALTA, style: 'stat-alta', icon: 'ti-alert-triangle text-warning' },
             { label: 'Proyectos Estables', count: counts.NORMAL, style: 'stat-normal', icon: 'ti-circle-check text-success' },
-            { label: 'Proyectos Bajo', count: counts.BAJA, style: 'stat-baja', icon: 'ti-circle-check text-success'},
+            { label: 'Proyectos Bajo', count: counts.BAJA, style: 'stat-baja', icon: 'ti-circle-check text-success' },
             { label: 'Total de Proyectos Activos', count: this.projects.length, style: 'stat-global', icon: 'ti-server text-primary' }
         ];
 
@@ -453,7 +454,7 @@ class InfrastructureMonitor {
     updateChartData() {
         if (!this.distributionChart) return;
         const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
-        const counts = { CRÍTICA: 0, ALTA: 0, NORMAL: 0 , BAJA: 0};
+        const counts = { CRÍTICA: 0, ALTA: 0, NORMAL: 0, BAJA: 0 };
         this.projects.forEach(p => counts[p.level]++);
 
         const option = {
@@ -469,7 +470,7 @@ class InfrastructureMonitor {
                     { value: counts.CRÍTICA, name: 'Crítica', itemStyle: { color: '#ef4444' } },
                     { value: counts.ALTA, name: 'Alta', itemStyle: { color: '#f59e0b' } },
                     { value: counts.NORMAL, name: 'Normal', itemStyle: { color: '#10b981' } },
-                    { value: counts.BAJA, name: 'Baja', itemStyle: {color:' #7010b9'} } 
+                    { value: counts.BAJA, name: 'Baja', itemStyle: { color: ' #7010b9' } }
 
                 ]
             }]
