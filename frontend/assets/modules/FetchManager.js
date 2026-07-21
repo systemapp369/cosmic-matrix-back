@@ -8,8 +8,14 @@ class FetchManager {
      * @param {string} baseUrl - La URL base de tu Web Service en Render (ej. 'https://tu-app.onrender.com')
      */
     constructor(baseUrl) {
-        // Asegurar que la URL base termine con /api para comodidad
-        this.baseUrl = `${baseUrl.replace(/\/$/, '')}/api`;
+
+        let formattedUrl = baseUrl.trim();
+        if (!formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
+            formattedUrl = `https://${formattedUrl}`;
+        }
+
+        // Formatear para que termine en /api
+        this.baseUrl = `${formattedUrl.replace(/\/+$/, '')}/api`;
 
         // Headers por defecto (CORS y JSON siempre activados)
         this.headers = {

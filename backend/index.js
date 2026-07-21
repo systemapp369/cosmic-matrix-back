@@ -6,7 +6,13 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+// Reemplaza app.use(cors()); con esta configuración completa:
+app.use(cors({
+    origin: '*', // Permite peticiones desde cualquier origen (tu frontend en Vercel)
+    methods: ['GET', 'POST', 'DELETE', 'PUT', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 
 const pool = new Pool({
