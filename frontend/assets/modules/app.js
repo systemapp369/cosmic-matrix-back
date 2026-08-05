@@ -429,7 +429,7 @@ class InfrastructureMonitor {
             { label: 'Proyectos Críticos', count: counts.CRÍTICA, style: 'stat-critica', icon: 'ti-alert-hexagon text-danger' },
             { label: 'Proyectos Advertencia', count: counts.ALTA, style: 'stat-alta', icon: 'ti-alert-triangle text-warning' },
             { label: 'Proyectos Estables', count: counts.NORMAL, style: 'stat-normal', icon: 'ti-circle-check text-success' },
-            { label: 'Proyectos Bajo', count: counts.BAJA, style: 'stat-baja', icon: 'ti-circle-check text-success' },
+            { label: 'Proyectos Baja', count: counts.BAJA, style: 'stat-baja', icon: 'ti-cube-3d-sphere text-success' },
             { label: 'Total de Proyectos Activos', count: this.projects.length, style: 'stat-global', icon: 'ti-server text-primary' }
         ];
 
@@ -621,7 +621,7 @@ class InfrastructureMonitor {
                             <th>Proyecto</th>
                             <th>Criticidad</th>
                             <th>Progreso</th>
-                            <th>Ingeniero a Cargo</th>
+                            <th>Responsable a Cargo</th>
                         </tr>
                     </thead>
                     <tbody>
