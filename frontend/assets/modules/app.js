@@ -568,22 +568,6 @@ class InfrastructureMonitor {
         this.indexToDelete = null;
     }
 
-    executeDeleteNode() {
-        if (this.indexToDelete !== null && this.indexToDelete !== "NEW") {
-            this.projects.splice(this.indexToDelete, 1);
-            this.showToast("Activo desconectado del clúster");
-            this.closeConfirmModal();
-            this.closeModal();
-
-            const maxPage = Math.ceil(this.projects.length / this.itemsPerPage) - 1;
-            if (this.currentPage > maxPage && this.currentPage > 0) {
-                this.currentPage = maxPage;
-            }
-
-            this.renderDashboard();
-        }
-    }
-
     exportToExcel() {
         const data = this.projects.map(p => ({
             ID: p.id,
