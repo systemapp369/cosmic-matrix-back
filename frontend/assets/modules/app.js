@@ -610,7 +610,7 @@ class InfrastructureMonitor {
                     <div class="d-flex justify-content-between align-items-start mb-1">
                         <span class="text-muted"><i class="ti ti-clock fs-6"></i> ${dateStr}</span>
                         <button type="button" class="btn btn-link btn-sm text-danger p-0" title="Eliminar avance"
-                            onclick="monitor.deleteUpdate(${u.id})">
+                            onclick="monitor.deleteUpdate('${u.id}')">
                             <i class="ti ti-trash fs-6"></i>
                         </button>
                     </div>

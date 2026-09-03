@@ -186,17 +186,23 @@ app.get('/api/projects/:id/updates', async (req, res) => {
         const updates = updatesResult.rows;
 
         if (updates.length > 0) {
-            const updateIds = updates.map(u => u.id);
+            // Se usa un JOIN en vez de "= ANY($1::int[])" para no depender del tipo real
+            // de la columna id/update_id (en esta BD son UUID, no enteros).
             const filesResult = await pool.query(
-                'SELECT id, update_id AS "updateId", file_url AS "fileUrl", file_name AS "fileName", file_type AS "fileType" FROM project_update_files WHERE update_id = ANY($1::int[])',
-                [updateIds]
+                `SELECT f.id, f.update_id AS "updateId", f.file_url AS "fileUrl", f.file_name AS "fileName", f.file_type AS "fileType"
+                 FROM project_update_files f
+                 INNER JOIN project_updates u ON f.update_id = u.id
+                 WHERE u.project_id = $1
+                 ORDER BY f.id`,
+                [id]
             );
             const filesByUpdate = {};
             filesResult.rows.forEach(f => {
-                if (!filesByUpdate[f.updateId]) filesByUpdate[f.updateId] = [];
-                filesByUpdate[f.updateId].push(f);
+                const key = String(f.updateId);
+                if (!filesByUpdate[key]) filesByUpdate[key] = [];
+                filesByUpdate[key].push(f);
             });
-            updates.forEach(u => { u.files = filesByUpdate[u.id] || []; });
+            updates.forEach(u => { u.files = filesByUpdate[String(u.id)] || []; });
         }
 
         res.json(updates);
