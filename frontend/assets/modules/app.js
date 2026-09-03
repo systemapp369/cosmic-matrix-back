@@ -1,7 +1,65 @@
+/**
+ * Helper class for API calls to cosmic-matrix-back
+ */
+class FetchManager {
+    constructor(baseUrl) {
+        this.baseUrl = baseUrl.replace(/\/$/, '');
+    }
+
+    async getAllProjects() {
+        const res = await fetch(`${this.baseUrl}/api/projects`);
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return await res.json();
+    }
+
+    async upsertProject(project) {
+        const res = await fetch(`${this.baseUrl}/api/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(project)
+        });
+        if (!res.ok) throw new Error(`Error en servidor (${res.status})`);
+        return await res.json();
+    }
+
+    async deleteProject(id) {
+        const res = await fetch(`${this.baseUrl}/api/projects/${id}`, {
+            method: 'DELETE'
+        });
+        if (!res.ok) throw new Error(`Error en servidor (${res.status})`);
+        return await res.json();
+    }
+
+    // --- NUEVAS RUTAS PARA LA BITÁCORA DE AVANCES ---
+
+    async getProjectUpdates(projectId) {
+        const res = await fetch(`${this.baseUrl}/api/projects/${projectId}/updates`);
+        if (!res.ok) throw new Error(`Error al obtener avances (${res.status})`);
+        return await res.json();
+    }
+
+    async createProjectUpdate(projectId, updateData) {
+        const res = await fetch(`${this.baseUrl}/api/projects/${projectId}/updates`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updateData)
+        });
+        if (!res.ok) throw new Error(`Error al guardar avance (${res.status})`);
+        return await res.json();
+    }
+
+    async deleteProjectUpdate(updateId) {
+        const res = await fetch(`${this.baseUrl}/api/updates/${updateId}`, {
+            method: 'DELETE'
+        });
+        if (!res.ok) throw new Error(`Error al eliminar avance (${res.status})`);
+        return await res.json();
+    }
+}
+
 class InfrastructureMonitor {
     constructor() {
-        // Datos base del clúster (30 registros)
-        this.apiClient = new FetchManager('https://cosmic-matrix-back.vercel.app/');
+        this.apiClient = new FetchManager('https://cosmic-matrix-back.vercel.app');
         this.projects = [];
         this.bsCrudModal = null;
         this.bsConfirmModal = null;
@@ -14,6 +72,16 @@ class InfrastructureMonitor {
         this.currentPage = 0;
         this.itemsPerPage = 8;
         this.activeMiniCharts = [];
+
+        // Estado para la Bitácora de Avances
+        this.currentProjectId = null;
+        this.currentAttachedFiles = [];
+        this.isUploadingFile = false;
+
+        // Configuración Supabase (Reemplaza con tus llaves reales)
+        this.supabaseUrl = 'https://tu-proyecto.supabase.co';
+        this.supabaseAnonKey = 'tu-anon-key-aqui';
+        this.supabaseClient = null;
     }
 
     /**
@@ -25,6 +93,10 @@ class InfrastructureMonitor {
         this.bsToast = new bootstrap.Toast(document.getElementById('toastNotification'), { delay: 2500 });
         this.bsReportModal = new bootstrap.Modal(document.getElementById('reportModal'));
 
+        // Inicializar cliente Supabase Storage si la librería CDN está cargada
+        if (window.supabase) {
+            this.supabaseClient = window.supabase.createClient(this.supabaseUrl, this.supabaseAnonKey);
+        }
 
         const nodeForm = document.getElementById('nodeForm');
         if (nodeForm) {
@@ -52,14 +124,13 @@ class InfrastructureMonitor {
     }
 
     /**
-     * LISTAR: Usa el manager para traer datos de Render
+     * LISTAR: Usa el manager para traer datos de Render / Vercel
      */
     async loadProjectsFromRemote() {
         try {
             console.log("loadProjectsFromRemote ****");
             this.showToast("Mapeando clúster central...");
 
-            // --- USO DEL MANAGER ---
             this.projects = await this.apiClient.getAllProjects();
             this.renderDashboard();
             this.showToast("Sistema sincronizado con Cosmic_Matrix");
@@ -76,7 +147,6 @@ class InfrastructureMonitor {
         e.preventDefault();
         const idx = document.getElementById('nodeIndex').value;
 
-        // Preparar el objeto de datos (Igual que antes)
         const data = {
             name: document.getElementById('nodeName').value,
             level: document.getElementById('nodeLevel').value,
@@ -85,9 +155,6 @@ class InfrastructureMonitor {
             selected: true
         };
 
-        console.log("handleFormSubmit---------");
-        console.log(data);
-
         if (idx === "NEW") {
             const nextId = this.projects.length > 0 ? Math.max(...this.projects.map(p => parseInt(p.id.split('-')[1]))) + 1 : 1;
             data.id = `NODE-${String(nextId).padStart(3, '0')}`;
@@ -95,25 +162,12 @@ class InfrastructureMonitor {
             data.id = this.projects[idx].id;
         }
 
-
-        console.log("handleFormSubmit---------");
-        console.log(data);
-
         try {
-
-            console.log("handleFormSubmit---------1");
             this.showToast("Sincronizando cambios en la nube...");
-
-            console.log("handleFormSubmit--------2");
-            // --- USO DEL MANAGER (UPSERT) ---
             const result = await this.apiClient.upsertProject(data);
-
-            console.log(result);
-
 
             if (result.success) {
                 this.closeModal();
-                // Recarga y renderiza limpio desde la nube
                 await this.loadProjectsFromRemote();
                 this.showToast(idx === "NEW" ? "Activo registrado en el clúster" : "Modificación guardada exitosamente");
             }
@@ -131,15 +185,13 @@ class InfrastructureMonitor {
 
             try {
                 this.showToast("Desconectando activo de forma remota...");
-
-                // --- USO DEL MANAGER (DELETE) ---
                 const result = await this.apiClient.deleteProject(targetId);
 
                 if (result.success) {
                     this.closeConfirmModal();
                     this.closeModal();
 
-                    await this.loadProjectsFromRemote(); // Actualiza local y gráficos
+                    await this.loadProjectsFromRemote();
 
                     const maxPage = Math.ceil(this.projects.length / this.itemsPerPage) - 1;
                     if (this.currentPage > maxPage && this.currentPage > 0) {
@@ -153,6 +205,293 @@ class InfrastructureMonitor {
             }
         }
     }
+
+    // =========================================================================
+    // MÓDULO DE BITÁCORA DE AVANCES Y CARGA DE ARCHIVOS
+    // =========================================================================
+
+    /**
+     * Carga y renderiza el historial de avances de un proyecto en el Modal
+     */
+    async loadProjectUpdates(projectId) {
+        const container = document.getElementById('updatesFeed');
+        if (!container) return;
+
+        container.innerHTML = '<div class="text-center py-3 text-muted small"><i class="ti ti-loader animate-spin me-1"></i> Cargando bitácora de avances...</div>';
+
+        try {
+            const updates = await this.apiClient.getProjectUpdates(projectId);
+            this.renderUpdatesFeed(updates);
+        } catch (err) {
+            console.error('Error al cargar bitácora:', err);
+            container.innerHTML = `<div class="alert alert-danger p-2 small m-0"><i class="ti ti-alert-circle me-1"></i> No se pudo obtener la bitácora: ${err.message}</div>`;
+        }
+    }
+
+    /**
+     * Dibuja las tarjetas del feed de observaciones
+     */
+    renderUpdatesFeed(updates) {
+        const container = document.getElementById('updatesFeed');
+        if (!container) return;
+
+        if (!updates || updates.length === 0) {
+            container.innerHTML = '<div class="text-center py-4 text-muted small"><i class="ti ti-notes-off fs-4 d-block mb-1"></i> No hay avances u observaciones registradas aún.</div>';
+            return;
+        }
+
+        container.innerHTML = updates.map(upd => {
+            const formattedDate = new Date(upd.created_at).toLocaleString('es-MX', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+            });
+
+            const filesHtml = (upd.files && upd.files.length > 0) ? `
+                <div class="d-flex flex-wrap gap-2 mt-2 pt-2 border-top border-secondary-subtle">
+                    ${upd.files.map(f => {
+                        const isImage = f.type && f.type.startsWith('image/');
+                        if (isImage) {
+                            return `
+                                <div class="position-relative rounded overflow-hidden border border-secondary" style="max-width: 200px;">
+                                    <img src="${f.url}" alt="${f.name}" class="img-fluid" style="max-height: 100px; object-fit: cover;">
+                                    <a href="${f.url}" target="_blank" class="position-absolute top-0 end-0 bg-dark bg-opacity-75 text-white p-1 rounded-bottom-start text-decoration-none">
+                                        <i class="ti ti-external-link"></i>
+                                    </a>
+                                </div>
+                            `;
+                        }
+                        return `
+                            <a href="${f.url}" target="_blank" class="btn btn-sm btn-outline-secondary d-flex items-center gap-1 text-truncate" style="max-width: 220px;" title="${f.name}">
+                                <i class="ti ti-file-text text-warning"></i>
+                                <span class="text-truncate">${f.name}</span>
+                                <small class="text-muted">(${f.size || 'Archivo'})</small>
+                            </a>
+                        `;
+                    }).join('')}
+                </div>
+            ` : '';
+
+            return `
+                <div class="card bg-body-tertiary border-0 mb-2 shadow-sm">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small font-monospace text-primary fw-bold">
+                                <i class="ti ti-clock me-1"></i>${formattedDate}
+                            </span>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace small">
+                                    <i class="ti ti-user me-1"></i>${upd.author || 'Sistema'}
+                                </span>
+                                <button type="button" onclick="monitor.handleDeleteUpdate('${upd.id}')" class="btn btn-link p-0 text-danger text-decoration-none" title="Eliminar este avance">
+                                    <i class="ti ti-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <p class="mb-0 text-wrap text-break small" style="white-space: pre-wrap;">${upd.content || '<em>Sin anotación de texto (sólo adjuntos)</em>'}</p>
+                        ${filesHtml}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    /**
+     * Maneja la selección de archivos y subida directa a Supabase Storage
+     */
+    async handleFileUpload(event) {
+        const files = Array.from(event.target.files);
+        if (!files.length) return;
+
+        const uploadStatusEl = document.getElementById('uploadStatus');
+        if (uploadStatusEl) uploadStatusEl.classList.remove('d-none');
+
+        for (const file of files) {
+            try {
+                let fileUrl = '';
+                let storagePath = '';
+
+                // Si Supabase está configurado, sube directamente al bucket
+                if (this.supabaseClient) {
+                    const fileExt = file.name.split('.').pop();
+                    const fileName = `${this.currentProjectId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+                    const { data, error } = await this.supabaseClient.storage
+                        .from('project-attachments')
+                        .upload(fileName, file, { cacheControl: '3600', upsert: false });
+
+                    if (error) throw error;
+
+                    const { data: publicUrlData } = this.supabaseClient.storage
+                        .from('project-attachments')
+                        .getPublicUrl(fileName);
+
+                    fileUrl = publicUrlData.publicUrl;
+                    storagePath = data.path;
+                } else {
+                    // Simulación local en caso de no haber configurado API keys de Supabase
+                    fileUrl = URL.createObjectURL(file);
+                    storagePath = file.name;
+                }
+
+                // Formateo simple de tamaño
+                const sizeKb = (file.size / 1024).toFixed(1);
+                const formattedSize = file.size > 1048576 
+                    ? `${(file.size / (1024 * 1024)).toFixed(2)} MB` 
+                    : `${sizeKb} KB`;
+
+                this.currentAttachedFiles.push({
+                    name: file.name,
+                    size: formattedSize,
+                    type: file.type,
+                    url: fileUrl,
+                    path: storagePath
+                });
+
+            } catch (err) {
+                console.error("Error al subir archivo a Supabase:", err);
+                this.showToast(`Error al subir ${file.name}: ${err.message}`);
+            }
+        }
+
+        if (uploadStatusEl) uploadStatusEl.classList.add('d-none');
+        this.renderAttachedFilesBadge();
+        event.target.value = ''; // Reset file input
+    }
+
+    /**
+     * Muestra las etiquetas de los archivos listos para guardarse junto al nuevo avance
+     */
+    renderAttachedFilesBadge() {
+        const badgeContainer = document.getElementById('attachedFilesBadges');
+        if (!badgeContainer) return;
+
+        badgeContainer.innerHTML = this.currentAttachedFiles.map((f, idx) => `
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-inline-flex align-items-center gap-1 p-2">
+                <i class="ti ti-paperclip"></i>
+                <span class="text-truncate" style="max-width: 140px;">${f.name}</span>
+                <button type="button" onclick="monitor.removeAttachedFile(${idx})" class="btn-close ms-1" style="font-size: 0.65rem;" aria-label="Remover"></button>
+            </span>
+        `).join('');
+    }
+
+    removeAttachedFile(index) {
+        this.currentAttachedFiles.splice(index, 1);
+        this.renderAttachedFilesBadge();
+    }
+
+    /**
+     * Guarda la nueva observación/avance en la base de datos a través del Backend
+     */
+    async handleAddUpdate() {
+        const noteTextEl = document.getElementById('newUpdateText');
+        const noteText = noteTextEl ? noteTextEl.value.trim() : '';
+
+        if (!noteText && this.currentAttachedFiles.length === 0) {
+            return this.showToast("Escribe una observación o adjunta un archivo.");
+        }
+
+        const projectLead = document.getElementById('nodeLead')?.value || 'Sistema';
+
+        try {
+            this.showToast("Registrando avance con timestamp...");
+            await this.apiClient.createProjectUpdate(this.currentProjectId, {
+                author: projectLead,
+                content: noteText,
+                files: this.currentAttachedFiles
+            });
+
+            // Limpiar formulario de avance
+            if (noteTextEl) noteTextEl.value = '';
+            this.currentAttachedFiles = [];
+            this.renderAttachedFilesBadge();
+
+            // Recargar la lista de la bitácora
+            await this.loadProjectUpdates(this.currentProjectId);
+            this.showToast("Avance registrado correctamente.");
+        } catch (err) {
+            this.showToast(`Error al guardar avance: ${err.message}`);
+        }
+    }
+
+    /**
+     * Elimina un registro de avance
+     */
+    async handleDeleteUpdate(updateId) {
+        if (!confirm("¿Deseas eliminar esta anotación de la bitácora?")) return;
+
+        try {
+            await this.apiClient.deleteProjectUpdate(updateId);
+            await this.loadProjectUpdates(this.currentProjectId);
+            this.showToast("Anotación eliminada.");
+        } catch (err) {
+            this.showToast(`Error al eliminar: ${err.message}`);
+        }
+    }
+
+    // =========================================================================
+
+    /**
+     * Abre el modal de edición y carga la bitácora del proyecto seleccionado
+     */
+    openModal(index) {
+        const p = this.projects[index];
+        this.currentProjectId = p.id;
+        this.currentAttachedFiles = [];
+
+        document.getElementById('modalTitle').textContent = "Módulo de Edición";
+        document.getElementById('nodeIndex').value = index;
+        document.getElementById('nodeName').value = p.name;
+        document.getElementById('nodeLevel').value = p.level;
+        document.getElementById('nodeProgress').value = p.progress;
+        document.getElementById('nodeLead').value = p.lead;
+        document.getElementById('deleteBtn').classList.remove('d-none');
+
+        // Limpieza de campos de bitácora
+        const noteTextEl = document.getElementById('newUpdateText');
+        if (noteTextEl) noteTextEl.value = '';
+        this.renderAttachedFilesBadge();
+
+        // Mostrar sección de bitácora e inicializar carga
+        const bitacoraSection = document.getElementById('bitacoraSection');
+        if (bitacoraSection) bitacoraSection.classList.remove('d-none');
+        this.loadProjectUpdates(p.id);
+
+        this.bsCrudModal.show();
+    }
+
+    openCreateModal() {
+        this.currentProjectId = null;
+        this.currentAttachedFiles = [];
+
+        document.getElementById('modalTitle').textContent = "Nuevo Proyecto";
+        document.getElementById('nodeIndex').value = "NEW";
+        document.getElementById('nodeName').value = "";
+        document.getElementById('nodeLevel').value = "NORMAL";
+        document.getElementById('nodeProgress').value = "0";
+        document.getElementById('nodeLead').value = "";
+        document.getElementById('deleteBtn').classList.add('d-none');
+
+        // Ocultar sección de bitácora al crear proyecto nuevo por primera vez
+        const bitacoraSection = document.getElementById('bitacoraSection');
+        if (bitacoraSection) bitacoraSection.classList.add('d-none');
+
+        this.bsCrudModal.show();
+    }
+
+    closeModal() {
+        this.bsCrudModal.hide();
+    }
+
+    confirmDeleteNode() {
+        this.indexToDelete = document.getElementById('nodeIndex').value;
+        this.bsConfirmModal.show();
+    }
+
+    closeConfirmModal() {
+        this.bsConfirmModal.hide();
+        this.indexToDelete = null;
+    }
+
     /**
      * Inyecta y ejecuta la lluvia digital en el contenedor de fondo
      */
@@ -178,18 +517,16 @@ class InfrastructureMonitor {
 
         const CHARS = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEF01010101><=/\\|{}[]#@%$&*!?';
 
-        // --- PALETAS ULTRA-CONTRASTE PARA MODO OSCURO ---
         const DARK_PALETTES = [
-            { head: '#ffffff', body: '#00f2ff', trail: 'rgba(0,242,255,' },   // cian cyber
-            { head: '#fff0ff', body: '#b46bff', trail: 'rgba(180,107,255,' }, // violeta neon
-            { head: '#fffae0', body: '#ffb84d', trail: 'rgba(255,184,77,' },  // dorado premium
+            { head: '#ffffff', body: '#00f2ff', trail: 'rgba(0,242,255,' },
+            { head: '#fff0ff', body: '#b46bff', trail: 'rgba(180,107,255,' },
+            { head: '#fffae0', body: '#ffb84d', trail: 'rgba(255,184,77,' },
         ];
 
-        // --- PALETAS ELEGANTES DE ALTO CONTRASTE PARA MODO CLARO ---
         const LIGHT_PALETTES = [
-            { head: '#0f172a', body: '#0284c7', trail: 'rgba(2,132,199,' },   // azul corporativo profundo
-            { head: '#1e1b4b', body: '#7c3aed', trail: 'rgba(124,58,237,' },  // indigo/violeta ejecutivo
-            { head: '#1c1917', body: '#d97706', trail: 'rgba(217,119,6,' },   // bronce/ámbar sofisticado
+            { head: '#0f172a', body: '#0284c7', trail: 'rgba(2,132,199,' },
+            { head: '#1e1b4b', body: '#7c3aed', trail: 'rgba(124,58,237,' },
+            { head: '#1c1917', body: '#d97706', trail: 'rgba(217,119,6,' },
         ];
 
         let cols, drops, dropPalette, dropSpeed, dropLength;
@@ -211,42 +548,35 @@ class InfrastructureMonitor {
         const draw = (ts) => {
             requestAnimationFrame(draw);
             const dt = ts - lastTime;
-            if (dt < 28) return; // ~35 fps
+            if (dt < 28) return;
             lastTime = ts;
 
             const isDarkNow = document.documentElement.getAttribute('data-bs-theme') === 'dark';
-
-            // 1. Seleccionar paleta basándose en el estado exacto del DOM
             const activePalettes = isDarkNow ? DARK_PALETTES : LIGHT_PALETTES;
 
-            // Limpieza controlada de rastro (Evita la sobresaturación de gris en light mode)
             ctx.fillStyle = isDarkNow ? 'rgba(1,5,9,0.18)' : 'rgba(247,249,251,0.28)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             ctx.font = `${FONT_SIZE}px "Fira Code", monospace`;
 
             for (let i = 0; i < cols; i++) {
-                const pal = activePalettes[dropPalette[i]]; // <-- Usa la paleta correspondiente
+                const pal = activePalettes[dropPalette[i]];
                 const y = drops[i] * FONT_SIZE;
                 const char = CHARS[Math.floor(Math.random() * CHARS.length)];
 
-                // Carácter cabeza (Líder de la gota)
                 if (y > 0 && y < canvas.height) {
-                    ctx.shadowBlur = isDarkNow ? 8 : 0; // El modo claro no lleva resplandor (glow)
+                    ctx.shadowBlur = isDarkNow ? 8 : 0;
                     ctx.shadowColor = pal.body;
                     ctx.fillStyle = pal.head;
                     ctx.fillText(char, i * FONT_SIZE, y);
                     ctx.shadowBlur = 0;
                 }
 
-                // Estela / Rastro ascendente
                 for (let k = 1; k < dropLength[i]; k++) {
                     const ky = y - k * FONT_SIZE;
                     if (ky < 0) continue;
                     const alpha = Math.max(0, 1 - k / dropLength[i]);
                     const trailChar = CHARS[Math.floor(Math.random() * CHARS.length)];
-
-                    // Modificamos la opacidad base multiplicadora para que en light mode sea legible pero fino
                     const factorAlpha = isDarkNow ? 0.9 : 0.65;
                     ctx.fillStyle = pal.trail + (alpha * factorAlpha).toFixed(2) + ')';
                     ctx.fillText(trailChar, i * FONT_SIZE, ky);
@@ -265,8 +595,9 @@ class InfrastructureMonitor {
     }
 
     showToast(message) {
-        document.getElementById('toastMessage').textContent = message;
-        this.bsToast.show();
+        const toastMessage = document.getElementById('toastMessage');
+        if (toastMessage) toastMessage.textContent = message;
+        if (this.bsToast) this.bsToast.show();
     }
 
     toggleTheme() {
@@ -280,13 +611,9 @@ class InfrastructureMonitor {
             icon.className = nextTheme === 'dark' ? 'ti ti-sun fs-4' : 'ti ti-moon fs-4';
         }
 
-        // Ajustar dinámicamente la opacidad física del lienzo
         const matrixCanvas = document.getElementById('matrix-canvas');
         if (matrixCanvas) {
-            // Le damos 0.15 al modo claro para compensar la falta de brillo de los colores oscuros
             matrixCanvas.style.opacity = nextTheme === 'dark' ? '0.35' : '0.15';
-
-            // Limpieza inmediata del búfer de dibujo previo
             const ctx = matrixCanvas.getContext('2d');
             ctx.clearRect(0, 0, matrixCanvas.width, matrixCanvas.height);
         }
@@ -471,7 +798,6 @@ class InfrastructureMonitor {
                     { value: counts.ALTA, name: 'Alta', itemStyle: { color: '#f59e0b' } },
                     { value: counts.NORMAL, name: 'Normal', itemStyle: { color: '#10b981' } },
                     { value: counts.BAJA, name: 'Baja', itemStyle: { color: ' #7010b9' } }
-
                 ]
             }]
         };
@@ -503,71 +829,6 @@ class InfrastructureMonitor {
         this.renderDashboard();
     }
 
-    openModal(index) {
-        const p = this.projects[index];
-        document.getElementById('modalTitle').textContent = "Módulo de Edición";
-        document.getElementById('nodeIndex').value = index;
-        document.getElementById('nodeName').value = p.name;
-        document.getElementById('nodeLevel').value = p.level;
-        document.getElementById('nodeProgress').value = p.progress;
-        document.getElementById('nodeLead').value = p.lead;
-        document.getElementById('deleteBtn').classList.remove('d-none');
-        this.bsCrudModal.show();
-    }
-
-    openCreateModal() {
-        document.getElementById('modalTitle').textContent = "Nuevo Proyecto";
-        document.getElementById('nodeIndex').value = "NEW";
-        document.getElementById('nodeName').value = "";
-        document.getElementById('nodeLevel').value = "NORMAL";
-        document.getElementById('nodeProgress').value = "0";
-        document.getElementById('nodeLead').value = "";
-        document.getElementById('deleteBtn').classList.add('d-none');
-        this.bsCrudModal.show();
-    }
-
-    closeModal() {
-        this.bsCrudModal.hide();
-    }
-
-    /*
-
-    handleFormSubmit(e) {
-        e.preventDefault();
-        const idx = document.getElementById('nodeIndex').value;
-        const data = {
-            name: document.getElementById('nodeName').value,
-            level: document.getElementById('nodeLevel').value,
-            progress: parseInt(document.getElementById('nodeProgress').value),
-            lead: document.getElementById('nodeLead').value || 'UNASSIGNED',
-            lastUpdate: new Date().toISOString().split('T')[0],
-            selected: true
-        };
-
-        if (idx === "NEW") {
-            const nextId = this.projects.length > 0 ? Math.max(...this.projects.map(p => parseInt(p.id.split('-')[1]))) + 1 : 1;
-            data.id = `NODE-${String(nextId).padStart(3, '0')}`;
-            this.projects.push(data);
-            this.showToast("Activo registrado en el clúster central");
-        } else {
-            this.projects[idx] = { ...this.projects[idx], ...data };
-            this.showToast("Modificación guardada exitosamente");
-        }
-        this.closeModal();
-        this.renderDashboard();
-    }
-    */
-
-    confirmDeleteNode() {
-        this.indexToDelete = document.getElementById('nodeIndex').value;
-        this.bsConfirmModal.show();
-    }
-
-    closeConfirmModal() {
-        this.bsConfirmModal.hide();
-        this.indexToDelete = null;
-    }
-
     exportToExcel() {
         const data = this.projects.map(p => ({
             ID: p.id,
@@ -586,12 +847,9 @@ class InfrastructureMonitor {
         const selected = this.projects.filter(p => p.selected);
         if (!selected.length) return this.showToast("Selecciona al menos un activo");
 
-        // Seleccionamos el cuerpo del nuevo modal de reporte
         const modalBody = document.getElementById('reportModalBody');
         if (!modalBody) return;
 
-        // Inyectamos la tabla (removimos los botones de cierre manual/impresión de aquí, 
-        // ya que ahora viven de forma fija en el footer y el header del modal del HTML)
         modalBody.innerHTML = `
             <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
                 <span class="small fw-bold text-uppercase tracking-wider text-primary">Resumen de Proyectos Seleccionados</span>
@@ -627,7 +885,6 @@ class InfrastructureMonitor {
             </div>
         `;
 
-        // Mostramos el modal de forma interactiva
         if (this.bsReportModal) {
             this.bsReportModal.show();
         }
@@ -642,3 +899,53 @@ class InfrastructureMonitor {
 
 const monitor = new InfrastructureMonitor();
 window.onload = () => monitor.init();
+
+```
+
+---
+
+### ¿Cómo agregar la sección en tu HTML (`crudModal`)?
+
+Dentro del cuerpo de tu modal HTML (`<div id="crudModal">`), justo debajo de los campos principales del proyecto, agrega este bloque HTML para renderizar la Bitácora de Avances:
+
+
+```html
+<!-- SECCIÓN NUEVA: BITÁCORA DE AVANCES -->
+<div id="bitacoraSection" class="mt-4 pt-3 border-top">
+    <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
+        <i class="ti ti-notes text-primary"></i> Bitácora de Avances y Evidencias
+    </h6>
+
+    <!-- Formulario para agregar nuevo avance -->
+    <div class="bg-body-tertiary p-3 rounded-3 border mb-3">
+        <textarea id="newUpdateText" class="form-control form-control-sm mb-2" rows="2" placeholder="Escribe un avance, observación o estado del proyecto..."></textarea>
+        
+        <!-- Badges de archivos adjuntos -->
+        <div id="attachedFilesBadges" class="d-flex flex-wrap gap-1 mb-2"></div>
+        <div id="uploadStatus" class="small text-muted mb-2 d-none">
+            <i class="ti ti-loader animate-spin me-1 text-primary"></i> Subiendo archivo a Supabase Storage...
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <input type="file" id="updateFileInput" multiple onchange="monitor.handleFileUpload(event)" class="d-none">
+                <button type="button" onclick="document.getElementById('updateFileInput').click()" class="btn btn-sm btn-outline-secondary">
+                    <i class="ti ti-paperclip me-1"></i> Adjuntar Evidencias
+                </button>
+            </div>
+            <button type="button" onclick="monitor.handleAddUpdate()" class="btn btn-sm btn-primary">
+                <i class="ti ti-plus me-1"></i> Agregar Avance
+            </button>
+        </div>
+    </div>
+
+    <!-- Contenedor del Historial de Avances -->
+    <div id="updatesFeed" style="max-height: 250px; overflow-y: auto;"></div>
+</div>
+```
+
+Y en tu `index.html` (o `index.ejs`/`main.html`), recuerda incluir el script CDN de Supabase si deseas subida directa:
+```html
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+```
+
