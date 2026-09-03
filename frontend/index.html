@@ -29,7 +29,7 @@
             <div class="row align-items-center justify-content-between g-3">
                 <div class="col-12 col-md-auto d-flex align-items-center gap-3">
                     <div class="col-12 col-md-auto d-flex align-items-center gap-3">
-                      <img src="Images/form.png" alt="No imagen" width="5%"> 
+                    <img src="Images/form.png" alt="No imagen" width="5%"> 
                     <div>
                     <div>
                         <h1 class="h5 mb-0 fw-bold tracking-tight">Project Admin <span class="text-primary">v1.0</span>
@@ -105,7 +105,7 @@
     </div>
 
     <div class="modal fade" id="crudModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
             <div class="modal-content shadow-lg border-0">
                 <div class="modal-header border-bottom-0 pb-0">
                     <div>
@@ -149,6 +149,33 @@
                             <button type="submit" id="submitBtn" class="btn btn-sm btn-primary">Guardar Cambios</button>
                         </div>
                     </form>
+
+                    <div id="updatesSection" class="d-none mt-4 pt-3 border-top">
+                        <h6 class="fw-bold small text-uppercase text-muted mb-3">
+                            <i class="ti ti-timeline-event me-1"></i> Bitácora de Avances
+                        </h6>
+
+                        <div class="mb-2">
+                            <textarea id="updateNote" class="form-control form-control-sm" rows="2"
+                                placeholder="Describe el avance u observación..."></textarea>
+                        </div>
+                        <div class="mb-2">
+                            <input type="file" id="updateFiles" class="form-control form-control-sm" multiple
+                                accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt">
+                            <div class="form-text small">Puedes adjuntar imágenes, documentos o video referentes a
+                                este avance.</div>
+                        </div>
+                        <div class="d-flex justify-content-end mb-3">
+                            <button type="button" id="addUpdateBtn" onclick="monitor.submitUpdate()"
+                                class="btn btn-sm btn-primary d-flex align-items-center gap-1">
+                                <i class="ti ti-plus"></i> Agregar Avance
+                            </button>
+                        </div>
+
+                        <div id="updatesList" class="d-flex flex-column gap-2"
+                            style="max-height: 260px; overflow-y: auto;">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
