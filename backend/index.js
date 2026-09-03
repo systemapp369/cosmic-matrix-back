@@ -40,7 +40,7 @@ async function initDB() {
       CREATE TABLE IF NOT EXISTS project_updates (
         id SERIAL PRIMARY KEY,
         project_id VARCHAR(50) NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-        note TEXT NOT NULL,
+        note TEXT,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
@@ -50,13 +50,26 @@ async function initDB() {
       CREATE TABLE IF NOT EXISTS project_update_files (
         id SERIAL PRIMARY KEY,
         update_id INTEGER NOT NULL REFERENCES project_updates(id) ON DELETE CASCADE,
-        file_url TEXT NOT NULL,
+        file_url TEXT,
         file_name TEXT,
         file_type TEXT
       );
     `);
 
-        console.log("Tablas 'projects', 'project_updates' y 'project_update_files' verificadas/creadas con éxito.");
+        // --- MIGRACIÓN AUTOCURABLE ---
+        // Si alguna de estas tablas ya existía en la BD (de un despliegue/prueba anterior)
+        // con una estructura distinta o incompleta, CREATE TABLE IF NOT EXISTS la deja intacta.
+        // Estas líneas agregan cualquier columna que falte, sin tocar datos existentes.
+        await pool.query(`ALTER TABLE project_updates ADD COLUMN IF NOT EXISTS project_id VARCHAR(50);`);
+        await pool.query(`ALTER TABLE project_updates ADD COLUMN IF NOT EXISTS note TEXT;`);
+        await pool.query(`ALTER TABLE project_updates ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();`);
+
+        await pool.query(`ALTER TABLE project_update_files ADD COLUMN IF NOT EXISTS update_id INTEGER;`);
+        await pool.query(`ALTER TABLE project_update_files ADD COLUMN IF NOT EXISTS file_url TEXT;`);
+        await pool.query(`ALTER TABLE project_update_files ADD COLUMN IF NOT EXISTS file_name TEXT;`);
+        await pool.query(`ALTER TABLE project_update_files ADD COLUMN IF NOT EXISTS file_type TEXT;`);
+
+        console.log("Tablas 'projects', 'project_updates' y 'project_update_files' verificadas/creadas/migradas con éxito.");
     } catch (err) {
         console.error("Error al inicializar la base de datos:", err.message);
     }
