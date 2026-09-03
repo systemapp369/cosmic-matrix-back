@@ -6,8 +6,8 @@ class InfrastructureMonitor {
         // --- Supabase Storage (solo para subir archivos de la bitácora de avances) ---
         // Reemplaza estos 3 valores con los de tu proyecto Supabase (Settings > API)
         this.storageManager = new StorageManager(
-            'https://TU-PROYECTO.supabase.co',   // <-- Project URL
-            'TU_ANON_PUBLIC_KEY',                 // <-- anon / public key (NO la service_role)
+            'https://owjssvxtzhwqedwigaux.supabase.co',   // <-- Project URL
+            'sb_publishable__fXpBwtZCmfW6jLKjzKHRg_who9vVlJ',                 // <-- anon / public key (NO la service_role)
             'project-attachments'                 // <-- nombre del bucket que crearás en Storage
         );
         this.currentProjectId = null; // proyecto abierto actualmente en el modal (para la bitácora)
