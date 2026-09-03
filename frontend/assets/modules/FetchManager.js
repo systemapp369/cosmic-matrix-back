@@ -108,4 +108,40 @@ class FetchManager {
             method: 'DELETE'
         });
     }
+
+    // --- MÉTODOS PÚBLICOS: BITÁCORA DE AVANCES ---
+
+    /**
+     * Obtiene los avances (con sus archivos adjuntos) de un proyecto.
+     * @param {string} projectId
+     * @returns {Promise<Array>}
+     */
+    async getProjectUpdates(projectId) {
+        return await this._request(`projects/${projectId}/updates`);
+    }
+
+    /**
+     * Registra un nuevo avance/observación. La fecha y hora las asigna el servidor.
+     * @param {string} projectId
+     * @param {string} note - Texto de la observación.
+     * @param {Array<{url:string,name:string,type:string}>} files - Archivos ya subidos a Supabase Storage.
+     * @returns {Promise<Object>}
+     */
+    async addProjectUpdate(projectId, note, files = []) {
+        return await this._request(`projects/${projectId}/updates`, {
+            method: 'POST',
+            body: JSON.stringify({ note, files })
+        });
+    }
+
+    /**
+     * Elimina un avance puntual de la bitácora.
+     * @param {number} updateId
+     * @returns {Promise<Object>}
+     */
+    async deleteProjectUpdate(updateId) {
+        return await this._request(`updates/${updateId}`, {
+            method: 'DELETE'
+        });
+    }
 }
