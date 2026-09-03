@@ -59,7 +59,67 @@ async function initDB() {
         // --- MIGRACIÓN AUTOCURABLE ---
         // Si alguna de estas tablas ya existía en la BD (de un despliegue/prueba anterior)
         // con una estructura distinta o incompleta, CREATE TABLE IF NOT EXISTS la deja intacta.
-        // Estas líneas agregan cualquier columna que falte, sin tocar datos existentes.
+        // Estas líneas la reconcilian automáticamente, sin tocar datos existentes.
+
+        // Caso detectado: la tabla ya traía una columna "content" (NOT NULL) en vez de "note".
+        // Si existe "content" y todavía no existe "note", renombramos para no perder esa columna.
+        await pool.query(`
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'project_updates' AND column_name = 'content'
+        ) AND NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'project_updates' AND column_name = 'note'
+        ) THEN
+          ALTER TABLE project_updates RENAME COLUMN content TO note;
+        END IF;
+      END $$;
+    `);
+
+        // Por si "content" sigue existiendo junto a "note" (o el rename no aplicó por alguna razón),
+        // quitamos su restricción NOT NULL para que ya no pueda tumbar los inserts nuevos.
+        await pool.query(`
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'project_updates' AND column_name = 'content'
+        ) THEN
+          ALTER TABLE project_updates ALTER COLUMN content DROP NOT NULL;
+        END IF;
+      END $$;
+    `);
+
+        // Catch-all: cualquier otra columna NOT NULL inesperada (heredada de una versión
+        // previa que no conocemos) en estas dos tablas se vuelve opcional automáticamente,
+        // para que nunca vuelva a tumbar un INSERT nuevo.
+        await pool.query(`
+      DO $$
+      DECLARE
+        col RECORD;
+      BEGIN
+        FOR col IN
+          SELECT column_name FROM information_schema.columns
+          WHERE table_name = 'project_updates'
+            AND is_nullable = 'NO'
+            AND column_name NOT IN ('id', 'project_id')
+        LOOP
+          EXECUTE format('ALTER TABLE project_updates ALTER COLUMN %I DROP NOT NULL', col.column_name);
+        END LOOP;
+
+        FOR col IN
+          SELECT column_name FROM information_schema.columns
+          WHERE table_name = 'project_update_files'
+            AND is_nullable = 'NO'
+            AND column_name NOT IN ('id', 'update_id')
+        LOOP
+          EXECUTE format('ALTER TABLE project_update_files ALTER COLUMN %I DROP NOT NULL', col.column_name);
+        END LOOP;
+      END $$;
+    `);
+
         await pool.query(`ALTER TABLE project_updates ADD COLUMN IF NOT EXISTS project_id VARCHAR(50);`);
         await pool.query(`ALTER TABLE project_updates ADD COLUMN IF NOT EXISTS note TEXT;`);
         await pool.query(`ALTER TABLE project_updates ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();`);
