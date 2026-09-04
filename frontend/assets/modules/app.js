@@ -1116,17 +1116,41 @@ class InfrastructureMonitor {
             // 3. Armar el HTML con el tema de ciberseguridad
             container.innerHTML = this.buildPdfHtml(selected, gaugeImages, bitacoraByProject, includeBitacora);
 
-            // 4. Convertir a PDF real (respeta colores/estilos, no depende del diálogo de impresión)
+            // Pequeño margen para que el navegador termine de pintar/decodificar
+            // las imágenes de los gauges antes de capturar el contenedor.
+            await new Promise(resolve => setTimeout(resolve, 150));
+
+            // 4. Capturar el contenedor como imagen (respeta colores/estilos reales)
+            const canvas = await html2canvas(container, {
+                scale: 2,
+                backgroundColor: '#0a0e17',
+                useCORS: true,
+                windowWidth: container.scrollWidth,
+                windowHeight: container.scrollHeight
+            });
+
+            // 5. Insertar la imagen en el PDF, partiéndola en páginas A4 si es necesario
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF('p', 'pt', 'a4');
+            const imgData = canvas.toDataURL('image/png');
 
-            await doc.html(container, {
-                x: 0,
-                y: 0,
-                width: 595,
-                windowWidth: 820,
-                html2canvas: { scale: 2, backgroundColor: '#0a0e17', useCORS: true }
-            });
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const imgWidth = pageWidth;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+            let heightLeft = imgHeight;
+            let position = 0;
+
+            doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+
+            while (heightLeft > 0) {
+                position -= pageHeight;
+                doc.addPage();
+                doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+            }
 
             doc.save(`Reporte_Infraestructura_${Date.now()}.pdf`);
             this.showToast("PDF generado con éxito");
