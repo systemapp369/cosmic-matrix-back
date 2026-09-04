@@ -357,7 +357,7 @@ class InfrastructureMonitor {
                             <div class="d-flex align-items-center gap-2">
                                 <button onclick="monitor.openBitacora(${originalIndex})" title="Bitácora de Avances"
                                     class="btn btn-link btn-sm p-0 text-decoration-none fw-semibold small text-info">
-                                    <i class="ti ti-notebook"></i>
+                                    <i class="ti ti-folder"></i> Bitácora
                                 </button>
                                 <button onclick="monitor.openModal(${originalIndex})" class="btn btn-link btn-sm p-0 text-decoration-none fw-semibold small text-primary">
                                     <i class="ti ti-edit"></i> Editar
