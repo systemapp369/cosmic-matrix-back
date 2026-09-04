@@ -354,9 +354,15 @@ class InfrastructureMonitor {
                                 <input type="checkbox" ${p.selected ? 'checked' : ''} onchange="monitor.toggleSelect(${originalIndex})" class="form-check-input m-0">
                                 <span class="font-monospace text-muted small fw-bold">${p.id}</span>
                             </div>
-                            <button onclick="monitor.openModal(${originalIndex})" class="btn btn-link btn-sm p-0 text-decoration-none fw-semibold small text-primary">
-                                <i class="ti ti-edit"></i> Editar
-                            </button>
+                            <div class="d-flex align-items-center gap-2">
+                                <button onclick="monitor.openBitacora(${originalIndex})" title="Bitácora de Avances"
+                                    class="btn btn-link btn-sm p-0 text-decoration-none fw-semibold small text-info">
+                                    <i class="ti ti-notebook"></i>
+                                </button>
+                                <button onclick="monitor.openModal(${originalIndex})" class="btn btn-link btn-sm p-0 text-decoration-none fw-semibold small text-primary">
+                                    <i class="ti ti-edit"></i> Editar
+                                </button>
+                            </div>
                         </div>
 
                         <div class="d-flex justify-content-center my-2">
@@ -516,6 +522,8 @@ class InfrastructureMonitor {
     openModal(index) {
         const p = this.projects[index];
         document.getElementById('modalTitle').textContent = "Módulo de Edición";
+        document.getElementById('modalSub').textContent = "Editor de Proyecto";
+        document.getElementById('nodeForm').classList.remove('d-none');
         document.getElementById('nodeIndex').value = index;
         document.getElementById('nodeName').value = p.name;
         document.getElementById('nodeLevel').value = p.level;
@@ -531,8 +539,30 @@ class InfrastructureMonitor {
         this.bsCrudModal.show();
     }
 
+    /**
+     * Acceso directo SOLO a la Bitácora de Avances de un proyecto, sin mostrar
+     * los campos de edición (nombre, criticidad, progreso, etc.)
+     */
+    openBitacora(index) {
+        const p = this.projects[index];
+        document.getElementById('modalTitle').textContent = "Bitácora de Avances";
+        document.getElementById('modalSub').textContent = p.name;
+        document.getElementById('nodeIndex').value = index;
+
+        // Oculta el formulario de edición: en este acceso solo interesa la bitácora
+        document.getElementById('nodeForm').classList.add('d-none');
+
+        this.currentProjectId = p.id;
+        document.getElementById('updatesSection').classList.remove('d-none');
+        this.loadUpdates(p.id);
+
+        this.bsCrudModal.show();
+    }
+
     openCreateModal() {
         document.getElementById('modalTitle').textContent = "Nuevo Proyecto";
+        document.getElementById('modalSub').textContent = "Editor de Proyecto";
+        document.getElementById('nodeForm').classList.remove('d-none');
         document.getElementById('nodeIndex').value = "NEW";
         document.getElementById('nodeName').value = "";
         document.getElementById('nodeLevel').value = "NORMAL";
@@ -551,6 +581,8 @@ class InfrastructureMonitor {
     }
 
     closeModal() {
+        // Restaura el formulario por si se cerró desde el modo "solo bitácora"
+        document.getElementById('nodeForm').classList.remove('d-none');
         this.bsCrudModal.hide();
     }
 
