@@ -773,13 +773,32 @@ class InfrastructureMonitor {
         const selected = this.projects.filter(p => p.selected);
         if (!selected.length) return this.showToast("Selecciona al menos un activo");
 
-        // Seleccionamos el cuerpo del nuevo modal de reporte
+        // "Foto" fija de qué proyectos entran a esta sesión de reporte. Los checks
+        // dentro del modal solo prenden/apagan p.selected, pero la fila se queda
+        // visible aquí (no desaparece) para poder afinar la selección con calma.
+        this.reportProjectIds = selected.map(p => p.id);
+
         const modalBody = document.getElementById('reportModalBody');
         if (!modalBody) return;
+        modalBody.innerHTML = this.buildReportTableHtml();
 
-        // Inyectamos la tabla (removimos los botones de cierre manual/impresión de aquí, 
-        // ya que ahora viven de forma fija en el footer y el header del modal del HTML)
-        modalBody.innerHTML = `
+        if (this.bsReportModal) {
+            this.bsReportModal.show();
+        }
+    }
+
+    /**
+     * Arma el HTML de la tabla de resumen del modal de Reporte, con un checkbox
+     * por fila para incluir/excluir ese proyecto del Excel/PDF a generar.
+     */
+    buildReportTableHtml() {
+        const list = (this.reportProjectIds || [])
+            .map(id => this.projects.find(p => p.id === id))
+            .filter(Boolean);
+
+        const includedCount = list.filter(p => p.selected).length;
+
+        return `
             <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
                 <span class="small fw-bold text-uppercase tracking-wider text-primary">Resumen de Proyectos Seleccionados</span>
                 <span class="small font-monospace badge bg-secondary-subtle text-secondary-emphasis p-2">${new Date().toLocaleDateString()}</span>
@@ -788,6 +807,7 @@ class InfrastructureMonitor {
                 <table class="table table-striped table-bordered align-middle small mb-0">
                     <thead class="table-light">
                         <tr>
+                            <th style="width:38px;"></th>
                             <th>ID Core</th>
                             <th>Proyecto</th>
                             <th>Criticidad</th>
@@ -796,28 +816,44 @@ class InfrastructureMonitor {
                         </tr>
                     </thead>
                     <tbody>
-                        ${selected.map(p => `
-                            <tr>
+                        ${list.map(p => `
+                            <tr style="${p.selected ? '' : 'opacity:0.45;'}">
+                                <td class="text-center">
+                                    <input type="checkbox" class="form-check-input m-0" ${p.selected ? 'checked' : ''}
+                                        onchange="monitor.toggleReportRow('${p.id}')">
+                                </td>
                                 <td class="font-monospace fw-bold small">${p.id}</td>
-                                <td class="fw-medium">${p.name}</td>
+                                <td class="fw-medium">${this.escapeHtml(p.name)}</td>
                                 <td>
                                     <span class="badge ${p.level === 'CRÍTICA' ? 'bg-danger' : (p.level === 'ALTA' ? 'bg-warning text-dark' : 'bg-success')} rounded-1 small">
                                         ${p.level}
                                     </span>
                                 </td>
                                 <td class="fw-bold">${p.progress}%</td>
-                                <td class="text-muted">${p.lead}</td>
+                                <td class="text-muted">${this.escapeHtml(p.lead || '')}</td>
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
             </div>
+            <div class="small text-muted mt-2">
+                <span id="reportSelectedSummary">${includedCount} de ${list.length}</span> proyecto(s) se incluirán en el Excel/PDF.
+            </div>
         `;
+    }
 
-        // Mostramos el modal de forma interactiva
-        if (this.bsReportModal) {
-            this.bsReportModal.show();
-        }
+    /**
+     * Prende/apaga un proyecto puntual dentro del modal de Reporte, sin que
+     * desaparezca de la tabla ni se cierre el modal.
+     */
+    toggleReportRow(id) {
+        const p = this.projects.find(pr => pr.id === id);
+        if (!p) return;
+        p.selected = !p.selected;
+        this.updateSelectedCount();
+
+        const modalBody = document.getElementById('reportModalBody');
+        if (modalBody) modalBody.innerHTML = this.buildReportTableHtml();
     }
 
     closeReportView() {
@@ -934,8 +970,9 @@ class InfrastructureMonitor {
     // --- REPORTES: Excel (incluye Bitácora de Avances) ---
 
     async generateExcelReport() {
-        const selected = this.projects.filter(p => p.selected);
-        if (!selected.length) return this.showToast("Selecciona al menos un activo");
+        const ids = this.reportProjectIds || this.projects.filter(p => p.selected).map(p => p.id);
+        const selected = this.projects.filter(p => ids.includes(p.id) && p.selected);
+        if (!selected.length) return this.showToast("Marca al menos un proyecto en la tabla");
 
         const includeBitacora = document.getElementById('includeBitacoraCheck')?.checked ?? true;
         const btn = document.getElementById('excelReportBtn');
@@ -1080,8 +1117,9 @@ class InfrastructureMonitor {
     }
 
     async generatePdfReport() {
-        const selected = this.projects.filter(p => p.selected);
-        if (!selected.length) return this.showToast("Selecciona al menos un activo");
+        const ids = this.reportProjectIds || this.projects.filter(p => p.selected).map(p => p.id);
+        const selected = this.projects.filter(p => ids.includes(p.id) && p.selected);
+        if (!selected.length) return this.showToast("Marca al menos un proyecto en la tabla");
 
         if (!window.jspdf || !window.html2canvas) {
             return this.showToast("No se pudo cargar el motor de PDF (revisa tu conexión a internet)");
