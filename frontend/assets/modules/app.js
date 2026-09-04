@@ -34,6 +34,7 @@ class InfrastructureMonitor {
         this.bsConfirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
         this.bsToast = new bootstrap.Toast(document.getElementById('toastNotification'), { delay: 2500 });
         this.bsReportModal = new bootstrap.Modal(document.getElementById('reportModal'));
+        this.bsCriticalityModal = new bootstrap.Modal(document.getElementById('criticalityModal'));
 
 
         const nodeForm = document.getElementById('nodeForm');
@@ -41,8 +42,8 @@ class InfrastructureMonitor {
             nodeForm.onsubmit = (e) => this.handleFormSubmit(e);
         }
 
-        // --- ACTIVACIÓN DEL EFECTO MATRIX DE FONDO ---
-        this.initMatrixRain();
+        // --- ACTIVACIÓN DEL FONDO 3D INTERACTIVO (red de proyectos) ---
+        this.background3D = new Background3D('canvas-container');
         await this.loadProjectsFromRemote();
 
         // Renderizado Inicial
@@ -163,116 +164,6 @@ class InfrastructureMonitor {
             }
         }
     }
-    /**
-     * Inyecta y ejecuta la lluvia digital en el contenedor de fondo
-     */
-    initMatrixRain() {
-        const container = document.getElementById('canvas-container');
-        if (!container) return;
-
-        const canvas = document.createElement('canvas');
-        canvas.id = 'matrix-canvas';
-
-        const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
-        canvas.style.cssText = `
-            position: absolute; top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 1; pointer-events: none;
-            opacity: ${isDark ? '0.35' : '0.15'};
-            transition: opacity 0.3s ease;
-        `;
-        container.appendChild(canvas);
-
-        const ctx = canvas.getContext('2d');
-        const FONT_SIZE = 14;
-
-        const CHARS = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEF01010101><=/\\|{}[]#@%$&*!?';
-
-        // --- PALETAS ULTRA-CONTRASTE PARA MODO OSCURO ---
-        const DARK_PALETTES = [
-            { head: '#ffffff', body: '#00f2ff', trail: 'rgba(0,242,255,' },   // cian cyber
-            { head: '#fff0ff', body: '#b46bff', trail: 'rgba(180,107,255,' }, // violeta neon
-            { head: '#fffae0', body: '#ffb84d', trail: 'rgba(255,184,77,' },  // dorado premium
-        ];
-
-        // --- PALETAS ELEGANTES DE ALTO CONTRASTE PARA MODO CLARO ---
-        const LIGHT_PALETTES = [
-            { head: '#0f172a', body: '#0284c7', trail: 'rgba(2,132,199,' },   // azul corporativo profundo
-            { head: '#1e1b4b', body: '#7c3aed', trail: 'rgba(124,58,237,' },  // indigo/violeta ejecutivo
-            { head: '#1c1917', body: '#d97706', trail: 'rgba(217,119,6,' },   // bronce/ámbar sofisticado
-        ];
-
-        let cols, drops, dropPalette, dropSpeed, dropLength;
-
-        const resizeMatrix = () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            cols = Math.floor(canvas.width / FONT_SIZE);
-            drops = new Array(cols).fill(1).map(() => Math.random() * -100);
-            dropPalette = new Array(cols).fill(0).map(() => Math.floor(Math.random() * DARK_PALETTES.length));
-            dropSpeed = new Array(cols).fill(0).map(() => 0.3 + Math.random() * 0.7);
-            dropLength = new Array(cols).fill(0).map(() => 8 + Math.floor(Math.random() * 24));
-        };
-
-        resizeMatrix();
-        window.addEventListener('resize', resizeMatrix);
-
-        let lastTime = 0;
-        const draw = (ts) => {
-            requestAnimationFrame(draw);
-            const dt = ts - lastTime;
-            if (dt < 28) return; // ~35 fps
-            lastTime = ts;
-
-            const isDarkNow = document.documentElement.getAttribute('data-bs-theme') === 'dark';
-
-            // 1. Seleccionar paleta basándose en el estado exacto del DOM
-            const activePalettes = isDarkNow ? DARK_PALETTES : LIGHT_PALETTES;
-
-            // Limpieza controlada de rastro (Evita la sobresaturación de gris en light mode)
-            ctx.fillStyle = isDarkNow ? 'rgba(1,5,9,0.18)' : 'rgba(247,249,251,0.28)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            ctx.font = `${FONT_SIZE}px "Fira Code", monospace`;
-
-            for (let i = 0; i < cols; i++) {
-                const pal = activePalettes[dropPalette[i]]; // <-- Usa la paleta correspondiente
-                const y = drops[i] * FONT_SIZE;
-                const char = CHARS[Math.floor(Math.random() * CHARS.length)];
-
-                // Carácter cabeza (Líder de la gota)
-                if (y > 0 && y < canvas.height) {
-                    ctx.shadowBlur = isDarkNow ? 8 : 0; // El modo claro no lleva resplandor (glow)
-                    ctx.shadowColor = pal.body;
-                    ctx.fillStyle = pal.head;
-                    ctx.fillText(char, i * FONT_SIZE, y);
-                    ctx.shadowBlur = 0;
-                }
-
-                // Estela / Rastro ascendente
-                for (let k = 1; k < dropLength[i]; k++) {
-                    const ky = y - k * FONT_SIZE;
-                    if (ky < 0) continue;
-                    const alpha = Math.max(0, 1 - k / dropLength[i]);
-                    const trailChar = CHARS[Math.floor(Math.random() * CHARS.length)];
-
-                    // Modificamos la opacidad base multiplicadora para que en light mode sea legible pero fino
-                    const factorAlpha = isDarkNow ? 0.9 : 0.65;
-                    ctx.fillStyle = pal.trail + (alpha * factorAlpha).toFixed(2) + ')';
-                    ctx.fillText(trailChar, i * FONT_SIZE, ky);
-                }
-
-                drops[i] += dropSpeed[i];
-                if (drops[i] * FONT_SIZE > canvas.height + dropLength[i] * FONT_SIZE) {
-                    drops[i] = -Math.random() * 40;
-                    dropPalette[i] = Math.floor(Math.random() * activePalettes.length);
-                    dropSpeed[i] = 0.3 + Math.random() * 0.7;
-                    dropLength[i] = 8 + Math.floor(Math.random() * 24);
-                }
-            }
-        };
-        requestAnimationFrame(draw);
-    }
 
     showToast(message) {
         document.getElementById('toastMessage').textContent = message;
@@ -290,15 +181,9 @@ class InfrastructureMonitor {
             icon.className = nextTheme === 'dark' ? 'ti ti-sun fs-4' : 'ti ti-moon fs-4';
         }
 
-        // Ajustar dinámicamente la opacidad física del lienzo
-        const matrixCanvas = document.getElementById('matrix-canvas');
-        if (matrixCanvas) {
-            // Le damos 0.15 al modo claro para compensar la falta de brillo de los colores oscuros
-            matrixCanvas.style.opacity = nextTheme === 'dark' ? '0.35' : '0.15';
-
-            // Limpieza inmediata del búfer de dibujo previo
-            const ctx = matrixCanvas.getContext('2d');
-            ctx.clearRect(0, 0, matrixCanvas.width, matrixCanvas.height);
+        // Ajustar la intensidad visual del fondo 3D según el tema
+        if (this.background3D) {
+            this.background3D.setTheme(nextTheme);
         }
 
         this.updateChartData();
@@ -442,11 +327,11 @@ class InfrastructureMonitor {
         this.projects.forEach(p => counts[p.level]++);
 
         const cardsData = [
-            { label: 'Proyectos Críticos', count: counts.CRÍTICA, style: 'stat-critica', icon: 'ti-alert-hexagon text-danger' },
-            { label: 'Proyectos Advertencia', count: counts.ALTA, style: 'stat-alta', icon: 'ti-alert-triangle text-warning' },
-            { label: 'Proyectos Estables', count: counts.NORMAL, style: 'stat-normal', icon: 'ti-circle-check text-success' },
-            { label: 'Proyectos Baja', count: counts.BAJA, style: 'stat-baja', icon: 'ti-cube-3d-sphere text-success' },
-            { label: 'Total de Proyectos Activos', count: this.projects.length, style: 'stat-global', icon: 'ti-server text-primary' }
+            { label: 'Proyectos Críticos', count: counts.CRÍTICA, style: 'stat-critica', icon: 'ti-alert-hexagon text-danger', level: 'CRÍTICA' },
+            { label: 'Proyectos Advertencia', count: counts.ALTA, style: 'stat-alta', icon: 'ti-alert-triangle text-warning', level: 'ALTA' },
+            { label: 'Proyectos Estables', count: counts.NORMAL, style: 'stat-normal', icon: 'ti-circle-check text-success', level: 'NORMAL' },
+            { label: 'Proyectos Baja', count: counts.BAJA, style: 'stat-baja', icon: 'ti-cube-3d-sphere text-success', level: 'BAJA' },
+            { label: 'Total de Proyectos Activos', count: this.projects.length, style: 'stat-global', icon: 'ti-server text-primary', level: null }
         ];
 
         const container = document.getElementById('statsContainer');
@@ -454,7 +339,9 @@ class InfrastructureMonitor {
 
         container.innerHTML = cardsData.map(c => `
             <div class="col-3">
-                <div class="card h-100 card-stat ${c.style} border shadow-sm">
+                <div class="card h-100 card-stat ${c.style} border shadow-sm" role="button" style="cursor:pointer;"
+                    onclick="monitor.openCriticalityModal(${c.level ? `'${c.level}'` : 'null'})"
+                    title="Ver proyectos">
                     <div class="card-body p-3 d-flex align-items-center justify-content-between">
                         <div>
                             <span class="small fw-medium text-muted d-block mb-1">${c.label}</span>
@@ -465,6 +352,75 @@ class InfrastructureMonitor {
                 </div>
             </div>
         `).join('');
+    }
+
+    /**
+     * Abre el modal flotante con los proyectos de una criticidad específica
+     * (o todos, si level es null). Se dispara al hacer clic en las tarjetas
+     * de resumen (Críticos / Advertencia / Estables / Baja / Total).
+     */
+    openCriticalityModal(level) {
+        const list = level ? this.projects.filter(p => p.level === level) : this.projects;
+
+        const titleEl = document.getElementById('criticalityModalTitle');
+        if (titleEl) {
+            titleEl.innerHTML = level
+                ? `Proyectos &mdash; Criticidad <span style="color:${this.getLevelColor(level)};">${level}</span>`
+                : 'Todos los Proyectos';
+        }
+
+        const bodyEl = document.getElementById('criticalityModalBody');
+        if (bodyEl) bodyEl.innerHTML = this.buildCriticalityListHtml(list);
+
+        if (this.bsCriticalityModal) this.bsCriticalityModal.show();
+    }
+
+    /**
+     * HTML de la lista de proyectos dentro del modal de criticidad.
+     * Cada fila es clicable y lleva al detalle completo (con bitácora).
+     */
+    buildCriticalityListHtml(list) {
+        if (!list.length) {
+            return `<div class="text-center text-muted small py-4">No hay proyectos con esta criticidad.</div>`;
+        }
+
+        return `
+            <div class="d-flex flex-column gap-2">
+                ${list.map(p => {
+                    const idx = this.projects.findIndex(pr => pr.id === p.id);
+                    return `
+                    <button type="button" onclick="monitor.openProjectFromCriticality(${idx})"
+                        class="btn text-start border rounded p-3 d-flex justify-content-between align-items-center w-100">
+                        <div>
+                            <div class="font-monospace small text-muted">${p.id}</div>
+                            <div class="fw-bold">${this.escapeHtml(p.name)}</div>
+                            <div class="small text-muted"><i class="ti ti-user"></i> ${this.escapeHtml(p.lead || '-')}</div>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge rounded-1 small mb-1 d-inline-block" style="background:${this.getLevelColor(p.level)};color:#0a0e17;">${p.level}</span>
+                            <div class="fw-bold">${p.progress}%</div>
+                        </div>
+                    </button>
+                `;
+                }).join('')}
+            </div>
+        `;
+    }
+
+    /**
+     * Desde el modal de criticidad, cierra esa ventana y abre el detalle
+     * completo del proyecto elegido (incluye su bitácora de avances).
+     */
+    openProjectFromCriticality(index) {
+        const modalEl = document.getElementById('criticalityModal');
+        const openDetail = () => this.openModal(index);
+
+        if (this.bsCriticalityModal && modalEl) {
+            modalEl.addEventListener('hidden.bs.modal', openDetail, { once: true });
+            this.bsCriticalityModal.hide();
+        } else {
+            openDetail();
+        }
     }
 
     updateChartData() {
