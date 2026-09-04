@@ -825,6 +825,318 @@ class InfrastructureMonitor {
         if (reportView) reportView.classList.add('d-none');
         document.querySelectorAll('.no-print').forEach(el => el.classList.remove('d-none'));
     }
+
+    // --- REPORTES: helpers ---
+
+    /**
+     * Color oficial según el nivel de criticidad (mismos tonos que las tarjetas del dashboard)
+     */
+    getLevelColor(level) {
+        switch (level) {
+            case 'CRÍTICA': return '#ef4444';
+            case 'ALTA': return '#f59e0b';
+            case 'NORMAL': return '#10b981';
+            case 'BAJA': return '#8443c0';
+            default: return '#3b82f6';
+        }
+    }
+
+    /**
+     * Aclara un color hex un % dado (para generar el degradado del gauge)
+     */
+    shadeColor(hex, percent) {
+        const num = parseInt(hex.replace('#', ''), 16);
+        let r = (num >> 16) + Math.round((255 * percent) / 100);
+        let g = ((num >> 8) & 0x00ff) + Math.round((255 * percent) / 100);
+        let b = (num & 0x0000ff) + Math.round((255 * percent) / 100);
+        r = Math.min(255, Math.max(0, r));
+        g = Math.min(255, Math.max(0, g));
+        b = Math.min(255, Math.max(0, b));
+        return `#${(0x1000000 + r * 0x10000 + g * 0x100 + b).toString(16).slice(1)}`;
+    }
+
+    /**
+     * Genera la imagen (dataURL PNG) de un gauge con efecto 3D (degradado + sombra + relieve),
+     * usado en el reporte PDF. ECharts no soporta gauges nativos en WebGL/3D real (ver nota
+     * al usuario); este efecto simula profundidad con gradiente + shadowBlur, muy usado en
+     * dashboards para dar sensación "3D" sin depender de librerías pesadas adicionales.
+     */
+    renderGaugeImage(percent, colorHex) {
+        return new Promise((resolve) => {
+            const holder = document.createElement('div');
+            holder.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:260px;height:260px;';
+            document.body.appendChild(holder);
+
+            const chart = echarts.init(holder, null, { width: 260, height: 260 });
+            chart.setOption({
+                animation: false,
+                backgroundColor: 'transparent',
+                series: [{
+                    type: 'gauge',
+                    startAngle: 210,
+                    endAngle: -30,
+                    min: 0,
+                    max: 100,
+                    radius: '85%',
+                    pointer: { show: false },
+                    progress: {
+                        show: true,
+                        width: 22,
+                        roundCap: true,
+                        itemStyle: {
+                            color: {
+                                type: 'linearGradient',
+                                x: 0, y: 0, x2: 1, y2: 1,
+                                colorStops: [
+                                    { offset: 0, color: this.shadeColor(colorHex, 30) },
+                                    { offset: 1, color: colorHex }
+                                ]
+                            },
+                            shadowBlur: 14,
+                            shadowColor: 'rgba(0,0,0,0.6)',
+                            shadowOffsetY: 6
+                        }
+                    },
+                    axisLine: {
+                        lineStyle: {
+                            width: 22,
+                            color: [[1, 'rgba(148,163,184,0.15)']],
+                            shadowBlur: 6,
+                            shadowColor: 'rgba(0,0,0,0.4)'
+                        }
+                    },
+                    axisTick: { show: false },
+                    splitLine: { show: false },
+                    axisLabel: { show: false },
+                    anchor: { show: false },
+                    detail: {
+                        fontSize: 42,
+                        fontWeight: 'bold',
+                        color: '#f8fafc',
+                        offsetCenter: [0, 0],
+                        formatter: '{value}%'
+                    },
+                    data: [{ value: percent }]
+                }]
+            });
+
+            // animation:false ya renderiza el valor final de inmediato; un pequeño
+            // margen asegura que el canvas terminó de pintar antes de exportarlo.
+            setTimeout(() => {
+                const url = chart.getDataURL({ pixelRatio: 3, backgroundColor: 'transparent' });
+                chart.dispose();
+                document.body.removeChild(holder);
+                resolve(url);
+            }, 80);
+        });
+    }
+
+    // --- REPORTES: Excel (incluye Bitácora de Avances) ---
+
+    async generateExcelReport() {
+        const selected = this.projects.filter(p => p.selected);
+        if (!selected.length) return this.showToast("Selecciona al menos un activo");
+
+        const includeBitacora = document.getElementById('includeBitacoraCheck')?.checked ?? true;
+        const btn = document.getElementById('excelReportBtn');
+        if (btn) btn.disabled = true;
+        this.showToast("Generando Excel...");
+
+        try {
+            const infraData = selected.map(p => ({
+                'ID Core': p.id,
+                'Proyecto': p.name,
+                'Criticidad': p.level,
+                'Progreso': `${p.progress}%`,
+                'Responsable': p.lead
+            }));
+
+            const wb = XLSX.utils.book_new();
+            const wsInfra = XLSX.utils.json_to_sheet(infraData);
+            XLSX.utils.book_append_sheet(wb, wsInfra, "Infraestructura");
+
+            if (includeBitacora) {
+                const bitacoraRows = [];
+                for (const p of selected) {
+                    try {
+                        const updates = await this.apiClient.getProjectUpdates(p.id);
+                        if (!updates || updates.length === 0) {
+                            bitacoraRows.push({
+                                'ID Proyecto': p.id,
+                                'Proyecto': p.name,
+                                'Fecha': '',
+                                'Hora': '',
+                                'Nota': '(Sin avances registrados)',
+                                'Archivos Adjuntos': ''
+                            });
+                        } else {
+                            updates.forEach(u => {
+                                const d = new Date(u.createdAt);
+                                bitacoraRows.push({
+                                    'ID Proyecto': p.id,
+                                    'Proyecto': p.name,
+                                    'Fecha': d.toLocaleDateString('es-MX'),
+                                    'Hora': d.toLocaleTimeString('es-MX'),
+                                    'Nota': u.note,
+                                    'Archivos Adjuntos': (u.files || []).map(f => f.fileName || f.fileUrl).join('; ')
+                                });
+                            });
+                        }
+                    } catch (err) {
+                        bitacoraRows.push({
+                            'ID Proyecto': p.id,
+                            'Proyecto': p.name,
+                            'Fecha': '',
+                            'Hora': '',
+                            'Nota': `(Error al cargar bitácora: ${err.message})`,
+                            'Archivos Adjuntos': ''
+                        });
+                    }
+                }
+                const wsBitacora = XLSX.utils.json_to_sheet(bitacoraRows);
+                XLSX.utils.book_append_sheet(wb, wsBitacora, "Bitácora de Avances");
+            }
+
+            XLSX.writeFile(wb, `Reporte_Infraestructura_${Date.now()}.xlsx`);
+            this.showToast("Excel generado con éxito");
+        } catch (err) {
+            this.showToast(`Error al generar Excel: ${err.message}`);
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    // --- REPORTES: PDF con tema de ciberseguridad + gauges 3D ---
+
+    buildBitacoraHtml(updates) {
+        if (!updates || updates.length === 0) {
+            return `<div style="margin-top:10px;padding-top:8px;border-top:1px solid #1f2f47;color:#64748b;font-size:11px;font-style:italic;">Sin avances registrados en la bitácora.</div>`;
+        }
+        const rows = updates.map(u => {
+            const d = new Date(u.createdAt).toLocaleString('es-MX');
+            const files = (u.files || [])
+                .map(f => `<span style="color:#22d3ee;">&#128206; ${this.escapeHtml(f.fileName || 'archivo')}</span>`)
+                .join(' &nbsp; ');
+            return `
+                <div style="padding:5px 0;border-bottom:1px dashed #1f2f47;font-size:11px;">
+                    <span style="color:#94a3b8;font-family:monospace;">${d}</span>
+                    <div style="color:#e2e8f0;margin-top:2px;">${this.escapeHtml(u.note)}</div>
+                    ${files ? `<div style="margin-top:2px;">${files}</div>` : ''}
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div style="margin-top:10px;padding-top:8px;border-top:1px solid #1f2f47;">
+                <div style="color:#22d3ee;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">
+                    &#128203; Bitácora de Avances
+                </div>
+                ${rows}
+            </div>
+        `;
+    }
+
+    buildPdfHtml(selected, gaugeImages, bitacoraByProject, includeBitacora) {
+        const now = new Date().toLocaleString('es-MX');
+
+        const levelBadge = (level) => {
+            const color = this.getLevelColor(level);
+            return `<span style="background:${color};color:#0a0e17;font-weight:700;font-size:10px;padding:3px 10px;border-radius:4px;letter-spacing:0.5px;">${level}</span>`;
+        };
+
+        const cards = selected.map(p => `
+            <div style="background:#111c2e;border:1px solid #1f2f47;border-left:4px solid ${this.getLevelColor(p.level)};border-radius:8px;padding:16px;margin-bottom:14px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <div>
+                        <div style="font-family:monospace;color:#22d3ee;font-size:11px;letter-spacing:1px;">${p.id}</div>
+                        <div style="color:#f8fafc;font-size:16px;font-weight:700;">${this.escapeHtml(p.name)}</div>
+                    </div>
+                    ${levelBadge(p.level)}
+                </div>
+                <div style="display:flex;gap:16px;align-items:center;margin-top:8px;">
+                    <img src="${gaugeImages[p.id]}" style="width:100px;height:100px;" />
+                    <div style="flex:1;color:#94a3b8;font-size:12px;">
+                        <div><strong style="color:#e2e8f0;">Responsable:</strong> ${this.escapeHtml(p.lead || '-')}</div>
+                        <div><strong style="color:#e2e8f0;">Progreso:</strong> ${p.progress}%</div>
+                    </div>
+                </div>
+                ${includeBitacora ? this.buildBitacoraHtml(bitacoraByProject[p.id]) : ''}
+            </div>
+        `).join('');
+
+        return `
+            <div style="font-family:'Inter',Arial,sans-serif;background:#0a0e17;color:#f8fafc;padding:28px;width:756px;">
+                <div style="display:flex;align-items:center;gap:10px;border-bottom:2px solid #22d3ee;padding-bottom:14px;margin-bottom:18px;">
+                    <div>
+                        <div style="font-size:20px;font-weight:800;color:#22d3ee;letter-spacing:1px;">
+                            &#128737; REPORTE DE INFRAESTRUCTURA
+                        </div>
+                        <div style="color:#64748b;font-size:11px;">Ecosistema Global de Proyectos &middot; Generado ${now}</div>
+                    </div>
+                </div>
+                ${cards}
+            </div>
+        `;
+    }
+
+    async generatePdfReport() {
+        const selected = this.projects.filter(p => p.selected);
+        if (!selected.length) return this.showToast("Selecciona al menos un activo");
+
+        if (!window.jspdf || !window.html2canvas) {
+            return this.showToast("No se pudo cargar el motor de PDF (revisa tu conexión a internet)");
+        }
+
+        const includeBitacora = document.getElementById('includeBitacoraCheck')?.checked ?? true;
+        const btn = document.getElementById('pdfReportBtn');
+        if (btn) btn.disabled = true;
+        this.showToast("Generando PDF...");
+
+        const container = document.getElementById('pdfReportContainer');
+
+        try {
+            // 1. Gauges 3D por proyecto
+            const gaugeImages = {};
+            for (const p of selected) {
+                gaugeImages[p.id] = await this.renderGaugeImage(p.progress, this.getLevelColor(p.level));
+            }
+
+            // 2. Bitácora por proyecto (opcional)
+            const bitacoraByProject = {};
+            if (includeBitacora) {
+                for (const p of selected) {
+                    try {
+                        bitacoraByProject[p.id] = await this.apiClient.getProjectUpdates(p.id);
+                    } catch (err) {
+                        bitacoraByProject[p.id] = [];
+                    }
+                }
+            }
+
+            // 3. Armar el HTML con el tema de ciberseguridad
+            container.innerHTML = this.buildPdfHtml(selected, gaugeImages, bitacoraByProject, includeBitacora);
+
+            // 4. Convertir a PDF real (respeta colores/estilos, no depende del diálogo de impresión)
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'pt', 'a4');
+
+            await doc.html(container, {
+                x: 0,
+                y: 0,
+                width: 595,
+                windowWidth: 820,
+                html2canvas: { scale: 2, backgroundColor: '#0a0e17', useCORS: true }
+            });
+
+            doc.save(`Reporte_Infraestructura_${Date.now()}.pdf`);
+            this.showToast("PDF generado con éxito");
+        } catch (err) {
+            this.showToast(`Error al generar PDF: ${err.message}`);
+        } finally {
+            container.innerHTML = '';
+            if (btn) btn.disabled = false;
+        }
+    }
 }
 
 const monitor = new InfrastructureMonitor();
