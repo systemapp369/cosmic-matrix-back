@@ -214,30 +214,14 @@ class InfrastructureMonitor {
         paginatedProjects.forEach((p) => {
             const originalIndex = this.projects.findIndex(proj => proj.id === p.id);
 
-            let colorHex = '#108fb9';
-            let borderClass = 'border-start border-success border-1';
-
-            if (p.level === 'CRÍTICA') {
-                colorHex = '#ef4444';
-                borderClass = 'border-start border-danger border-1';
-            }
-            if (p.level === 'NORMAL') {
-                colorHex = '#10b981';
-                borderClass = 'border-start border-success border-1';
-            }
-            if (p.level === 'BAJA') {
-                colorHex = '#8443c0';
-                borderClass = 'border-start border-success border-1';
-            }
-            else if (p.level === 'ALTA') {
-                colorHex = '#f59e0b';
-                borderClass = 'border-start border-warning border-1';
-            }
+            // Un solo color oficial por nivel, reutilizado tanto en el borde de
+            // la tarjeta como en el gauge, para que siempre coincidan exactamente.
+            const colorHex = this.getLevelColor(p.level);
 
             const col = document.createElement('div');
             col.className = 'col-12 col-md-6 col-lg-4 col-xl-3';
             col.innerHTML = `
-                <div class="card h-100 shadow-sm ${borderClass}" style="transition: transform 0.15s ease;">
+                <div class="card h-100 shadow-sm" style="transition: transform 0.15s ease; border-color: ${colorHex} !important;">
                     <div class="card-body p-3 d-flex flex-column justify-content-between">
                         <div class="d-flex align-items-center justify-content-between mb-3">
                             <div class="d-flex align-items-center gap-2">
