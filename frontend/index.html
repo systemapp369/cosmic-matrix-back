@@ -44,37 +44,32 @@
 
                 <div class="col-12 col-md-auto d-flex flex-wrap gap-2 justify-content-md-end align-items-center">
                     <button onclick="monitor.toggleTheme()"
-                        class="btn btn-icon btn-ghost-secondary text-muted border-0 p-2 me-2" title="Cambiar Tema">
+                        class="btn btn-icon btn-ghost-secondary text-muted border-0 p-2 me-1" title="Cambiar Tema">
                         <i id="theme-icon" class="ti ti-sun fs-4"></i>
                     </button>
 
                     <button onclick="monitor.openCreateModal()"
-                        class="btn btn-dark btn-sm d-flex align-items-center gap-1">
+                        class="btn btn-dark btn-sm rounded-pill px-3 d-flex align-items-center gap-1" title="Crear un nuevo proyecto">
                         <i class="ti ti-plus fs-6"></i> Nuevo Proyecto
                     </button>
                     <button onclick="monitor.toggleSelectAll()" id="selectAllBtn"
-                        class="btn btn-outline-secondary btn-sm">
-                        Desmarcar Todos
+                        class="btn btn-outline-secondary btn-sm rounded-pill px-3 d-flex align-items-center gap-1" title="Marcar/Desmarcar todos los proyectos">
+                        <i class="ti ti-checkbox fs-6"></i> Desmarcar Todos
                     </button>
                     <button onclick="monitor.exportToExcel()"
-                        class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
+                        class="btn btn-outline-secondary btn-sm rounded-pill px-3 d-flex align-items-center gap-1" title="Exportar todo a Excel">
                         <i class="ti ti-file-spreadsheet fs-6"></i> Excel
                     </button>
                     <button onclick="monitor.generateReport()"
-                        class="btn btn-primary btn-sm d-flex align-items-center gap-1">
+                        class="btn btn-primary btn-sm rounded-pill px-3 d-flex align-items-center gap-1" title="Generar reporte de los proyectos seleccionados">
                         <i class="ti ti-report-analytics fs-6"></i> Reporte (<span id="selectedCount">0</span>)
                     </button>
-                    
                 </div>
+            </div>
+
+            <div id="statsContainer" class="d-flex flex-wrap gap-2 mt-3 pt-3 border-top">
             </div>
         </header>
-
-        <div class="row g-3 mb-4 no-print">
-            <div class="col-12">
-                <div id="statsContainer" class="row g-3">
-                </div>
-            </div>
-        </div>
 
         <div class="row g-3 mb-4 no-print flex-grow-1">
             <div class="col-12 col-xl-12 d-flex">

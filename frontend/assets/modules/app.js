@@ -316,31 +316,34 @@ class InfrastructureMonitor {
         this.projects.forEach(p => counts[p.level]++);
 
         const cardsData = [
-            { label: 'Proyectos Críticos', count: counts.CRÍTICA, style: 'stat-critica', icon: 'ti-alert-hexagon text-danger', level: 'CRÍTICA' },
-            { label: 'Proyectos Advertencia', count: counts.ALTA, style: 'stat-alta', icon: 'ti-alert-triangle text-warning', level: 'ALTA' },
-            { label: 'Proyectos Estables', count: counts.NORMAL, style: 'stat-normal', icon: 'ti-circle-check text-success', level: 'NORMAL' },
-            { label: 'Proyectos Baja', count: counts.BAJA, style: 'stat-baja', icon: 'ti-cube-3d-sphere text-success', level: 'BAJA' },
-            { label: 'Total de Proyectos Activos', count: this.projects.length, style: 'stat-global', icon: 'ti-server text-primary', level: null }
+            { label: 'Proyectos Críticos', count: counts.CRÍTICA, icon: 'ti-alert-hexagon', level: 'CRÍTICA' },
+            { label: 'Proyectos Advertencia', count: counts.ALTA, icon: 'ti-alert-triangle', level: 'ALTA' },
+            { label: 'Proyectos Estables', count: counts.NORMAL, icon: 'ti-circle-check', level: 'NORMAL' },
+            { label: 'Proyectos Baja', count: counts.BAJA, icon: 'ti-cube-3d-sphere', level: 'BAJA' },
+            { label: 'Total Activos', count: this.projects.length, icon: 'ti-server', level: null }
         ];
 
         const container = document.getElementById('statsContainer');
         if (!container) return;
 
-        container.innerHTML = cardsData.map(c => `
-            <div class="col-3">
-                <div class="card h-100 card-stat ${c.style} border shadow-sm" role="button" style="cursor:pointer;"
+        container.innerHTML = cardsData.map(c => {
+            const color = c.level ? this.getLevelColor(c.level) : '#3b82f6';
+            return `
+                <div class="d-flex align-items-center gap-2 px-3 py-2 rounded-3 border flex-fill"
+                    role="button" style="cursor:pointer; min-width:150px; background: rgba(255,255,255,0.02);"
                     onclick="monitor.openCriticalityModal(${c.level ? `'${c.level}'` : 'null'})"
                     title="Ver proyectos">
-                    <div class="card-body p-3 d-flex align-items-center justify-content-between">
-                        <div>
-                            <span class="small fw-medium text-muted d-block mb-1">${c.label}</span>
-                            <h3 class="h4 mb-0 fw-bold tracking-tight">${c.count}</h3>
-                        </div>
-                        <i class="ti ${c.icon} fs-2 opacity-75"></i>
+                    <span class="d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                        style="width:38px;height:38px;background:${color}22;">
+                        <i class="ti ${c.icon} fs-5" style="color:${color};"></i>
+                    </span>
+                    <div class="d-flex flex-column lh-1">
+                        <span class="small text-muted mb-1">${c.label}</span>
+                        <span class="fw-bold fs-6">${c.count}</span>
                     </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     /**
