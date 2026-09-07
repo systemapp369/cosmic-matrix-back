@@ -34,6 +34,9 @@ class Background3D {
         this._buildBackgroundGradient();
         this._buildStreetMap();
         this._buildCityCluster();
+        this._buildParks();
+        this._buildCranes();
+        this._buildTraffic();
         this._rebuildDrones([]); // enjambre neutro hasta que lleguen datos reales
         this._bindEvents();
 
@@ -203,6 +206,153 @@ class Background3D {
         this.scene.add(cityGroup);
         this.cityGroup = cityGroup;
     }
+
+    /**
+     * Parques: parches verdes con árboles esparcidos entre las torres,
+     * como en la imagen de referencia con áreas verdes junto a los edificios.
+     */
+    _buildParks() {
+        const parksGroup = new THREE.Group();
+        const grassMat = new THREE.MeshStandardMaterial({
+            color: 0x14532d, emissive: 0x0f3d22, emissiveIntensity: 0.35, roughness: 0.9
+        });
+        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4a3222, roughness: 0.9 });
+        const leafMat = new THREE.MeshStandardMaterial({
+            color: 0x22c55e, emissive: 0x14532d, emissiveIntensity: 0.4, roughness: 0.7
+        });
+
+        this.trees = [];
+
+        for (let i = 0; i < 9; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 14 + Math.random() * 30;
+            const cx = this.cityCenter.x + Math.cos(angle) * radius;
+            const cz = this.cityCenter.z + Math.sin(angle) * radius;
+
+            const patch = new THREE.Mesh(new THREE.CircleGeometry(3 + Math.random() * 2, 16), grassMat);
+            patch.rotation.x = -Math.PI / 2;
+            patch.position.set(cx, -0.15, cz);
+            parksGroup.add(patch);
+
+            const treeCount = 3 + Math.floor(Math.random() * 4);
+            for (let j = 0; j < treeCount; j++) {
+                const tAngle = Math.random() * Math.PI * 2;
+                const tRadius = Math.random() * 2.4;
+                const tx = cx + Math.cos(tAngle) * tRadius;
+                const tz = cz + Math.sin(tAngle) * tRadius;
+
+                const treeGroup = new THREE.Group();
+                const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.11, 1.1, 6), trunkMat);
+                trunk.position.y = 0.55;
+                treeGroup.add(trunk);
+
+                const foliage = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.6, 7), leafMat);
+                foliage.position.y = 1.5;
+                treeGroup.add(foliage);
+
+                treeGroup.position.set(tx, 0, tz);
+                treeGroup.scale.setScalar(0.8 + Math.random() * 0.6);
+                parksGroup.add(treeGroup);
+
+                this.trees.push({ group: treeGroup, phase: Math.random() * Math.PI * 2 });
+            }
+        }
+
+        this.scene.add(parksGroup);
+    }
+
+    /**
+     * Grúas torre de construcción (como en las imágenes de referencia): mástil
+     * + pluma que gira lentamente + gancho que sube y baja simulando trabajo.
+     */
+    _buildCranes() {
+        const craneMat = new THREE.MeshStandardMaterial({ color: 0xf5b942, roughness: 0.5, metalness: 0.4 });
+        const cabinMat = new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.6 });
+        const cableMat = new THREE.LineBasicMaterial({ color: 0x94a3b8 });
+
+        this.cranes = [];
+
+        for (let i = 0; i < 3; i++) {
+            const angle = (i / 3) * Math.PI * 2 + Math.random();
+            const radius = 20 + Math.random() * 12;
+            const cx = this.cityCenter.x + Math.cos(angle) * radius;
+            const cz = this.cityCenter.z + Math.sin(angle) * radius;
+            const mastHeight = 28 + Math.random() * 8;
+
+            const craneRoot = new THREE.Group();
+            craneRoot.position.set(cx, 0, cz);
+
+            // Mástil vertical
+            const mast = new THREE.Mesh(new THREE.BoxGeometry(0.5, mastHeight, 0.5), craneMat);
+            mast.position.y = mastHeight / 2;
+            craneRoot.add(mast);
+
+            // Cabina + pluma (grupo que rota para simular la grúa trabajando)
+            const jibGroup = new THREE.Group();
+            jibGroup.position.y = mastHeight;
+            craneRoot.add(jibGroup);
+
+            const cabin = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.7, 0.9), cabinMat);
+            jibGroup.add(cabin);
+
+            const jibLen = 11;
+            const jib = new THREE.Mesh(new THREE.BoxGeometry(jibLen, 0.35, 0.35), craneMat);
+            jib.position.set(jibLen / 2 - 1, 0.4, 0);
+            jibGroup.add(jib);
+
+            const counterJib = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.35, 0.35), craneMat);
+            counterJib.position.set(-2.5, 0.4, 0);
+            jibGroup.add(counterJib);
+
+            const counterWeight = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), cabinMat);
+            counterWeight.position.set(-4, 0, 0);
+            jibGroup.add(counterWeight);
+
+            // Cable + gancho (se mueve verticalmente)
+            const hookAnchorX = jibLen - 2;
+            const cableGeo = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(hookAnchorX, 0.4, 0), new THREE.Vector3(hookAnchorX, -6, 0)
+            ]);
+            const cable = new THREE.Line(cableGeo, cableMat);
+            jibGroup.add(cable);
+
+            const hook = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), cabinMat);
+            hook.position.set(hookAnchorX, -6, 0);
+            jibGroup.add(hook);
+
+            this.scene.add(craneRoot);
+            this.cranes.push({
+                jibGroup, cable, hook, cableGeo, hookAnchorX,
+                rotSpeed: (Math.random() > 0.5 ? 1 : -1) * (0.05 + Math.random() * 0.05),
+                hookPhase: Math.random() * Math.PI * 2
+            });
+        }
+    }
+
+    /**
+     * Pequeños vehículos de obra recorriendo las avenidas principales, para
+     * dar más movimiento a nivel de calle.
+     */
+    _buildTraffic() {
+        const vehicleMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.5, metalness: 0.3 });
+        this.vehicles = [];
+
+        for (let i = 0; i < 5; i++) {
+            const body = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.7, 0.8), vehicleMat);
+            body.position.y = 0.4;
+            this.scene.add(body);
+
+            this.vehicles.push({
+                mesh: body,
+                radius: 18 + i * 6,
+                speed: 0.08 + Math.random() * 0.06,
+                phase: Math.random() * Math.PI * 2,
+                dir: Math.random() > 0.5 ? 1 : -1
+            });
+        }
+    }
+
+
 
     /**
      * Construye un dron individual (cuerpo + 4 brazos + 4 hélices + luz de
@@ -408,6 +558,39 @@ class Background3D {
 
         // Rotación lenta del clúster completo, para reforzar la sensación de movimiento
         if (this.cityGroup) this.cityGroup.rotation.y = Math.sin(t * 0.02) * 0.04;
+
+        // --- Árboles: leve balanceo, como si los moviera el viento ---
+        if (this.trees) {
+            this.trees.forEach(tr => {
+                tr.group.rotation.z = Math.sin(t * 0.8 + tr.phase) * 0.05;
+            });
+        }
+
+        // --- Grúas de construcción: la pluma gira y el gancho sube/baja trabajando ---
+        if (this.cranes) {
+            this.cranes.forEach(c => {
+                c.jibGroup.rotation.y += c.rotSpeed * 0.016;
+
+                const hookY = -3 - (Math.sin(t * 0.6 + c.hookPhase) * 0.5 + 0.5) * 5;
+                c.hook.position.y = hookY;
+                const positions = c.cableGeo.attributes.position;
+                positions.setY(1, hookY + 0.4);
+                positions.needsUpdate = true;
+            });
+        }
+
+        // --- Vehículos de obra: recorren las avenidas en bucle ---
+        if (this.vehicles) {
+            this.vehicles.forEach(v => {
+                const a = t * v.speed * v.dir + v.phase;
+                v.mesh.position.set(
+                    this.cityCenter.x + Math.cos(a) * v.radius,
+                    0.4,
+                    this.cityCenter.z + Math.sin(a) * v.radius
+                );
+                v.mesh.rotation.y = -a + (v.dir > 0 ? Math.PI / 2 : -Math.PI / 2);
+            });
+        }
 
         this.renderer.render(this.scene, this.camera);
     }
