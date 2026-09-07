@@ -194,6 +194,11 @@ class InfrastructureMonitor {
         const nodesGrid = document.getElementById('nodesGrid');
         if (!nodesGrid) return;
 
+        // Mantiene el enjambre de drones del fondo 3D en sincronía con los datos reales
+        if (this.background3D) {
+            this.background3D.syncProjects(this.projects);
+        }
+
         this.activeMiniCharts.forEach(chart => chart.dispose());
         this.activeMiniCharts = [];
         nodesGrid.innerHTML = '';
