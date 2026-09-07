@@ -1,14 +1,19 @@
 /**
  * Background3D.js
- * Fondo interactivo en 3D: una "ciudad" wireframe (estilo skyline digital) con
- * un enjambre de drones sobrevolándola. Cada dron representa un proyecto real
- * del sistema, y su color corresponde EXACTAMENTE al color del anillo de
- * criticidad de ese proyecto (mismo mapeo que getLevelColor() en app.js):
+ * Fondo interactivo en 3D: una ciudad "holográfica" (torres glow + wireframe)
+ * sobre un piso tipo mapa/blueprint de calles, sobrevolada por un enjambre de
+ * drones. La cámara recorre la ciudad de forma AUTÓNOMA Y CONTINUA (órbita +
+ * variación de altitud), pasando de vista a nivel de calle a vista aérea y
+ * viceversa, dando la sensación de estar "recorriendo" la ciudad. El mouse
+ * añade un paralaje adicional sutil por encima de ese recorrido.
+ *
+ * Cada dron representa un proyecto real del sistema; su color corresponde
+ * EXACTAMENTE al color del anillo de criticidad de ese proyecto (mismo mapeo
+ * que getLevelColor() en app.js):
  *   CRÍTICA -> rojo · ALTA -> ámbar · NORMAL -> verde · BAJA -> morado
  *
  * app.js debe llamar a background3D.syncProjects(this.projects) cada vez que
- * la lista de proyectos cambia (carga inicial, alta, edición, baja), para que
- * el número de drones y sus colores reflejen los datos reales.
+ * la lista de proyectos cambia, para que el enjambre refleje los datos reales.
  *
  * Requiere que <script src=".../three.min.js"></script> esté cargado antes.
  */
@@ -23,11 +28,12 @@ class Background3D {
         this.mouse = { x: 0, y: 0 };
         this.time = 0;
         this.nodes = [];
+        this.cityCenter = new THREE.Vector3(10, 0, -10);
 
         this._initScene();
         this._buildBackgroundGradient();
-        this._buildCity();
-        this._buildGroundPath();
+        this._buildStreetMap();
+        this._buildCityCluster();
         this._rebuildDrones([]); // enjambre neutro hasta que lleguen datos reales
         this._bindEvents();
 
@@ -51,10 +57,10 @@ class Background3D {
         const h = window.innerHeight;
 
         this.scene = new THREE.Scene();
-        this.scene.fog = new THREE.FogExp2(0x040917, 0.0075);
+        this.scene.fog = new THREE.FogExp2(0x030814, 0.0065);
 
-        this.camera = new THREE.PerspectiveCamera(58, w / h, 0.1, 600);
-        this.camera.position.set(0, 6, 46);
+        this.camera = new THREE.PerspectiveCamera(55, w / h, 0.1, 700);
+        this.camera.position.set(0, 20, 70);
 
         this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -63,11 +69,11 @@ class Background3D {
         this.container.appendChild(this.renderer.domElement);
 
         const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
-        this.renderer.domElement.style.opacity = isDark ? '0.9' : '0.32';
+        this.renderer.domElement.style.opacity = isDark ? '0.92' : '0.32';
 
-        this.scene.add(new THREE.AmbientLight(0x40506a, 1.1));
-        const key = new THREE.PointLight(0x2b6bff, 1.6, 260);
-        key.position.set(0, 30, 40);
+        this.scene.add(new THREE.AmbientLight(0x3a4a6a, 1.2));
+        const key = new THREE.PointLight(0x3b82f6, 2, 300);
+        key.position.set(this.cityCenter.x, 60, this.cityCenter.z);
         this.scene.add(key);
 
         this.droneGroup = new THREE.Group();
@@ -75,100 +81,127 @@ class Background3D {
     }
 
     /**
-     * Fondo con degradado radial azul profundo (igual a la imagen de referencia:
-     * centro más claro, bordes casi negros).
+     * Degradado radial azul profundo de fondo (igual espíritu que las
+     * imágenes de referencia: centro más claro, bordes casi negros).
      */
     _buildBackgroundGradient() {
         const canvas = document.createElement('canvas');
         canvas.width = 512;
         canvas.height = 512;
         const ctx = canvas.getContext('2d');
-        const gradient = ctx.createRadialGradient(256, 200, 40, 256, 256, 420);
-        gradient.addColorStop(0, '#0a1a3d');
+        const gradient = ctx.createRadialGradient(256, 220, 30, 256, 256, 430);
+        gradient.addColorStop(0, '#0c1c40');
         gradient.addColorStop(0.5, '#050f28');
-        gradient.addColorStop(1, '#02050f');
+        gradient.addColorStop(1, '#02040d');
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, 512, 512);
-
-        const texture = new THREE.CanvasTexture(canvas);
-        this.scene.background = texture;
+        this.scene.background = new THREE.CanvasTexture(canvas);
     }
 
     /**
-     * Skyline wireframe a ambos lados, formando una "avenida" que se pierde en
-     * la distancia, como en la imagen de referencia.
+     * Piso tipo "mapa/blueprint de calles" (como la vista aérea de
+     * referencia): una textura de calles finas + un par de avenidas más
+     * gruesas, aplicada a un plano grande a nivel de piso.
      */
-    _buildCity() {
+    _buildStreetMap() {
+        const size = 1024;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#040a1c';
+        ctx.fillRect(0, 0, size, size);
+
+        // Calles finas (grid irregular, como un plano de ciudad)
+        ctx.strokeStyle = 'rgba(60, 110, 220, 0.35)';
+        ctx.lineWidth = 1;
+        let x = 0;
+        while (x < size) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, size);
+            ctx.stroke();
+            x += 22 + Math.random() * 26;
+        }
+        let y = 0;
+        while (y < size) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(size, y);
+            ctx.stroke();
+            y += 22 + Math.random() * 26;
+        }
+
+        // Avenidas principales, más brillantes
+        ctx.strokeStyle = 'rgba(90, 216, 255, 0.55)';
+        ctx.lineWidth = 3;
+        for (let i = 0; i < 5; i++) {
+            const vx = 120 + i * 190 + (Math.random() - 0.5) * 30;
+            ctx.beginPath(); ctx.moveTo(vx, 0); ctx.lineTo(vx, size); ctx.stroke();
+        }
+        for (let i = 0; i < 4; i++) {
+            const hy = 150 + i * 220 + (Math.random() - 0.5) * 30;
+            ctx.beginPath(); ctx.moveTo(0, hy); ctx.lineTo(size, hy); ctx.stroke();
+        }
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(1, 1);
+
+        const geo = new THREE.PlaneGeometry(420, 420);
+        const mat = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0.85 });
+        const ground = new THREE.Mesh(geo, mat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.set(this.cityCenter.x, -0.2, this.cityCenter.z);
+        this.scene.add(ground);
+    }
+
+    /**
+     * Clúster de torres "holográficas" (glass glow + contorno wireframe),
+     * agrupadas como en la vista aérea de referencia, sobre el mapa de calles.
+     */
+    _buildCityCluster() {
         const cityGroup = new THREE.Group();
-        const buildingMat = new THREE.LineBasicMaterial({ color: 0x3b6bff, transparent: true, opacity: 0.4 });
-        const roofMat = new THREE.LineBasicMaterial({ color: 0x5ad8ff, transparent: true, opacity: 0.55 });
+        const towerCount = 34;
 
-        for (let side = -1; side <= 1; side += 2) {
-            for (let i = 0; i < 16; i++) {
-                const z = -6 - i * 8 - Math.random() * 3;
-                const distFactor = Math.min(Math.abs(z) / 130, 1);
-                const xBase = side * (9 + distFactor * 46);
+        for (let i = 0; i < towerCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = Math.pow(Math.random(), 0.6) * 32; // más denso al centro
+            const x = this.cityCenter.x + Math.cos(angle) * radius;
+            const z = this.cityCenter.z + Math.sin(angle) * radius;
 
-                const w = 4 + Math.random() * 6;
-                const h = 7 + Math.random() * 30;
-                const d = 4 + Math.random() * 6;
+            const distFactor = radius / 32;
+            const w = 2 + Math.random() * 3.5;
+            const d = 2 + Math.random() * 3.5;
+            const h = (6 + Math.random() * 26) * (1 - distFactor * 0.4);
 
-                const geo = new THREE.BoxGeometry(w, h, d);
-                const edges = new THREE.EdgesGeometry(geo);
-                const building = new THREE.LineSegments(edges, buildingMat);
-                building.position.set(xBase + (Math.random() - 0.5) * 3, h / 2 - 16, z);
-                cityGroup.add(building);
+            const geo = new THREE.BoxGeometry(w, h, d);
 
-                // pequeño "remate" brillante en la azotea, como puntos de luz del skyline
-                const roofDot = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.18, 6, 6),
-                    new THREE.MeshBasicMaterial({ color: 0x5ad8ff })
-                );
-                roofDot.position.set(building.position.x, h - 16, z);
-                cityGroup.add(roofDot);
-            }
+            const glassMat = new THREE.MeshStandardMaterial({
+                color: 0x2f6bff, emissive: 0x2f6bff, emissiveIntensity: 0.55,
+                transparent: true, opacity: 0.28, roughness: 0.3, metalness: 0.6
+            });
+            const tower = new THREE.Mesh(geo, glassMat);
+            tower.position.set(x, h / 2, z);
+            cityGroup.add(tower);
+
+            const edges = new THREE.EdgesGeometry(geo);
+            const edgeMat = new THREE.LineBasicMaterial({ color: 0x8fd6ff, transparent: true, opacity: 0.7 });
+            const outline = new THREE.LineSegments(edges, edgeMat);
+            outline.position.copy(tower.position);
+            cityGroup.add(outline);
+
+            const roofDot = new THREE.Mesh(
+                new THREE.SphereGeometry(0.16, 6, 6),
+                new THREE.MeshBasicMaterial({ color: 0x5ad8ff })
+            );
+            roofDot.position.set(x, h + 0.2, z);
+            cityGroup.add(roofDot);
         }
 
         this.scene.add(cityGroup);
         this.cityGroup = cityGroup;
-    }
-
-    /**
-     * "Avenida" digital en el piso: red de puntos luminosos conectados que se
-     * pierde hacia el horizonte, como en la imagen de referencia.
-     */
-    _buildGroundPath() {
-        const grid = new THREE.GridHelper(260, 40, 0x1c3a7a, 0x14264f);
-        grid.position.y = -16;
-        grid.material.transparent = true;
-        grid.material.opacity = 0.25;
-        this.scene.add(grid);
-
-        const waypoints = [];
-        for (let i = 0; i < 14; i++) {
-            const z = 30 - i * 6;
-            const x = Math.sin(i * 0.6) * 6;
-            waypoints.push(new THREE.Vector3(x, -15.7, z));
-        }
-
-        const dotMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee });
-        waypoints.forEach(p => {
-            const dot = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), dotMat);
-            dot.position.copy(p);
-            this.scene.add(dot);
-        });
-
-        const linePositions = [];
-        for (let i = 0; i < waypoints.length - 1; i++) {
-            linePositions.push(
-                waypoints[i].x, waypoints[i].y, waypoints[i].z,
-                waypoints[i + 1].x, waypoints[i + 1].y, waypoints[i + 1].z
-            );
-        }
-        const lineGeo = new THREE.BufferGeometry();
-        lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
-        const lineMat = new THREE.LineBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.5 });
-        this.scene.add(new THREE.LineSegments(lineGeo, lineMat));
     }
 
     /**
@@ -221,17 +254,14 @@ class Background3D {
 
     /**
      * Reconstruye el enjambre completo de drones a partir de la lista de
-     * proyectos (uno por proyecto). Si no hay proyectos aún, arma un enjambre
-     * neutro de relleno para no dejar la escena vacía.
+     * proyectos (uno por proyecto), sobrevolando el clúster de torres.
      */
     _rebuildDrones(projects) {
-        // Materiales compartidos (brazos/hélices no cambian de color, solo el cuerpo/luz)
         if (!this.armMat) {
             this.armMat = new THREE.MeshStandardMaterial({ color: 0x18202f, roughness: 0.6, metalness: 0.5 });
             this.rotorMat = new THREE.MeshStandardMaterial({ color: 0x3a4a63, transparent: true, opacity: 0.5, roughness: 0.3 });
         }
 
-        // Limpia el enjambre anterior
         this.nodes.forEach(n => this.droneGroup.remove(n.group));
         this.nodes = [];
 
@@ -243,10 +273,12 @@ class Background3D {
             const colorHex = this._levelColor(p.level);
             const { group, rotors, light, bodyMat } = this._createDrone(colorHex);
 
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 8 + Math.random() * 34;
             const base = new THREE.Vector3(
-                (Math.random() - 0.5) * 90,
-                4 + Math.random() * 22,
-                (Math.random() - 0.5) * 60 - 5
+                this.cityCenter.x + Math.cos(angle) * radius,
+                14 + Math.random() * 20,
+                this.cityCenter.z + Math.sin(angle) * radius
             );
             group.position.copy(base);
             group.scale.setScalar(0.9 + Math.random() * 0.6);
@@ -263,8 +295,7 @@ class Background3D {
             });
         });
 
-        // Red de líneas entre drones cercanos (fleet en formación/comunicación)
-        const maxDist = 24;
+        const maxDist = 22;
         const linePositions = [];
         this.linkPairs = [];
         for (let i = 0; i < this.nodes.length; i++) {
@@ -297,7 +328,6 @@ class Background3D {
             return;
         }
 
-        // Mismo número de proyectos: solo actualiza colores por si cambió la criticidad
         projects.forEach((p, i) => {
             const n = this.nodes[i];
             if (!n) return;
@@ -335,18 +365,17 @@ class Background3D {
         this.time = ts * 0.001;
         const t = this.time;
 
-        // Vuelo: flotación + deriva suave + hélices girando + ligero "banqueo"
+        // --- Vuelo de los drones (flotación + deriva + hélices + banqueo) ---
         this.nodes.forEach(n => {
             const bobY = Math.sin(t * n.speed + n.phase) * n.amp;
-            const driftX = Math.cos(t * 0.15 + n.driftPhase) * 7;
-            const driftZ = Math.sin(t * 0.12 + n.driftPhase) * 5;
+            const driftX = Math.cos(t * 0.15 + n.driftPhase) * 6;
+            const driftZ = Math.sin(t * 0.12 + n.driftPhase) * 4;
             n.group.position.set(n.base.x + driftX, n.base.y + bobY, n.base.z + driftZ);
             n.group.rotation.z = Math.sin(t * 0.18 + n.driftPhase) * 0.22;
             n.group.rotation.x = Math.cos(t * 0.14 + n.driftPhase) * 0.12;
             n.rotors.forEach(r => { r.rotation.y += 1.1; });
         });
 
-        // Reconstruye las líneas de la red siguiendo a los drones en movimiento
         if (this.droneLines && this.linkPairs.length) {
             const posAttr = this.droneLines.geometry.attributes.position;
             let idx = 0;
@@ -359,18 +388,32 @@ class Background3D {
             posAttr.needsUpdate = true;
         }
 
-        // Paralaje interactivo con el mouse
-        const targetX = this.mouse.x * 8;
-        const targetY = 6 - this.mouse.y * 4;
-        this.camera.position.x += (targetX - this.camera.position.x) * 0.03;
-        this.camera.position.y += (targetY - this.camera.position.y) * 0.03;
-        this.camera.lookAt(0, 2, -40);
+        // --- Recorrido continuo de la cámara: órbita alrededor de la ciudad,
+        // subiendo y bajando entre vista a nivel de calle y vista aérea ---
+        const orbitAngle = t * 0.045;
+        const orbitRadius = 58 + Math.sin(t * 0.05) * 22;
+        const altitude = 22 + Math.sin(t * 0.065) * 18; // sube/baja: calle <-> aérea
+
+        const flightX = this.cityCenter.x + Math.cos(orbitAngle) * orbitRadius;
+        const flightZ = this.cityCenter.z + Math.sin(orbitAngle) * orbitRadius;
+
+        // Paralaje del mouse, como capa extra sutil sobre el recorrido
+        const mouseOffsetX = this.mouse.x * 6;
+        const mouseOffsetY = -this.mouse.y * 4;
+
+        this.camera.position.x += (flightX + mouseOffsetX - this.camera.position.x) * 0.02;
+        this.camera.position.y += (altitude + mouseOffsetY - this.camera.position.y) * 0.02;
+        this.camera.position.z += (flightZ - this.camera.position.z) * 0.02;
+        this.camera.lookAt(this.cityCenter.x, altitude * 0.25, this.cityCenter.z);
+
+        // Rotación lenta del clúster completo, para reforzar la sensación de movimiento
+        if (this.cityGroup) this.cityGroup.rotation.y = Math.sin(t * 0.02) * 0.04;
 
         this.renderer.render(this.scene, this.camera);
     }
 
     setTheme(theme) {
         if (!this.renderer) return;
-        this.renderer.domElement.style.opacity = theme === 'dark' ? '0.9' : '0.32';
+        this.renderer.domElement.style.opacity = theme === 'dark' ? '0.92' : '0.32';
     }
 }
