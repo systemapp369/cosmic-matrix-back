@@ -326,21 +326,26 @@ class InfrastructureMonitor {
         const container = document.getElementById('statsContainer');
         if (!container) return;
 
-        container.innerHTML = cardsData.map(c => {
+        container.innerHTML = cardsData.map((c, i) => {
             const color = c.level ? this.getLevelColor(c.level) : '#3b82f6';
             return `
-                <div class="d-flex align-items-center gap-2 px-3 py-2 rounded-3 border flex-fill"
-                    role="button" style="cursor:pointer; min-width:150px; background: rgba(255,255,255,0.02);"
-                    onclick="monitor.openCriticalityModal(${c.level ? `'${c.level}'` : 'null'})"
-                    title="Ver proyectos">
-                    <span class="d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
-                        style="width:38px;height:38px;background:${color}22;">
+                <div class="dropdown">
+                    <button type="button" class="btn p-0 rounded-circle position-relative d-flex align-items-center justify-content-center"
+                        style="width:40px;height:40px;background:${color}22;border:1px solid ${color}55;"
+                        data-bs-toggle="dropdown" aria-expanded="false" title="${c.label}">
                         <i class="ti ${c.icon} fs-5" style="color:${color};"></i>
-                    </span>
-                    <div class="d-flex flex-column lh-1">
-                        <span class="small text-muted mb-1">${c.label}</span>
-                        <span class="fw-bold fs-6">${c.count}</span>
-                    </div>
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill"
+                            style="background:${color}; font-size:0.6rem;">${c.count}</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <button class="dropdown-item d-flex align-items-center justify-content-between gap-3"
+                                onclick="monitor.openCriticalityModal(${c.level ? `'${c.level}'` : 'null'})">
+                                <span>${c.label}</span>
+                                <span class="badge rounded-pill" style="background:${color};">${c.count}</span>
+                            </button>
+                        </li>
+                    </ul>
                 </div>
             `;
         }).join('');
