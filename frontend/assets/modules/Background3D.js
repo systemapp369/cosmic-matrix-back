@@ -355,48 +355,116 @@ class Background3D {
 
 
     /**
-     * Construye un dron individual (cuerpo + 4 brazos + 4 hélices + luz de
-     * navegación) con el color de estatus indicado.
+     * Construye un dron mucho más detallado y realista: chasis plano tipo
+     * quadcóptero, gimbal de cámara, 4 brazos con motor + hélice (con efecto
+     * de "blur" al girar), patas de aterrizaje, antena, luces de navegación
+     * rojo/verde (como aeronaves reales) y una baliza de estatus con el color
+     * de criticidad del proyecto.
      */
     _createDrone(colorHex) {
         const group = new THREE.Group();
 
-        const bodyMat = new THREE.MeshStandardMaterial({
-            color: colorHex, emissive: colorHex, emissiveIntensity: 0.85,
-            roughness: 0.35, metalness: 0.4
+        if (!this.chassisMat) {
+            this.chassisMat = new THREE.MeshStandardMaterial({ color: 0x22262f, roughness: 0.45, metalness: 0.6 });
+            this.trimMat = new THREE.MeshStandardMaterial({ color: 0x484f5e, roughness: 0.4, metalness: 0.7 });
+            this.lensMat = new THREE.MeshStandardMaterial({ color: 0x0a0d12, roughness: 0.15, metalness: 0.2 });
+            this.legMat = new THREE.MeshStandardMaterial({ color: 0x14161c, roughness: 0.6, metalness: 0.3 });
+            this.propMat = new THREE.MeshStandardMaterial({
+                color: 0xdfe6ee, transparent: true, opacity: 0.32, roughness: 0.3, side: THREE.DoubleSide
+            });
+        }
+
+        // --- Chasis central (plano, tipo quadcóptero real) ---
+        const chassis = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.14, 0.9), this.chassisMat);
+        group.add(chassis);
+        const trimTop = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.05, 0.55), this.trimMat);
+        trimTop.position.y = 0.095;
+        group.add(trimTop);
+
+        // --- Gimbal + cámara (delante, colgando) ---
+        const gimbalArm = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.16, 6), this.legMat);
+        gimbalArm.position.set(0, -0.12, 0.38);
+        group.add(gimbalArm);
+        const camBall = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), this.chassisMat);
+        camBall.position.set(0, -0.2, 0.38);
+        group.add(camBall);
+        const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.03, 10), this.lensMat);
+        lens.rotation.x = Math.PI / 2;
+        lens.position.set(0, -0.2, 0.45);
+        group.add(lens);
+
+        // --- Patas de aterrizaje ---
+        [[-0.28, 0.32], [0.28, 0.32], [-0.28, -0.32], [0.28, -0.32]].forEach(([lx, lz]) => {
+            const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.32, 5), this.legMat);
+            leg.position.set(lx, -0.22, lz);
+            leg.rotation.z = lx > 0 ? -0.18 : 0.18;
+            group.add(leg);
         });
 
-        const body = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 8), bodyMat);
-        body.scale.set(1, 0.5, 1.3);
-        group.add(body);
+        // --- Antena ---
+        const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.3, 5), this.legMat);
+        antenna.position.set(-0.12, 0.22, -0.3);
+        group.add(antenna);
 
-        const armLen = 1.1;
+        // --- 4 brazos, cada uno con motor + hélice (con disco de "blur") ---
+        const armLen = 1.05;
         const armSpots = [
-            { x: armLen, z: armLen }, { x: -armLen, z: armLen },
-            { x: armLen, z: -armLen }, { x: -armLen, z: -armLen }
+            { x: armLen, z: armLen, navColor: 0x22c55e },   // verde: derecha (convención de navegación aérea)
+            { x: -armLen, z: armLen, navColor: 0xef4444 },  // rojo: izquierda
+            { x: armLen, z: -armLen, navColor: 0x22c55e },
+            { x: -armLen, z: -armLen, navColor: 0xef4444 }
         ];
 
         const rotors = [];
         armSpots.forEach(spot => {
             const angle = Math.atan2(spot.z, spot.x);
-            const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, armLen * 1.4, 5), this.armMat);
+            const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.05, armLen * 1.38, 6), this.trimMat);
             arm.rotation.z = Math.PI / 2;
             arm.rotation.y = -angle;
             arm.position.set(spot.x * 0.5, 0, spot.z * 0.5);
             group.add(arm);
 
-            const rotor = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.025, 10), this.rotorMat);
-            rotor.position.set(spot.x, 0.07, spot.z);
-            group.add(rotor);
-            rotors.push(rotor);
+            const motor = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.1, 0.14, 10), this.chassisMat);
+            motor.position.set(spot.x, 0.06, spot.z);
+            group.add(motor);
 
-            const led = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 6), bodyMat);
-            led.position.set(spot.x, -0.04, spot.z);
-            group.add(led);
+            // Hélice "real": 2 aspas delgadas + disco semitransparente que
+            // simula el desenfoque de movimiento al girar rápido.
+            const rotorGroup = new THREE.Group();
+            rotorGroup.position.set(spot.x, 0.13, spot.z);
+
+            const blade1 = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.008, 0.05), this.trimMat);
+            const blade2 = blade1.clone();
+            blade2.rotation.y = Math.PI / 2;
+            rotorGroup.add(blade1, blade2);
+
+            const blurDisc = new THREE.Mesh(new THREE.CircleGeometry(0.34, 20), this.propMat);
+            blurDisc.rotation.x = -Math.PI / 2;
+            rotorGroup.add(blurDisc);
+
+            group.add(rotorGroup);
+            rotors.push(rotorGroup);
+
+            // Lucecita de navegación en la punta del brazo (rojo/verde real)
+            const navLed = new THREE.Mesh(
+                new THREE.SphereGeometry(0.045, 6, 6),
+                new THREE.MeshBasicMaterial({ color: spot.navColor })
+            );
+            navLed.position.set(spot.x, -0.02, spot.z);
+            group.add(navLed);
         });
 
+        // --- Baliza de estatus (arriba, con el color de criticidad del proyecto) ---
+        const bodyMat = new THREE.MeshStandardMaterial({
+            color: colorHex, emissive: colorHex, emissiveIntensity: 1,
+            roughness: 0.3, metalness: 0.2
+        });
+        const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 8), bodyMat);
+        beacon.position.set(0, 0.14, -0.2);
+        group.add(beacon);
+
         const navLight = new THREE.PointLight(colorHex, 1.1, 8);
-        navLight.position.set(0, -0.3, 0);
+        navLight.position.set(0, 0.2, -0.2);
         group.add(navLight);
 
         return { group, rotors, light: navLight, bodyMat };
@@ -407,11 +475,6 @@ class Background3D {
      * proyectos (uno por proyecto), sobrevolando el clúster de torres.
      */
     _rebuildDrones(projects) {
-        if (!this.armMat) {
-            this.armMat = new THREE.MeshStandardMaterial({ color: 0x18202f, roughness: 0.6, metalness: 0.5 });
-            this.rotorMat = new THREE.MeshStandardMaterial({ color: 0x3a4a63, transparent: true, opacity: 0.5, roughness: 0.3 });
-        }
-
         this.nodes.forEach(n => this.droneGroup.remove(n.group));
         this.nodes = [];
 
