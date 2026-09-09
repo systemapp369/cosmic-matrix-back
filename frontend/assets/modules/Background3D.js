@@ -1,15 +1,13 @@
 /**
  * Background3D.js
- * Fondo interactivo en 3D: una ciudad "holográfica" (torres glow + wireframe)
- * sobre un piso tipo mapa/blueprint de calles, sobrevolada por un enjambre de
- * drones. La cámara recorre la ciudad de forma AUTÓNOMA Y CONTINUA (órbita +
- * variación de altitud), pasando de vista a nivel de calle a vista aérea y
- * viceversa, dando la sensación de estar "recorriendo" la ciudad. El mouse
- * añade un paralaje adicional sutil por encima de ese recorrido.
+ * Fondo abstracto tecnológico/holográfico: degradado azul profundo + anillos
+ * y paneles hexagonales flotantes (decoración tipo HUD) + un enjambre de
+ * drones que representan los proyectos reales del sistema. Sin ciudad,
+ * árboles ni piso de calles — ambiente limpio tipo "consola de diagnóstico".
  *
- * Cada dron representa un proyecto real del sistema; su color corresponde
- * EXACTAMENTE al color del anillo de criticidad de ese proyecto (mismo mapeo
- * que getLevelColor() en app.js):
+ * Cada dron representa un proyecto real; su color corresponde EXACTAMENTE
+ * al color del anillo de criticidad de ese proyecto (mismo mapeo que
+ * getLevelColor() en app.js):
  *   CRÍTICA -> rojo · ALTA -> ámbar · NORMAL -> verde · BAJA -> morado
  *
  * app.js debe llamar a background3D.syncProjects(this.projects) cada vez que
@@ -28,15 +26,10 @@ class Background3D {
         this.mouse = { x: 0, y: 0 };
         this.time = 0;
         this.nodes = [];
-        this.cityCenter = new THREE.Vector3(10, 0, -10);
 
         this._initScene();
         this._buildBackgroundGradient();
-        this._buildStreetMap();
-        this._buildCityCluster();
-        this._buildParks();
-        this._buildCranes();
-        this._buildTraffic();
+        this._buildHudDecor();
         this._rebuildDrones([]); // enjambre neutro hasta que lleguen datos reales
         this._bindEvents();
 
@@ -51,7 +44,7 @@ class Background3D {
             case 'ALTA': return '#f59e0b';
             case 'NORMAL': return '#10b981';
             case 'BAJA': return '#8443c0';
-            default: return '#3b82f6';
+            default: return '#22d3ee';
         }
     }
 
@@ -60,10 +53,10 @@ class Background3D {
         const h = window.innerHeight;
 
         this.scene = new THREE.Scene();
-        this.scene.fog = new THREE.FogExp2(0x030814, 0.0065);
+        this.scene.fog = new THREE.FogExp2(0x030814, 0.006);
 
-        this.camera = new THREE.PerspectiveCamera(55, w / h, 0.1, 700);
-        this.camera.position.set(0, 20, 70);
+        this.camera = new THREE.PerspectiveCamera(55, w / h, 0.1, 500);
+        this.camera.position.set(0, 6, 46);
 
         this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -72,11 +65,11 @@ class Background3D {
         this.container.appendChild(this.renderer.domElement);
 
         const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
-        this.renderer.domElement.style.opacity = isDark ? '0.92' : '0.32';
+        this.renderer.domElement.style.opacity = isDark ? '0.9' : '0.3';
 
         this.scene.add(new THREE.AmbientLight(0x3a4a6a, 1.2));
-        const key = new THREE.PointLight(0x3b82f6, 2, 300);
-        key.position.set(this.cityCenter.x, 60, this.cityCenter.z);
+        const key = new THREE.PointLight(0x22d3ee, 1.8, 260);
+        key.position.set(0, 30, 30);
         this.scene.add(key);
 
         this.droneGroup = new THREE.Group();
@@ -84,282 +77,78 @@ class Background3D {
     }
 
     /**
-     * Degradado radial azul profundo de fondo (igual espíritu que las
-     * imágenes de referencia: centro más claro, bordes casi negros).
+     * Fondo con degradado radial azul/negro profundo (ambiente de consola de
+     * diagnóstico, sin elementos literales como calles o edificios).
      */
     _buildBackgroundGradient() {
         const canvas = document.createElement('canvas');
         canvas.width = 512;
         canvas.height = 512;
         const ctx = canvas.getContext('2d');
-        const gradient = ctx.createRadialGradient(256, 220, 30, 256, 256, 430);
-        gradient.addColorStop(0, '#0c1c40');
-        gradient.addColorStop(0.5, '#050f28');
-        gradient.addColorStop(1, '#02040d');
+        const gradient = ctx.createRadialGradient(256, 210, 20, 256, 256, 420);
+        gradient.addColorStop(0, '#0b1830');
+        gradient.addColorStop(0.55, '#050f24');
+        gradient.addColorStop(1, '#02050d');
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, 512, 512);
         this.scene.background = new THREE.CanvasTexture(canvas);
     }
 
     /**
-     * Piso tipo "mapa/blueprint de calles" (como la vista aérea de
-     * referencia): una textura de calles finas + un par de avenidas más
-     * gruesas, aplicada a un plano grande a nivel de piso.
+     * Decoración abstracta tipo HUD: anillos wireframe grandes + paneles
+     * hexagonales translúcidos flotando lentamente, para dar ambiente
+     * "holográfico" sin representar literalmente edificios/calles.
      */
-    _buildStreetMap() {
-        const size = 1024;
-        const canvas = document.createElement('canvas');
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext('2d');
+    _buildHudDecor() {
+        const decorGroup = new THREE.Group();
+        this.ringMeshes = [];
+        this.hexMeshes = [];
 
-        ctx.fillStyle = '#040a1c';
-        ctx.fillRect(0, 0, size, size);
-
-        // Calles finas (grid irregular, como un plano de ciudad)
-        ctx.strokeStyle = 'rgba(60, 110, 220, 0.35)';
-        ctx.lineWidth = 1;
-        let x = 0;
-        while (x < size) {
-            ctx.beginPath();
-            ctx.moveTo(x, 0);
-            ctx.lineTo(x, size);
-            ctx.stroke();
-            x += 22 + Math.random() * 26;
-        }
-        let y = 0;
-        while (y < size) {
-            ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(size, y);
-            ctx.stroke();
-            y += 22 + Math.random() * 26;
-        }
-
-        // Avenidas principales, más brillantes
-        ctx.strokeStyle = 'rgba(90, 216, 255, 0.55)';
-        ctx.lineWidth = 3;
-        for (let i = 0; i < 5; i++) {
-            const vx = 120 + i * 190 + (Math.random() - 0.5) * 30;
-            ctx.beginPath(); ctx.moveTo(vx, 0); ctx.lineTo(vx, size); ctx.stroke();
-        }
-        for (let i = 0; i < 4; i++) {
-            const hy = 150 + i * 220 + (Math.random() - 0.5) * 30;
-            ctx.beginPath(); ctx.moveTo(0, hy); ctx.lineTo(size, hy); ctx.stroke();
-        }
-
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set(1, 1);
-
-        const geo = new THREE.PlaneGeometry(420, 420);
-        const mat = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0.85 });
-        const ground = new THREE.Mesh(geo, mat);
-        ground.rotation.x = -Math.PI / 2;
-        ground.position.set(this.cityCenter.x, -0.2, this.cityCenter.z);
-        this.scene.add(ground);
-    }
-
-    /**
-     * Clúster de torres "holográficas" (glass glow + contorno wireframe),
-     * agrupadas como en la vista aérea de referencia, sobre el mapa de calles.
-     */
-    _buildCityCluster() {
-        const cityGroup = new THREE.Group();
-        const towerCount = 34;
-
-        for (let i = 0; i < towerCount; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const radius = Math.pow(Math.random(), 0.6) * 32; // más denso al centro
-            const x = this.cityCenter.x + Math.cos(angle) * radius;
-            const z = this.cityCenter.z + Math.sin(angle) * radius;
-
-            const distFactor = radius / 32;
-            const w = 2 + Math.random() * 3.5;
-            const d = 2 + Math.random() * 3.5;
-            const h = (6 + Math.random() * 26) * (1 - distFactor * 0.4);
-
-            const geo = new THREE.BoxGeometry(w, h, d);
-
-            const glassMat = new THREE.MeshStandardMaterial({
-                color: 0x2f6bff, emissive: 0x2f6bff, emissiveIntensity: 0.55,
-                transparent: true, opacity: 0.28, roughness: 0.3, metalness: 0.6
-            });
-            const tower = new THREE.Mesh(geo, glassMat);
-            tower.position.set(x, h / 2, z);
-            cityGroup.add(tower);
-
-            const edges = new THREE.EdgesGeometry(geo);
-            const edgeMat = new THREE.LineBasicMaterial({ color: 0x8fd6ff, transparent: true, opacity: 0.7 });
-            const outline = new THREE.LineSegments(edges, edgeMat);
-            outline.position.copy(tower.position);
-            cityGroup.add(outline);
-
-            const roofDot = new THREE.Mesh(
-                new THREE.SphereGeometry(0.16, 6, 6),
-                new THREE.MeshBasicMaterial({ color: 0x5ad8ff })
-            );
-            roofDot.position.set(x, h + 0.2, z);
-            cityGroup.add(roofDot);
-        }
-
-        this.scene.add(cityGroup);
-        this.cityGroup = cityGroup;
-    }
-
-    /**
-     * Parques: parches verdes con árboles esparcidos entre las torres,
-     * como en la imagen de referencia con áreas verdes junto a los edificios.
-     */
-    _buildParks() {
-        const parksGroup = new THREE.Group();
-        const grassMat = new THREE.MeshStandardMaterial({
-            color: 0x14532d, emissive: 0x0f3d22, emissiveIntensity: 0.35, roughness: 0.9
-        });
-        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4a3222, roughness: 0.9 });
-        const leafMat = new THREE.MeshStandardMaterial({
-            color: 0x22c55e, emissive: 0x14532d, emissiveIntensity: 0.4, roughness: 0.7
-        });
-
-        this.trees = [];
-
-        for (let i = 0; i < 9; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const radius = 14 + Math.random() * 30;
-            const cx = this.cityCenter.x + Math.cos(angle) * radius;
-            const cz = this.cityCenter.z + Math.sin(angle) * radius;
-
-            const patch = new THREE.Mesh(new THREE.CircleGeometry(3 + Math.random() * 2, 16), grassMat);
-            patch.rotation.x = -Math.PI / 2;
-            patch.position.set(cx, -0.15, cz);
-            parksGroup.add(patch);
-
-            const treeCount = 3 + Math.floor(Math.random() * 4);
-            for (let j = 0; j < treeCount; j++) {
-                const tAngle = Math.random() * Math.PI * 2;
-                const tRadius = Math.random() * 2.4;
-                const tx = cx + Math.cos(tAngle) * tRadius;
-                const tz = cz + Math.sin(tAngle) * tRadius;
-
-                const treeGroup = new THREE.Group();
-                const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.11, 1.1, 6), trunkMat);
-                trunk.position.y = 0.55;
-                treeGroup.add(trunk);
-
-                const foliage = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.6, 7), leafMat);
-                foliage.position.y = 1.5;
-                treeGroup.add(foliage);
-
-                treeGroup.position.set(tx, 0, tz);
-                treeGroup.scale.setScalar(0.8 + Math.random() * 0.6);
-                parksGroup.add(treeGroup);
-
-                this.trees.push({ group: treeGroup, phase: Math.random() * Math.PI * 2 });
-            }
-        }
-
-        this.scene.add(parksGroup);
-    }
-
-    /**
-     * Grúas torre de construcción (como en las imágenes de referencia): mástil
-     * + pluma que gira lentamente + gancho que sube y baja simulando trabajo.
-     */
-    _buildCranes() {
-        const craneMat = new THREE.MeshStandardMaterial({ color: 0xf5b942, roughness: 0.5, metalness: 0.4 });
-        const cabinMat = new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.6 });
-        const cableMat = new THREE.LineBasicMaterial({ color: 0x94a3b8 });
-
-        this.cranes = [];
-
+        // Anillos concéntricos grandes, como un radar/consola
         for (let i = 0; i < 3; i++) {
-            const angle = (i / 3) * Math.PI * 2 + Math.random();
-            const radius = 20 + Math.random() * 12;
-            const cx = this.cityCenter.x + Math.cos(angle) * radius;
-            const cz = this.cityCenter.z + Math.sin(angle) * radius;
-            const mastHeight = 28 + Math.random() * 8;
-
-            const craneRoot = new THREE.Group();
-            craneRoot.position.set(cx, 0, cz);
-
-            // Mástil vertical
-            const mast = new THREE.Mesh(new THREE.BoxGeometry(0.5, mastHeight, 0.5), craneMat);
-            mast.position.y = mastHeight / 2;
-            craneRoot.add(mast);
-
-            // Cabina + pluma (grupo que rota para simular la grúa trabajando)
-            const jibGroup = new THREE.Group();
-            jibGroup.position.y = mastHeight;
-            craneRoot.add(jibGroup);
-
-            const cabin = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.7, 0.9), cabinMat);
-            jibGroup.add(cabin);
-
-            const jibLen = 11;
-            const jib = new THREE.Mesh(new THREE.BoxGeometry(jibLen, 0.35, 0.35), craneMat);
-            jib.position.set(jibLen / 2 - 1, 0.4, 0);
-            jibGroup.add(jib);
-
-            const counterJib = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.35, 0.35), craneMat);
-            counterJib.position.set(-2.5, 0.4, 0);
-            jibGroup.add(counterJib);
-
-            const counterWeight = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), cabinMat);
-            counterWeight.position.set(-4, 0, 0);
-            jibGroup.add(counterWeight);
-
-            // Cable + gancho (se mueve verticalmente)
-            const hookAnchorX = jibLen - 2;
-            const cableGeo = new THREE.BufferGeometry().setFromPoints([
-                new THREE.Vector3(hookAnchorX, 0.4, 0), new THREE.Vector3(hookAnchorX, -6, 0)
-            ]);
-            const cable = new THREE.Line(cableGeo, cableMat);
-            jibGroup.add(cable);
-
-            const hook = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), cabinMat);
-            hook.position.set(hookAnchorX, -6, 0);
-            jibGroup.add(hook);
-
-            this.scene.add(craneRoot);
-            this.cranes.push({
-                jibGroup, cable, hook, cableGeo, hookAnchorX,
-                rotSpeed: (Math.random() > 0.5 ? 1 : -1) * (0.05 + Math.random() * 0.05),
-                hookPhase: Math.random() * Math.PI * 2
-            });
+            const radius = 20 + i * 9;
+            const ring = new THREE.Mesh(
+                new THREE.TorusGeometry(radius, 0.06, 8, 96),
+                new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.14 - i * 0.03 })
+            );
+            ring.rotation.x = Math.PI / 2.1;
+            ring.position.set(0, -6, -20);
+            decorGroup.add(ring);
+            this.ringMeshes.push({ mesh: ring, speed: 0.02 + i * 0.01 });
         }
+
+        // Paneles hexagonales translúcidos flotando (acento decorativo tipo HUD)
+        const hexGeo = new THREE.CircleGeometry(2.2, 6);
+        for (let i = 0; i < 10; i++) {
+            const mat = new THREE.MeshBasicMaterial({
+                color: 0x22d3ee, transparent: true, opacity: 0.06,
+                side: THREE.DoubleSide
+            });
+            const hex = new THREE.Mesh(hexGeo, mat);
+            hex.position.set(
+                (Math.random() - 0.5) * 90,
+                (Math.random() - 0.5) * 50,
+                (Math.random() - 0.5) * 60 - 20
+            );
+            hex.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+            decorGroup.add(hex);
+            this.hexMeshes.push({ mesh: hex, phase: Math.random() * Math.PI * 2 });
+
+            const edges = new THREE.EdgesGeometry(hexGeo);
+            const outline = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x5ad8ff, transparent: true, opacity: 0.25 }));
+            outline.position.copy(hex.position);
+            outline.rotation.copy(hex.rotation);
+            decorGroup.add(outline);
+        }
+
+        this.scene.add(decorGroup);
+        this.decorGroup = decorGroup;
     }
 
     /**
-     * Pequeños vehículos de obra recorriendo las avenidas principales, para
-     * dar más movimiento a nivel de calle.
-     */
-    _buildTraffic() {
-        const vehicleMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.5, metalness: 0.3 });
-        this.vehicles = [];
-
-        for (let i = 0; i < 5; i++) {
-            const body = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.7, 0.8), vehicleMat);
-            body.position.y = 0.4;
-            this.scene.add(body);
-
-            this.vehicles.push({
-                mesh: body,
-                radius: 18 + i * 6,
-                speed: 0.08 + Math.random() * 0.06,
-                phase: Math.random() * Math.PI * 2,
-                dir: Math.random() > 0.5 ? 1 : -1
-            });
-        }
-    }
-
-
-
-    /**
-     * Construye un dron mucho más detallado y realista: chasis plano tipo
-     * quadcóptero, gimbal de cámara, 4 brazos con motor + hélice (con efecto
-     * de "blur" al girar), patas de aterrizaje, antena, luces de navegación
-     * rojo/verde (como aeronaves reales) y una baliza de estatus con el color
-     * de criticidad del proyecto.
+     * Construye un dron detallado (chasis + gimbal + patas + brazos con
+     * motor/hélice con blur + antena + luces de navegación) con la baliza de
+     * estatus en el color de criticidad indicado.
      */
     _createDrone(colorHex) {
         const group = new THREE.Group();
@@ -374,14 +163,12 @@ class Background3D {
             });
         }
 
-        // --- Chasis central (plano, tipo quadcóptero real) ---
         const chassis = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.14, 0.9), this.chassisMat);
         group.add(chassis);
         const trimTop = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.05, 0.55), this.trimMat);
         trimTop.position.y = 0.095;
         group.add(trimTop);
 
-        // --- Gimbal + cámara (delante, colgando) ---
         const gimbalArm = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.16, 6), this.legMat);
         gimbalArm.position.set(0, -0.12, 0.38);
         group.add(gimbalArm);
@@ -393,7 +180,6 @@ class Background3D {
         lens.position.set(0, -0.2, 0.45);
         group.add(lens);
 
-        // --- Patas de aterrizaje ---
         [[-0.28, 0.32], [0.28, 0.32], [-0.28, -0.32], [0.28, -0.32]].forEach(([lx, lz]) => {
             const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.32, 5), this.legMat);
             leg.position.set(lx, -0.22, lz);
@@ -401,16 +187,14 @@ class Background3D {
             group.add(leg);
         });
 
-        // --- Antena ---
         const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.3, 5), this.legMat);
         antenna.position.set(-0.12, 0.22, -0.3);
         group.add(antenna);
 
-        // --- 4 brazos, cada uno con motor + hélice (con disco de "blur") ---
         const armLen = 1.05;
         const armSpots = [
-            { x: armLen, z: armLen, navColor: 0x22c55e },   // verde: derecha (convención de navegación aérea)
-            { x: -armLen, z: armLen, navColor: 0xef4444 },  // rojo: izquierda
+            { x: armLen, z: armLen, navColor: 0x22c55e },
+            { x: -armLen, z: armLen, navColor: 0xef4444 },
             { x: armLen, z: -armLen, navColor: 0x22c55e },
             { x: -armLen, z: -armLen, navColor: 0xef4444 }
         ];
@@ -428,24 +212,18 @@ class Background3D {
             motor.position.set(spot.x, 0.06, spot.z);
             group.add(motor);
 
-            // Hélice "real": 2 aspas delgadas + disco semitransparente que
-            // simula el desenfoque de movimiento al girar rápido.
             const rotorGroup = new THREE.Group();
             rotorGroup.position.set(spot.x, 0.13, spot.z);
-
             const blade1 = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.008, 0.05), this.trimMat);
             const blade2 = blade1.clone();
             blade2.rotation.y = Math.PI / 2;
             rotorGroup.add(blade1, blade2);
-
             const blurDisc = new THREE.Mesh(new THREE.CircleGeometry(0.34, 20), this.propMat);
             blurDisc.rotation.x = -Math.PI / 2;
             rotorGroup.add(blurDisc);
-
             group.add(rotorGroup);
             rotors.push(rotorGroup);
 
-            // Lucecita de navegación en la punta del brazo (rojo/verde real)
             const navLed = new THREE.Mesh(
                 new THREE.SphereGeometry(0.045, 6, 6),
                 new THREE.MeshBasicMaterial({ color: spot.navColor })
@@ -454,10 +232,8 @@ class Background3D {
             group.add(navLed);
         });
 
-        // --- Baliza de estatus (arriba, con el color de criticidad del proyecto) ---
         const bodyMat = new THREE.MeshStandardMaterial({
-            color: colorHex, emissive: colorHex, emissiveIntensity: 1,
-            roughness: 0.3, metalness: 0.2
+            color: colorHex, emissive: colorHex, emissiveIntensity: 1, roughness: 0.3, metalness: 0.2
         });
         const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 8), bodyMat);
         beacon.position.set(0, 0.14, -0.2);
@@ -470,10 +246,6 @@ class Background3D {
         return { group, rotors, light: navLight, bodyMat };
     }
 
-    /**
-     * Reconstruye el enjambre completo de drones a partir de la lista de
-     * proyectos (uno por proyecto), sobrevolando el clúster de torres.
-     */
     _rebuildDrones(projects) {
         this.nodes.forEach(n => this.droneGroup.remove(n.group));
         this.nodes = [];
@@ -487,11 +259,11 @@ class Background3D {
             const { group, rotors, light, bodyMat } = this._createDrone(colorHex);
 
             const angle = Math.random() * Math.PI * 2;
-            const radius = 8 + Math.random() * 34;
+            const radius = 6 + Math.random() * 32;
             const base = new THREE.Vector3(
-                this.cityCenter.x + Math.cos(angle) * radius,
-                14 + Math.random() * 20,
-                this.cityCenter.z + Math.sin(angle) * radius
+                Math.cos(angle) * radius,
+                4 + Math.random() * 22,
+                Math.sin(angle) * radius - 15
             );
             group.position.copy(base);
             group.scale.setScalar(0.9 + Math.random() * 0.6);
@@ -578,7 +350,6 @@ class Background3D {
         this.time = ts * 0.001;
         const t = this.time;
 
-        // --- Vuelo de los drones (flotación + deriva + hélices + banqueo) ---
         this.nodes.forEach(n => {
             const bobY = Math.sin(t * n.speed + n.phase) * n.amp;
             const driftX = Math.cos(t * 0.15 + n.driftPhase) * 6;
@@ -601,65 +372,37 @@ class Background3D {
             posAttr.needsUpdate = true;
         }
 
-        // --- Recorrido continuo de la cámara: órbita alrededor de la ciudad,
-        // subiendo y bajando entre vista a nivel de calle y vista aérea ---
-        const orbitAngle = t * 0.045;
-        const orbitRadius = 58 + Math.sin(t * 0.05) * 22;
-        const altitude = 22 + Math.sin(t * 0.065) * 18; // sube/baja: calle <-> aérea
+        // Decoración: anillos girando lento + paneles hexagonales flotando
+        if (this.ringMeshes) {
+            this.ringMeshes.forEach(r => { r.mesh.rotation.z += r.speed * 0.01; });
+        }
+        if (this.hexMeshes) {
+            this.hexMeshes.forEach(h => {
+                h.mesh.position.y += Math.sin(t * 0.2 + h.phase) * 0.003;
+                h.mesh.rotation.z += 0.0008;
+            });
+        }
 
-        const flightX = this.cityCenter.x + Math.cos(orbitAngle) * orbitRadius;
-        const flightZ = this.cityCenter.z + Math.sin(orbitAngle) * orbitRadius;
+        // Recorrido suave de cámara + paralaje del mouse
+        const orbitAngle = t * 0.03;
+        const orbitRadius = 46 + Math.sin(t * 0.04) * 10;
+        const flightX = Math.cos(orbitAngle) * orbitRadius;
+        const flightZ = Math.sin(orbitAngle) * orbitRadius - 15;
+        const altitude = 10 + Math.sin(t * 0.05) * 8;
 
-        // Paralaje del mouse, como capa extra sutil sobre el recorrido
         const mouseOffsetX = this.mouse.x * 6;
         const mouseOffsetY = -this.mouse.y * 4;
 
         this.camera.position.x += (flightX + mouseOffsetX - this.camera.position.x) * 0.02;
         this.camera.position.y += (altitude + mouseOffsetY - this.camera.position.y) * 0.02;
         this.camera.position.z += (flightZ - this.camera.position.z) * 0.02;
-        this.camera.lookAt(this.cityCenter.x, altitude * 0.25, this.cityCenter.z);
-
-        // Rotación lenta del clúster completo, para reforzar la sensación de movimiento
-        if (this.cityGroup) this.cityGroup.rotation.y = Math.sin(t * 0.02) * 0.04;
-
-        // --- Árboles: leve balanceo, como si los moviera el viento ---
-        if (this.trees) {
-            this.trees.forEach(tr => {
-                tr.group.rotation.z = Math.sin(t * 0.8 + tr.phase) * 0.05;
-            });
-        }
-
-        // --- Grúas de construcción: la pluma gira y el gancho sube/baja trabajando ---
-        if (this.cranes) {
-            this.cranes.forEach(c => {
-                c.jibGroup.rotation.y += c.rotSpeed * 0.016;
-
-                const hookY = -3 - (Math.sin(t * 0.6 + c.hookPhase) * 0.5 + 0.5) * 5;
-                c.hook.position.y = hookY;
-                const positions = c.cableGeo.attributes.position;
-                positions.setY(1, hookY + 0.4);
-                positions.needsUpdate = true;
-            });
-        }
-
-        // --- Vehículos de obra: recorren las avenidas en bucle ---
-        if (this.vehicles) {
-            this.vehicles.forEach(v => {
-                const a = t * v.speed * v.dir + v.phase;
-                v.mesh.position.set(
-                    this.cityCenter.x + Math.cos(a) * v.radius,
-                    0.4,
-                    this.cityCenter.z + Math.sin(a) * v.radius
-                );
-                v.mesh.rotation.y = -a + (v.dir > 0 ? Math.PI / 2 : -Math.PI / 2);
-            });
-        }
+        this.camera.lookAt(0, 0, -15);
 
         this.renderer.render(this.scene, this.camera);
     }
 
     setTheme(theme) {
         if (!this.renderer) return;
-        this.renderer.domElement.style.opacity = theme === 'dark' ? '0.92' : '0.32';
+        this.renderer.domElement.style.opacity = theme === 'dark' ? '0.9' : '0.3';
     }
 }

@@ -44,6 +44,7 @@ class InfrastructureMonitor {
 
         // --- ACTIVACIÓN DEL FONDO 3D INTERACTIVO (red de proyectos) ---
         this.background3D = new Background3D('canvas-container');
+        this.gauge3D = new Gauge3D();
         await this.loadProjectsFromRemote();
 
         // Renderizado Inicial
@@ -248,7 +249,10 @@ class InfrastructureMonitor {
                         </div>
 
                         <div class="d-flex justify-content-center my-2">
-                            <div id="gauge-${p.id}" style="width: 140px; height: 140px;"></div>
+                            <div id="gauge-${p.id}" class="position-relative" style="width: 140px; height: 140px;">
+                                <span class="position-absolute top-50 start-50 translate-middle fw-bold fs-5"
+                                    style="z-index:6; color:${labelColor}; pointer-events:none;">${p.progress}%</span>
+                            </div>
                         </div>
 
                         <div class="hud-seg-bar mb-2" title="Progreso: ${p.progress}%">
@@ -267,31 +271,16 @@ class InfrastructureMonitor {
             `;
             nodesGrid.appendChild(col);
 
-            const gaugeContainer = document.getElementById(`gauge-${p.id}`);
-            if (gaugeContainer) {
-                const myChart = echarts.init(gaugeContainer);
-                const option = {
-                    series: [{
-                        type: 'gauge',
-                        startAngle: 240,
-                        endAngle: -60,
-                        radius: '96%',
-                        center: ['50%', '50%'],
-                        pointer: { show: false },
-                        progress: { show: true, overlap: false, roundCap: true, itemStyle: { color: colorHex } },
-                        axisLine: { lineStyle: { width: 8, color: [[1, trackColor]] } },
-                        // Marcas tipo "carátula" (HUD), como en la imagen de referencia
-                        splitLine: { show: true, distance: -2, length: 9, lineStyle: { color: colorHex, width: 2 } },
-                        axisTick: { show: true, distance: -2, splitNumber: 4, length: 4, lineStyle: { color: colorHex, width: 1, opacity: 0.55 } },
-                        axisLabel: { show: false },
-                        data: [{ value: p.progress }],
-                        detail: { offsetCenter: [0, 0], fontSize: 20, fontWeight: '700', formatter: '{value}%', color: labelColor }
-                    }]
-                };
-                myChart.setOption(option);
-                this.activeMiniCharts.push(myChart);
+            // Gauge en 3D real (Three.js), no una simulación 2D
+            if (this.gauge3D) {
+                this.gauge3D.register(`gauge-${p.id}`, p.progress, colorHex);
             }
         });
+
+        // Quita del motor 3D cualquier gauge que ya no esté en esta página
+        if (this.gauge3D) {
+            this.gauge3D.pruneTo(paginatedProjects.map(p => `gauge-${p.id}`));
+        }
 
         const maxPage = Math.ceil(this.projects.length / this.itemsPerPage) - 1;
         const prevBtn = document.getElementById('prevBtn');
