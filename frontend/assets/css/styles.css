@@ -94,6 +94,76 @@ body {
   height: 6px;
 }
 
+/* ============================================================
+   HUD / Sci-Fi panel system — esquinas biseladas + brackets,
+   con color configurable por elemento vía --hud-color.
+   ============================================================ */
+.hud-panel {
+  --hud-color: #22d3ee;
+  position: relative;
+  clip-path: polygon(
+    14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%,
+    0 100%, 0 14px
+  );
+  border: 1px solid color-mix(in srgb, var(--hud-color) 55%, transparent) !important;
+  box-shadow: 0 0 14px -6px color-mix(in srgb, var(--hud-color) 70%, transparent);
+  transition: box-shadow 0.2s ease;
+}
+
+.hud-panel:hover {
+  box-shadow: 0 0 20px -4px color-mix(in srgb, var(--hud-color) 85%, transparent);
+}
+
+.hud-panel::before,
+.hud-panel::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.hud-panel::before {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid var(--hud-color);
+  border-left: 2px solid var(--hud-color);
+}
+
+.hud-panel::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 2px solid var(--hud-color);
+  border-right: 2px solid var(--hud-color);
+}
+
+/* Barra segmentada tipo LED (como los indicadores "Data 1/2/3" de referencia) */
+.hud-seg-bar {
+  display: flex;
+  gap: 2px;
+  width: 100%;
+}
+
+.hud-seg {
+  flex: 1;
+  height: 6px;
+  border-radius: 1px;
+  background: rgba(148, 163, 184, 0.18);
+}
+
+.hud-seg.on {
+  background: var(--seg-color, #22d3ee);
+  box-shadow: 0 0 5px var(--seg-color, #22d3ee);
+}
+
+/* Patrón de puntos decorativo, opcional, estilo HUD */
+.hud-dots {
+  background-image: radial-gradient(currentColor 1px, transparent 1px);
+  background-size: 6px 6px;
+  opacity: 0.35;
+}
+
 @media print {
   .no-print {
     display: none !important;

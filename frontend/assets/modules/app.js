@@ -214,14 +214,22 @@ class InfrastructureMonitor {
         paginatedProjects.forEach((p) => {
             const originalIndex = this.projects.findIndex(proj => proj.id === p.id);
 
-            // Un solo color oficial por nivel, reutilizado tanto en el borde de
-            // la tarjeta como en el gauge, para que siempre coincidan exactamente.
+            // Un solo color oficial por nivel, reutilizado en el borde HUD, el
+            // gauge y la barra segmentada, para que siempre coincidan.
             const colorHex = this.getLevelColor(p.level);
+
+            // Barra segmentada tipo LED (10 segmentos) reflejando el progreso
+            const segCount = 10;
+            const filledSegs = Math.round((p.progress / 100) * segCount);
+            let segsHtml = '';
+            for (let s = 0; s < segCount; s++) {
+                segsHtml += `<span class="hud-seg ${s < filledSegs ? 'on' : ''}" style="--seg-color:${colorHex};"></span>`;
+            }
 
             const col = document.createElement('div');
             col.className = 'col-12 col-md-6 col-lg-4 col-xl-3';
             col.innerHTML = `
-                <div class="card h-100 shadow-sm" style="transition: transform 0.15s ease; border-color: ${colorHex} !important;">
+                <div class="card hud-panel h-100 shadow-sm" style="--hud-color:${colorHex}; transition: transform 0.15s ease;">
                     <div class="card-body p-3 d-flex flex-column justify-content-between">
                         <div class="d-flex align-items-center justify-content-between mb-3">
                             <div class="d-flex align-items-center gap-2">
@@ -243,11 +251,15 @@ class InfrastructureMonitor {
                             <div id="gauge-${p.id}" style="width: 140px; height: 140px;"></div>
                         </div>
 
+                        <div class="hud-seg-bar mb-2" title="Progreso: ${p.progress}%">
+                            ${segsHtml}
+                        </div>
+
                         <div class="border-top pt-2 mt-2">
                             <div class="fw-bold text-truncate mb-1" title="${p.name}">${p.name}</div>
                             <div class="d-flex justify-content-between align-items-center text-muted" style="font-size: 0.75rem;">
                                 <span><i class="ti ti-user"></i> ${p.lead}</span>
-                                <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis fw-bold">${p.level}</span>
+                                <span class="badge rounded-pill fw-bold" style="background:${colorHex}22; color:${colorHex}; border:1px solid ${colorHex}55;">${p.level}</span>
                             </div>
                         </div>
                     </div>
@@ -263,13 +275,14 @@ class InfrastructureMonitor {
                         type: 'gauge',
                         startAngle: 240,
                         endAngle: -60,
-                        radius: '100%',
+                        radius: '96%',
                         center: ['50%', '50%'],
                         pointer: { show: false },
                         progress: { show: true, overlap: false, roundCap: true, itemStyle: { color: colorHex } },
-                        axisLine: { lineStyle: { width: 10, color: [[1, trackColor]] } },
-                        splitLine: { show: false },
-                        axisTick: { show: false },
+                        axisLine: { lineStyle: { width: 8, color: [[1, trackColor]] } },
+                        // Marcas tipo "carátula" (HUD), como en la imagen de referencia
+                        splitLine: { show: true, distance: -2, length: 9, lineStyle: { color: colorHex, width: 2 } },
+                        axisTick: { show: true, distance: -2, splitNumber: 4, length: 4, lineStyle: { color: colorHex, width: 1, opacity: 0.55 } },
                         axisLabel: { show: false },
                         data: [{ value: p.progress }],
                         detail: { offsetCenter: [0, 0], fontSize: 20, fontWeight: '700', formatter: '{value}%', color: labelColor }
