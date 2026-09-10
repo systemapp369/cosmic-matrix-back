@@ -45,6 +45,7 @@ class InfrastructureMonitor {
         // --- ACTIVACIÓN DEL FONDO 3D INTERACTIVO (red de proyectos) ---
         this.background3D = new Background3D('canvas-container');
         this.gauge3D = new Gauge3D();
+        this.commandHub = new CommandHub3D('command-hub-3d');
         await this.loadProjectsFromRemote();
 
         // Renderizado Inicial
@@ -56,10 +57,19 @@ class InfrastructureMonitor {
             this.activeMiniCharts.forEach(chart => chart.resize());
         });
 
-        // Reloj en tiempo real
+        // Reloj y fecha en tiempo real
         setInterval(() => {
+            const now = new Date();
             const clockEl = document.getElementById('system-clock');
-            if (clockEl) clockEl.textContent = new Date().toLocaleTimeString();
+            if (clockEl) clockEl.textContent = now.toLocaleTimeString();
+
+            const hubClockEl = document.getElementById('hub-clock');
+            if (hubClockEl) hubClockEl.textContent = now.toLocaleTimeString();
+
+            const hubDateEl = document.getElementById('hub-date');
+            if (hubDateEl) {
+                hubDateEl.textContent = now.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+            }
         }, 1000);
     }
 
@@ -199,6 +209,12 @@ class InfrastructureMonitor {
         if (this.background3D) {
             this.background3D.syncProjects(this.projects);
         }
+
+        // Mantiene el panel Centro de Mando (barras 3D + badges) en sincronía
+        if (this.commandHub) {
+            this.commandHub.updateStats(this.projects);
+        }
+        this.renderHubBadges();
 
         this.activeMiniCharts.forEach(chart => chart.dispose());
         this.activeMiniCharts = [];
@@ -351,6 +367,37 @@ class InfrastructureMonitor {
                 </div>
             `;
         }).join('');
+    }
+
+    /**
+     * Pinta los badges flotantes alrededor del panel 3D del Centro de Mando,
+     * con estadísticas reales calculadas a partir de los proyectos actuales.
+     */
+    renderHubBadges() {
+        const container = document.getElementById('hub-badges');
+        if (!container) return;
+
+        const total = this.projects.length;
+        const avgProgress = total > 0
+            ? Math.round(this.projects.reduce((sum, p) => sum + Number(p.progress || 0), 0) / total)
+            : 0;
+        const criticos = this.projects.filter(p => p.level === 'CRÍTICA').length;
+        const responsables = new Set(this.projects.map(p => p.lead).filter(Boolean)).size;
+
+        const badges = [
+            { icon: 'ti-server', label: 'Total Activos', value: total, color: '#22d3ee', pos: 'top:2%; left:2%;' },
+            { icon: 'ti-chart-arcs', label: 'Progreso Prom.', value: `${avgProgress}%`, color: '#10b981', pos: 'top:2%; right:2%;' },
+            { icon: 'ti-alert-hexagon', label: 'Críticos', value: criticos, color: '#ef4444', pos: 'top:46%; left:-2%;' },
+            { icon: 'ti-users', label: 'Responsables', value: responsables, color: '#f59e0b', pos: 'top:46%; right:-2%;' },
+            { icon: 'ti-notebook', label: 'Bitácoras', value: 'Ver detalle', color: '#8443c0', pos: 'bottom:2%; left:50%; transform:translateX(-50%);' }
+        ];
+
+        container.innerHTML = badges.map(b => `
+            <div class="hub-badge" style="${b.pos} --badge-color:${b.color};">
+                <span class="hub-badge-icon"><i class="ti ${b.icon}"></i></span>
+                <span>${b.label}: <strong>${b.value}</strong></span>
+            </div>
+        `).join('');
     }
 
     /**

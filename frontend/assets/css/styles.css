@@ -184,3 +184,35 @@ body {
 
 }*/
 
+/* ============================================================
+   Centro de Mando: badges flotantes alrededor del panel 3D
+   ============================================================ */
+.hub-badge {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(11, 24, 48, 0.78);
+  border: 1px solid var(--badge-color, #22d3ee);
+  box-shadow: 0 0 10px -3px var(--badge-color, #22d3ee);
+  font-size: 0.72rem;
+  white-space: nowrap;
+  backdrop-filter: blur(2px);
+  pointer-events: none;
+}
+
+.hub-badge .hub-badge-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--badge-color, #22d3ee);
+  color: #04101f;
+  flex-shrink: 0;
+  font-size: 0.85rem;
+}
+
