@@ -251,7 +251,7 @@ class InfrastructureMonitor {
                         <div class="d-flex align-items-center justify-content-between mb-3">
                             <div class="d-flex align-items-center gap-2">
                                 <input type="checkbox" ${p.selected ? 'checked' : ''} onchange="monitor.toggleSelect(${originalIndex})" class="form-check-input m-0">
-                                <span class="font-monospace text-muted small fw-bold">${p.id}</span>
+                                <span class="data-label font-monospace fw-bold">${p.id}</span>
                             </div>
                             <div class="d-flex align-items-center gap-2">
                                 <button onclick="monitor.openBitacora(${originalIndex})" title="Bitácora de Avances"
