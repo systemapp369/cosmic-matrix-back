@@ -308,3 +308,89 @@ body {
   font-size: 0.85rem;
 }
 
+/* ============================================================
+   Panel de Indicadores: anillos punteados con % real,
+   barra + tira de degradado, filas de ícono+descripción.
+   ============================================================ */
+.hud-ring {
+  --pct: 0;
+  --ring-color: #22d3ee;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: conic-gradient(var(--ring-color) calc(var(--pct) * 1%), rgba(148, 163, 184, 0.12) 0);
+  flex-shrink: 0;
+}
+
+.hud-ring.hud-ring-lg {
+  width: 150px;
+  height: 150px;
+}
+
+.hud-ring::before {
+  content: "";
+  position: absolute;
+  inset: 9px;
+  border-radius: 50%;
+  background: var(--ts-card-bg, #1e293b);
+}
+
+.hud-ring::after {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+  border: 2px dotted var(--ring-color);
+  opacity: 0.5;
+}
+
+.hud-ring-value {
+  position: relative;
+  z-index: 2;
+  font-weight: 700;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+/* Tira vertical de cuadritos con degradado, uno por proyecto, según su % */
+.hud-heat-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 14px;
+}
+
+.hud-heat-cell {
+  width: 100%;
+  flex: 1;
+  min-height: 8px;
+  border-radius: 1px;
+  background: var(--cell-color, #22d3ee);
+  opacity: var(--cell-opacity, 0.3);
+}
+
+/* Fila de ícono + descripción, con esquinas tipo bracket */
+.hud-icon-row {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--hud-color, #22d3ee) 40%, transparent);
+}
+
+.hud-icon-row .hud-icon-box {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--hud-color, #22d3ee);
+  color: var(--hud-color, #22d3ee);
+  font-size: 1.2rem;
+}
+

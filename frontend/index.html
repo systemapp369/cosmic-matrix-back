@@ -96,6 +96,34 @@
             </div>
         </div>
 
+        <div class="card hud-panel mb-4 p-3 shadow-sm no-print" style="--hud-color:#22d3ee;">
+            <h6 class="fw-bold text-uppercase mb-3 data-label" style="font-size:0.8rem;">
+                <i class="ti ti-chart-donut"></i> Panel de Indicadores
+            </h6>
+            <div class="row g-4">
+                <div class="col-12 col-lg-5">
+                    <div class="d-flex justify-content-center mb-3">
+                        <div id="indicator-total-ring" class="hud-ring hud-ring-lg" style="--ring-color:#22d3ee;">
+                            <span class="hud-ring-value fs-3" id="indicator-total-value">0%</span>
+                        </div>
+                    </div>
+                    <div class="text-center small text-muted mb-4" id="indicator-total-label">Promedio General &middot; 0 Activos</div>
+                    <div id="indicator-rings" class="d-flex flex-wrap justify-content-center gap-3"></div>
+                </div>
+
+                <div class="col-12 col-lg-4">
+                    <div class="d-flex gap-2">
+                        <div id="indicator-bars" class="flex-grow-1 d-flex flex-column gap-2"></div>
+                        <div id="indicator-heatstrip" class="hud-heat-strip"></div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-lg-3">
+                    <div id="indicator-icon-rows" class="d-flex flex-column gap-2"></div>
+                </div>
+            </div>
+        </div>
+
         <div id="statsContainer"
             class="d-flex flex-column gap-2 no-print"
             style="position:fixed; top:100px; right:18px; z-index:20;">
@@ -168,6 +196,14 @@
                         <div class="col-12">
                             <label class="form-label small fw-medium text-muted">Responsables de Proyecto</label>
                             <input type="text" id="nodeLead" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-medium text-muted">Descripción Breve</label>
+                            <input type="text" id="nodeDescription" class="form-control form-control-sm"
+                                placeholder="Ej. seguridad perimetral, servidor de base de datos, monitoreo de red..."
+                                maxlength="120">
+                            <div class="form-text small">Se usa para elegir automáticamente un ícono representativo
+                                en el panel de indicadores.</div>
                         </div>
                         <div class="col-12 d-flex gap-2 pt-2 border-top mt-3">
                             <button type="button" id="deleteBtn" onclick="monitor.confirmDeleteNode()"

@@ -104,6 +104,7 @@ class InfrastructureMonitor {
             level: document.getElementById('nodeLevel').value,
             progress: parseInt(document.getElementById('nodeProgress').value),
             lead: document.getElementById('nodeLead').value || 'UNASSIGNED',
+            description: document.getElementById('nodeDescription').value || '',
             selected: true
         };
 
@@ -215,6 +216,7 @@ class InfrastructureMonitor {
             this.commandHub.updateStats(this.projects);
         }
         this.renderHubBadges();
+        this.renderIndicatorsPanel();
 
         this.activeMiniCharts.forEach(chart => chart.dispose());
         this.activeMiniCharts = [];
@@ -401,6 +403,114 @@ class InfrastructureMonitor {
     }
 
     /**
+     * Elige un ícono representativo con base en palabras clave encontradas en
+     * la descripción breve del proyecto. Si no coincide con ninguna, usa un
+     * ícono genérico de carpeta/proyecto.
+     */
+    getIconForDescription(description) {
+        const text = (description || '').toLowerCase();
+        const map = [
+            { keywords: ['seguridad', 'firewall', 'proteccion', 'protección', 'acceso'], icon: 'ti-shield-lock' },
+            { keywords: ['red', 'network', 'internet', 'conectividad', 'wifi'], icon: 'ti-topology-star' },
+            { keywords: ['servidor', 'server', 'hosting'], icon: 'ti-server-2' },
+            { keywords: ['base de datos', 'database', 'sql', 'datos'], icon: 'ti-database' },
+            { keywords: ['usuario', 'personal', 'equipo humano', 'recursos humanos'], icon: 'ti-users' },
+            { keywords: ['finanzas', 'presupuesto', 'dinero', 'costos', 'pago'], icon: 'ti-currency-dollar' },
+            { keywords: ['construccion', 'construcción', 'obra', 'edificio', 'infraestructura civil'], icon: 'ti-building' },
+            { keywords: ['software', 'aplicacion', 'aplicación', 'app', 'sistema', 'desarrollo'], icon: 'ti-apps' },
+            { keywords: ['monitoreo', 'vigilancia', 'camara', 'cámara', 'cctv'], icon: 'ti-video' },
+            { keywords: ['energia', 'energía', 'electrico', 'eléctrico', 'planta', 'generador'], icon: 'ti-bolt' },
+            { keywords: ['nube', 'cloud', 'backup', 'respaldo'], icon: 'ti-cloud' },
+            { keywords: ['mantenimiento', 'soporte', 'reparacion', 'reparación'], icon: 'ti-tool' }
+        ];
+        for (const entry of map) {
+            if (entry.keywords.some(k => text.includes(k))) return entry.icon;
+        }
+        return 'ti-folder';
+    }
+
+    /**
+     * Panel de Indicadores: anillos circulares punteados (uno por proyecto +
+     * uno grande de agregado), barras horizontales + tira de calor con
+     * degradado, y filas de ícono+descripción — todo con datos reales.
+     */
+    renderIndicatorsPanel() {
+        const ringsContainer = document.getElementById('indicator-rings');
+        const barsContainer = document.getElementById('indicator-bars');
+        const heatstripContainer = document.getElementById('indicator-heatstrip');
+        const iconRowsContainer = document.getElementById('indicator-icon-rows');
+        const totalRing = document.getElementById('indicator-total-ring');
+        const totalValue = document.getElementById('indicator-total-value');
+        const totalLabel = document.getElementById('indicator-total-label');
+        if (!ringsContainer || !barsContainer || !heatstripContainer || !iconRowsContainer) return;
+
+        const total = this.projects.length;
+        const avgProgress = total > 0
+            ? Math.round(this.projects.reduce((sum, p) => sum + Number(p.progress || 0), 0) / total)
+            : 0;
+
+        // --- Anillo grande de agregado (promedio general, color neutro) ---
+        if (totalRing) totalRing.style.setProperty('--pct', avgProgress);
+        if (totalValue) totalValue.textContent = `${avgProgress}%`;
+        if (totalLabel) totalLabel.textContent = `Promedio General · ${total} Activo${total === 1 ? '' : 's'}`;
+
+        // --- Anillos pequeños, uno por proyecto, coloreados por criticidad ---
+        ringsContainer.innerHTML = this.projects.map(p => {
+            const color = this.getLevelColor(p.level);
+            return `
+                <div class="text-center">
+                    <div class="hud-ring" style="--pct:${p.progress}; --ring-color:${color};">
+                        <span class="hud-ring-value">${p.progress}%</span>
+                    </div>
+                    <div class="small text-muted text-truncate mt-1" style="max-width:100px;" title="${this.escapeHtml(p.name)}">
+                        ${this.escapeHtml(p.name)}
+                    </div>
+                </div>
+            `;
+        }).join('') || `<div class="text-muted small">Sin proyectos activos.</div>`;
+
+        // --- Barras horizontales + tira de calor con degradado ---
+        barsContainer.innerHTML = this.projects.map(p => {
+            const color = this.getLevelColor(p.level);
+            return `
+                <div>
+                    <div class="d-flex justify-content-between small text-muted mb-1">
+                        <span class="text-truncate" style="max-width:70%;">${this.escapeHtml(p.name)}</span>
+                        <span class="font-monospace">${p.progress}%</span>
+                    </div>
+                    <div style="height:8px; background:rgba(148,163,184,0.15);">
+                        <div style="height:100%; width:${p.progress}%; background:${color}; box-shadow:0 0 6px ${color};"></div>
+                    </div>
+                </div>
+            `;
+        }).join('') || `<div class="text-muted small">Sin proyectos activos.</div>`;
+
+        heatstripContainer.innerHTML = this.projects.map(p => {
+            const color = this.getLevelColor(p.level);
+            const opacity = 0.25 + (p.progress / 100) * 0.75;
+            return `<div class="hud-heat-cell" style="--cell-color:${color}; --cell-opacity:${opacity.toFixed(2)};" title="${this.escapeHtml(p.name)}: ${p.progress}%"></div>`;
+        }).join('');
+
+        // --- Filas de ícono + descripción, una por proyecto ---
+        iconRowsContainer.innerHTML = this.projects.map(p => {
+            const color = this.getLevelColor(p.level);
+            const icon = this.getIconForDescription(p.description);
+            const desc = p.description
+                ? this.escapeHtml(p.description)
+                : '<span class="fst-italic text-muted">Sin descripción aún — agrégala en Editar.</span>';
+            return `
+                <div class="hud-icon-row" style="--hud-color:${color};">
+                    <span class="hud-icon-box" style="--hud-color:${color};"><i class="ti ${icon}"></i></span>
+                    <div class="flex-grow-1" style="min-width:0;">
+                        <div class="fw-bold small text-truncate">${this.escapeHtml(p.name)}</div>
+                        <div class="small text-muted" style="font-size:0.7rem; line-height:1.2;">${desc}</div>
+                    </div>
+                </div>
+            `;
+        }).join('') || `<div class="text-muted small">Sin proyectos activos.</div>`;
+    }
+
+    /**
      * Abre el modal flotante con los proyectos de una criticidad específica
      * (o todos, si level es null). Se dispara al hacer clic en las tarjetas
      * de resumen (Críticos / Advertencia / Estables / Baja / Total).
@@ -531,6 +641,7 @@ class InfrastructureMonitor {
         document.getElementById('nodeLevel').value = p.level;
         document.getElementById('nodeProgress').value = p.progress;
         document.getElementById('nodeLead').value = p.lead;
+        document.getElementById('nodeDescription').value = p.description || '';
         document.getElementById('deleteBtn').classList.remove('d-none');
 
         // Bitácora de avances: solo aplica a proyectos ya existentes
@@ -570,6 +681,7 @@ class InfrastructureMonitor {
         document.getElementById('nodeLevel').value = "NORMAL";
         document.getElementById('nodeProgress').value = "0";
         document.getElementById('nodeLead').value = "";
+        document.getElementById('nodeDescription').value = "";
         document.getElementById('deleteBtn').classList.add('d-none');
 
         // Aún no existe el proyecto, no se puede documentar avances todavía

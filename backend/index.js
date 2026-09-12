@@ -120,6 +120,8 @@ async function initDB() {
       END $$;
     `);
 
+        await pool.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS description TEXT;`);
+
         await pool.query(`ALTER TABLE project_updates ADD COLUMN IF NOT EXISTS project_id VARCHAR(50);`);
         await pool.query(`ALTER TABLE project_updates ADD COLUMN IF NOT EXISTS note TEXT;`);
         await pool.query(`ALTER TABLE project_updates ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();`);
@@ -139,7 +141,7 @@ initDB();
 // 1. LISTAR PROYECTOS (GET)
 app.get('/api/projects', async (req, res) => {
     try {
-        const result = await pool.query('SELECT id, name, level, progress, lead, last_update AS "lastUpdate", selected FROM projects ORDER BY id ASC');
+        const result = await pool.query('SELECT id, name, level, progress, lead, description, last_update AS "lastUpdate", selected FROM projects ORDER BY id ASC');
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -148,16 +150,16 @@ app.get('/api/projects', async (req, res) => {
 
 // 2. INSERTAR / ACTUALIZAR PROYECTO (POST)
 app.post('/api/projects', async (req, res) => {
-    const { id, name, level, progress, lead, selected } = req.body;
+    const { id, name, level, progress, lead, description, selected } = req.body;
     try {
         const query = `
-      INSERT INTO projects (id, name, level, progress, lead, selected) 
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO projects (id, name, level, progress, lead, description, selected) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       ON CONFLICT (id) 
-      DO UPDATE SET name = $2, level = $3, progress = $4, lead = $5, selected = $6
+      DO UPDATE SET name = $2, level = $3, progress = $4, lead = $5, description = $6, selected = $7
       RETURNING *;
     `;
-        const result = await pool.query(query, [id, name, level, progress, lead, selected ?? true]);
+        const result = await pool.query(query, [id, name, level, progress, lead, description ?? null, selected ?? true]);
         res.json({ success: true, project: result.rows[0] });
     } catch (err) {
         res.status(500).json({ error: err.message });
