@@ -19,7 +19,7 @@
     <script src="./assets/modules/FetchManager.js"></script>
     <script src="./assets/modules/StorageManager.js"></script>
     <script src="./assets/modules/Background3D.js"></script>
-    <script src="./assets/modules/Gauge3D.js"></script>
+    <script src="./assets/modules/GlassRing3D.js"></script>
 
 </head>
 
@@ -82,8 +82,9 @@
             <div class="row g-4">
                 <div class="col-12 col-lg-5">
                     <div class="d-flex justify-content-center mb-3">
-                        <div id="indicator-total-ring" class="hud-ring hud-ring-lg" style="--ring-color:#22d3ee;">
-                            <span class="hud-ring-value fs-3" id="indicator-total-value">0%</span>
+                        <div id="indicator-total-ring" class="position-relative mx-auto" style="width:150px; height:150px;">
+                            <span class="position-absolute top-50 start-50 translate-middle hud-ring-value fs-3"
+                                id="indicator-total-value" style="z-index:6; pointer-events:none;">0%</span>
                         </div>
                     </div>
                     <div class="text-center small text-muted mb-4" id="indicator-total-label">Promedio General &middot; 0 Activos</div>
@@ -106,28 +107,6 @@
         <div id="statsContainer"
             class="d-flex flex-column gap-2 no-print"
             style="position:fixed; top:100px; right:18px; z-index:20;">
-        </div>
-
-        <div class="row g-3 mb-4 no-print flex-grow-1">
-            <div class="col-12 col-xl-12 d-flex">
-                <div
-                    class="card shadow-sm flex-grow-1 d-flex flex-row align-items-center gap-2 p-3 border border-secondary-subtle bg-body-tertiary">
-                    <button onclick="monitor.prevPage()"
-                        class="btn btn-icon btn-ghost-secondary text-muted border-0 p-2 fs-3" id="prevBtn"
-                        style="cursor: pointer;">
-                        <i class="ti ti-chevron-compact-left"></i>
-                    </button>
-
-                    <div id="nodesGrid" class="row g-3 flex-grow-1">
-                    </div>
-
-                    <button onclick="monitor.nextPage()"
-                        class="btn btn-icon btn-ghost-secondary text-muted border-0 p-2 fs-3" id="nextBtn"
-                        style="cursor: pointer;">
-                        <i class="ti ti-chevron-compact-right"></i>
-                    </button>
-                </div>
-            </div>
         </div>
 
         <footer

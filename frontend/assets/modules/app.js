@@ -44,7 +44,7 @@ class InfrastructureMonitor {
 
         // --- ACTIVACIÓN DEL FONDO 3D INTERACTIVO (red de proyectos) ---
         this.background3D = new Background3D('canvas-container');
-        this.gauge3D = new Gauge3D();
+        this.glassRing3D = new GlassRing3D();
         await this.loadProjectsFromRemote();
 
         // Renderizado Inicial
@@ -193,104 +193,14 @@ class InfrastructureMonitor {
     }
 
     renderDashboard() {
-        const nodesGrid = document.getElementById('nodesGrid');
-        if (!nodesGrid) return;
-
         // Mantiene el enjambre de drones del fondo 3D en sincronía con los datos reales
         if (this.background3D) {
             this.background3D.syncProjects(this.projects);
         }
 
         this.renderIndicatorsPanel();
-
         this.activeMiniCharts.forEach(chart => chart.dispose());
         this.activeMiniCharts = [];
-        nodesGrid.innerHTML = '';
-
-        const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
-        const labelColor = isDark ? '#f8fafc' : '#1e293b';
-        const trackColor = isDark ? '#334155' : '#e2e8f0';
-
-        const startIndex = this.currentPage * this.itemsPerPage;
-        const endIndex = startIndex + this.itemsPerPage;
-        const paginatedProjects = this.projects.slice(startIndex, endIndex);
-
-        paginatedProjects.forEach((p) => {
-            const originalIndex = this.projects.findIndex(proj => proj.id === p.id);
-
-            // Un solo color oficial por nivel, reutilizado en el borde HUD, el
-            // gauge y la barra segmentada, para que siempre coincidan.
-            const colorHex = this.getLevelColor(p.level);
-
-            // Barra segmentada tipo LED (10 segmentos) reflejando el progreso
-            const segCount = 10;
-            const filledSegs = Math.round((p.progress / 100) * segCount);
-            let segsHtml = '';
-            for (let s = 0; s < segCount; s++) {
-                segsHtml += `<span class="hud-seg ${s < filledSegs ? 'on' : ''}" style="--seg-color:${colorHex};"></span>`;
-            }
-
-            const col = document.createElement('div');
-            col.className = 'col-12 col-md-6 col-lg-4 col-xl-3';
-            col.innerHTML = `
-                <div class="card hud-panel h-100 shadow-sm" style="--hud-color:${colorHex}; transition: transform 0.15s ease;">
-                    <div class="card-body p-3 d-flex flex-column justify-content-between">
-                        <div class="d-flex align-items-center justify-content-between mb-3">
-                            <div class="d-flex align-items-center gap-2">
-                                <input type="checkbox" ${p.selected ? 'checked' : ''} onchange="monitor.toggleSelect(${originalIndex})" class="form-check-input m-0">
-                                <span class="data-label font-monospace fw-bold">${p.id}</span>
-                            </div>
-                            <div class="d-flex align-items-center gap-2">
-                                <button onclick="monitor.openBitacora(${originalIndex})" title="Bitácora de Avances"
-                                    class="btn btn-link btn-sm p-0 text-decoration-none fw-semibold small text-info">
-                                    <i class="ti ti-folder"></i> Bitácora
-                                </button>
-                                <button onclick="monitor.openModal(${originalIndex})" class="btn btn-link btn-sm p-0 text-decoration-none fw-semibold small text-primary">
-                                    <i class="ti ti-edit"></i> Editar
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-center my-2">
-                            <div id="gauge-${p.id}" class="position-relative" style="width: 140px; height: 140px;">
-                                <span class="position-absolute top-50 start-50 translate-middle fw-bold fs-5"
-                                    style="z-index:6; color:${labelColor}; pointer-events:none;">${p.progress}%</span>
-                            </div>
-                        </div>
-
-                        <div class="hud-seg-bar mb-2" title="Progreso: ${p.progress}%">
-                            ${segsHtml}
-                        </div>
-
-                        <div class="border-top pt-2 mt-2">
-                            <div class="fw-bold text-truncate mb-1" title="${p.name}">${p.name}</div>
-                            <div class="d-flex justify-content-between align-items-center text-muted" style="font-size: 0.75rem;">
-                                <span><i class="ti ti-user"></i> ${p.lead}</span>
-                                <span class="badge rounded-pill fw-bold" style="background:${colorHex}22; color:${colorHex}; border:1px solid ${colorHex}55;">${p.level}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            nodesGrid.appendChild(col);
-
-            // Gauge en 3D real (Three.js), no una simulación 2D
-            if (this.gauge3D) {
-                this.gauge3D.register(`gauge-${p.id}`, p.progress, colorHex);
-            }
-        });
-
-        // Quita del motor 3D cualquier gauge que ya no esté en esta página
-        if (this.gauge3D) {
-            this.gauge3D.pruneTo(paginatedProjects.map(p => `gauge-${p.id}`));
-        }
-
-        const maxPage = Math.ceil(this.projects.length / this.itemsPerPage) - 1;
-        const prevBtn = document.getElementById('prevBtn');
-        const nextBtn = document.getElementById('nextBtn');
-
-        if (prevBtn) prevBtn.disabled = this.currentPage === 0;
-        if (nextBtn) nextBtn.disabled = this.currentPage >= maxPage;
 
         this.updateStats();
         this.updateSelectedCount();
@@ -403,25 +313,33 @@ class InfrastructureMonitor {
             ? Math.round(this.projects.reduce((sum, p) => sum + Number(p.progress || 0), 0) / total)
             : 0;
 
-        // --- Anillo grande de agregado (promedio general, color neutro) ---
-        if (totalRing) totalRing.style.setProperty('--pct', avgProgress);
-        if (totalValue) totalValue.textContent = `${avgProgress}%`;
+        // --- Anillo grande de agregado (promedio general, vidrio neutro cian) ---
         if (totalLabel) totalLabel.textContent = `Promedio General · ${total} Activo${total === 1 ? '' : 's'}`;
+        if (totalValue) totalValue.textContent = `${avgProgress}%`;
+        if (this.glassRing3D && totalRing) {
+            this.glassRing3D.register('indicator-total-ring', avgProgress, '#22d3ee');
+        }
 
-        // --- Anillos pequeños, uno por proyecto, coloreados por criticidad ---
-        ringsContainer.innerHTML = this.projects.map(p => {
-            const color = this.getLevelColor(p.level);
-            return `
-                <div class="text-center">
-                    <div class="hud-ring" style="--pct:${p.progress}; --ring-color:${color};">
-                        <span class="hud-ring-value">${p.progress}%</span>
-                    </div>
-                    <div class="small text-muted text-truncate mt-1" style="max-width:100px;" title="${this.escapeHtml(p.name)}">
-                        ${this.escapeHtml(p.name)}
-                    </div>
+        // --- Anillos pequeños, uno por proyecto, en vidrio 3D coloreado por criticidad ---
+        ringsContainer.innerHTML = this.projects.map(p => `
+            <div class="text-center">
+                <div id="indicator-ring-${p.id}" class="position-relative mx-auto" style="width:100px; height:100px;">
+                    <span class="position-absolute top-50 start-50 translate-middle hud-ring-value"
+                        style="z-index:6; pointer-events:none;">${p.progress}%</span>
                 </div>
-            `;
-        }).join('') || `<div class="text-muted small">Sin proyectos activos.</div>`;
+                <div class="small text-muted text-truncate mt-1" style="max-width:100px;" title="${this.escapeHtml(p.name)}">
+                    ${this.escapeHtml(p.name)}
+                </div>
+            </div>
+        `).join('') || `<div class="text-muted small">Sin proyectos activos.</div>`;
+
+        if (this.glassRing3D) {
+            this.projects.forEach(p => {
+                const color = this.getLevelColor(p.level);
+                this.glassRing3D.register(`indicator-ring-${p.id}`, p.progress, color);
+            });
+            this.glassRing3D.pruneTo(['indicator-total-ring', ...this.projects.map(p => `indicator-ring-${p.id}`)]);
+        }
 
         // --- Barras horizontales + tira de calor con degradado ---
         barsContainer.innerHTML = this.projects.map(p => {

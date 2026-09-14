@@ -309,45 +309,9 @@ body {
 }
 
 /* ============================================================
-   Panel de Indicadores: anillos punteados con % real,
-   barra + tira de degradado, filas de ícono+descripción.
+   Panel de Indicadores: anillos ahora renderizados en vidrio 3D
+   real (GlassRing3D.js); aquí solo queda el estilo del texto %.
    ============================================================ */
-.hud-ring {
-  --pct: 0;
-  --ring-color: #22d3ee;
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: conic-gradient(var(--ring-color) calc(var(--pct) * 1%), rgba(148, 163, 184, 0.12) 0);
-  flex-shrink: 0;
-}
-
-.hud-ring.hud-ring-lg {
-  width: 150px;
-  height: 150px;
-}
-
-.hud-ring::before {
-  content: "";
-  position: absolute;
-  inset: 9px;
-  border-radius: 50%;
-  background: var(--ts-card-bg, #1e293b);
-}
-
-.hud-ring::after {
-  content: "";
-  position: absolute;
-  inset: -7px;
-  border-radius: 50%;
-  border: 2px dotted var(--ring-color);
-  opacity: 0.5;
-}
-
 .hud-ring-value {
   position: relative;
   z-index: 2;
