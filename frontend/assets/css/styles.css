@@ -15,7 +15,7 @@
   --ts-border-color: #334155;
   --ts-text-main: #f8fafc;
   --ts-text-muted: #94a3b8;
-  opacity: 0.08;
+  
 
   /* Override Bootstrap dark mode defaults for crisp SaaS look */
   --bs-body-bg: #0f172a;
