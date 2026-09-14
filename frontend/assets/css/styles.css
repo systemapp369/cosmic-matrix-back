@@ -314,7 +314,7 @@ body {
    ============================================================ */
 .hud-ring-value {
   position: relative;
-  z-index: 5;
+  z-index: 4;
   font-weight: 700;
   font-family: 'Share Tech Mono', monospace;
 }
