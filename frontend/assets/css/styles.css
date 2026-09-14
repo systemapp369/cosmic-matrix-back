@@ -291,9 +291,9 @@ body {
   box-shadow: 0 0 10px -3px var(--badge-color, #22d3ee);
   font-size: 0.72rem;
   white-space: nowrap;
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(12px);
   pointer-events: none;
-   opacity: 0.08;
+   opacity: 0.8;
 }
 
 .hub-badge .hub-badge-icon {
