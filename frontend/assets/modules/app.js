@@ -45,7 +45,6 @@ class InfrastructureMonitor {
         // --- ACTIVACIÓN DEL FONDO 3D INTERACTIVO (red de proyectos) ---
         this.background3D = new Background3D('canvas-container');
         this.gauge3D = new Gauge3D();
-        this.commandHub = new CommandHub3D('command-hub-3d');
         await this.loadProjectsFromRemote();
 
         // Renderizado Inicial
@@ -57,19 +56,10 @@ class InfrastructureMonitor {
             this.activeMiniCharts.forEach(chart => chart.resize());
         });
 
-        // Reloj y fecha en tiempo real
+        // Reloj en tiempo real
         setInterval(() => {
-            const now = new Date();
             const clockEl = document.getElementById('system-clock');
-            if (clockEl) clockEl.textContent = now.toLocaleTimeString();
-
-            const hubClockEl = document.getElementById('hub-clock');
-            if (hubClockEl) hubClockEl.textContent = now.toLocaleTimeString();
-
-            const hubDateEl = document.getElementById('hub-date');
-            if (hubDateEl) {
-                hubDateEl.textContent = now.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
-            }
+            if (clockEl) clockEl.textContent = new Date().toLocaleTimeString();
         }, 1000);
     }
 
@@ -211,11 +201,6 @@ class InfrastructureMonitor {
             this.background3D.syncProjects(this.projects);
         }
 
-        // Mantiene el panel Centro de Mando (barras 3D + badges) en sincronía
-        if (this.commandHub) {
-            this.commandHub.updateStats(this.projects);
-        }
-        this.renderHubBadges();
         this.renderIndicatorsPanel();
 
         this.activeMiniCharts.forEach(chart => chart.dispose());
@@ -372,37 +357,6 @@ class InfrastructureMonitor {
     }
 
     /**
-     * Pinta los badges flotantes alrededor del panel 3D del Centro de Mando,
-     * con estadísticas reales calculadas a partir de los proyectos actuales.
-     */
-    renderHubBadges() {
-        const container = document.getElementById('hub-badges');
-        if (!container) return;
-
-        const total = this.projects.length;
-        const avgProgress = total > 0
-            ? Math.round(this.projects.reduce((sum, p) => sum + Number(p.progress || 0), 0) / total)
-            : 0;
-        const criticos = this.projects.filter(p => p.level === 'CRÍTICA').length;
-        const responsables = new Set(this.projects.map(p => p.lead).filter(Boolean)).size;
-
-        const badges = [
-            { icon: 'ti-server', label: 'Total Activos', value: total, color: '#22d3ee', pos: 'top:2%; left:2%;' },
-            { icon: 'ti-chart-arcs', label: 'Progreso Prom.', value: `${avgProgress}%`, color: '#10b981', pos: 'top:2%; right:2%;' },
-            { icon: 'ti-alert-hexagon', label: 'Críticos', value: criticos, color: '#ef4444', pos: 'top:46%; left:-2%;' },
-            { icon: 'ti-users', label: 'Responsables', value: responsables, color: '#f59e0b', pos: 'top:46%; right:-2%;' },
-            { icon: 'ti-notebook', label: 'Bitácoras', value: 'Ver detalle', color: '#8443c0', pos: 'bottom:2%; left:50%; transform:translateX(-50%);' }
-        ];
-
-        container.innerHTML = badges.map(b => `
-            <div class="hub-badge" style="${b.pos} --badge-color:${b.color};">
-                <span class="hub-badge-icon"><i class="ti ${b.icon}"></i></span>
-                <span>${b.label}: <strong>${b.value}</strong></span>
-            </div>
-        `).join('');
-    }
-
-    /**
      * Elige un ícono representativo con base en palabras clave encontradas en
      * la descripción breve del proyecto. Si no coincide con ninguna, usa un
      * ícono genérico de carpeta/proyecto.
@@ -492,17 +446,33 @@ class InfrastructureMonitor {
         }).join('');
 
         // --- Filas de ícono + descripción, una por proyecto ---
-        iconRowsContainer.innerHTML = this.projects.map(p => {
+        iconRowsContainer.innerHTML = this.projects.map((p) => {
+            const idx = this.projects.findIndex(pr => pr.id === p.id);
             const color = this.getLevelColor(p.level);
             const icon = this.getIconForDescription(p.description);
             const desc = p.description
                 ? this.escapeHtml(p.description)
                 : '<span class="fst-italic text-muted">Sin descripción aún — agrégala en Editar.</span>';
             return `
-                <div class="hud-icon-row" style="--hud-color:${color};">
+                <div class="hud-icon-row" role="button" style="--hud-color:${color}; cursor:pointer;"
+                    onclick="monitor.openModal(${idx})" title="Ver detalle de ${this.escapeHtml(p.name)}">
                     <span class="hud-icon-box" style="--hud-color:${color};"><i class="ti ${icon}"></i></span>
                     <div class="flex-grow-1" style="min-width:0;">
-                        <div class="fw-bold small text-truncate">${this.escapeHtml(p.name)}</div>
+                        <div class="d-flex align-items-center justify-content-between gap-2">
+                            <div class="fw-bold small text-truncate">${this.escapeHtml(p.name)}</div>
+                            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                <button type="button" onclick="event.stopPropagation(); monitor.openBitacora(${idx});"
+                                    class="btn btn-link btn-sm p-0 text-decoration-none text-info" title="Bitácora de Avances"
+                                    style="font-size:0.7rem;">
+                                    <i class="ti ti-folder"></i>
+                                </button>
+                                <button type="button" onclick="event.stopPropagation(); monitor.openModal(${idx});"
+                                    class="btn btn-link btn-sm p-0 text-decoration-none text-primary" title="Editar"
+                                    style="font-size:0.7rem;">
+                                    <i class="ti ti-edit"></i>
+                                </button>
+                            </div>
+                        </div>
                         <div class="small text-muted" style="font-size:0.7rem; line-height:1.2;">${desc}</div>
                     </div>
                 </div>
