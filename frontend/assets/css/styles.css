@@ -15,7 +15,6 @@
   --ts-border-color: #334155;
   --ts-text-main: #f8fafc;
   --ts-text-muted: #94a3b8;
-  
 
   /* Override Bootstrap dark mode defaults for crisp SaaS look */
   --bs-body-bg: #0f172a;
@@ -294,7 +293,6 @@ body {
   white-space: nowrap;
   backdrop-filter: blur(2px);
   pointer-events: none;
-   
 }
 
 .hub-badge .hub-badge-icon {
@@ -316,7 +314,7 @@ body {
    ============================================================ */
 .hud-ring-value {
   position: relative;
-  z-index:5;
+  z-index: 2;
   font-weight: 700;
   font-family: 'Share Tech Mono', monospace;
 }
