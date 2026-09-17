@@ -104,38 +104,71 @@ class Background3D {
         this.ringMeshes = [];
         this.hexMeshes = [];
 
-        // Anillos concéntricos grandes, como un radar/consola
-        for (let i = 0; i < 3; i++) {
-            const radius = 20 + i * 9;
+        // Anillos concéntricos grandes, como un radar/consola (más capas + inclinaciones variadas)
+        for (let i = 0; i < 5; i++) {
+            const radius = 16 + i * 8;
             const ring = new THREE.Mesh(
-                new THREE.TorusGeometry(radius, 0.06, 8, 96),
-                new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.14 - i * 0.03 })
+                new THREE.TorusGeometry(radius, 0.05, 8, 96),
+                new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.16 - i * 0.025 })
             );
-            ring.rotation.x = Math.PI / 2.1;
+            ring.rotation.x = Math.PI / 2.1 + (i % 2 === 0 ? 0.06 : -0.06);
             ring.position.set(0, -6, -20);
             decorGroup.add(ring);
-            this.ringMeshes.push({ mesh: ring, speed: 0.02 + i * 0.01 });
+            this.ringMeshes.push({ mesh: ring, speed: 0.015 + i * 0.008 });
         }
+
+        // Núcleo de energía central: icosaedro brillante con contorno wireframe,
+        // pulsando lentamente — punto focal "tecnológico" de la escena.
+        const coreMat = new THREE.MeshStandardMaterial({
+            color: 0x22d3ee, emissive: 0x22d3ee, emissiveIntensity: 0.9,
+            transparent: true, opacity: 0.35, roughness: 0.2, metalness: 0.6
+        });
+        this.coreMesh = new THREE.Mesh(new THREE.IcosahedronGeometry(3.2, 1), coreMat);
+        this.coreMesh.position.set(0, -6, -20);
+        decorGroup.add(this.coreMesh);
+
+        const coreOutline = new THREE.LineSegments(
+            new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(3.35, 1)),
+            new THREE.LineBasicMaterial({ color: 0x5ad8ff, transparent: true, opacity: 0.55 })
+        );
+        coreOutline.position.copy(this.coreMesh.position);
+        decorGroup.add(coreOutline);
+        this.coreOutline = coreOutline;
+
+        // Campo de partículas estelares disperso, para dar profundidad y
+        // sensación de "espacio tecnológico" al fondo.
+        const starCount = 260;
+        const starPositions = new Float32Array(starCount * 3);
+        for (let i = 0; i < starCount; i++) {
+            starPositions[i * 3] = (Math.random() - 0.5) * 220;
+            starPositions[i * 3 + 1] = (Math.random() - 0.5) * 140;
+            starPositions[i * 3 + 2] = (Math.random() - 0.5) * 160 - 30;
+        }
+        const starGeo = new THREE.BufferGeometry();
+        starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+        const starMat = new THREE.PointsMaterial({ color: 0x8fd6ff, size: 0.35, transparent: true, opacity: 0.55 });
+        this.starField = new THREE.Points(starGeo, starMat);
+        decorGroup.add(this.starField);
 
         // Paneles hexagonales translúcidos flotando (acento decorativo tipo HUD)
         const hexGeo = new THREE.CircleGeometry(2.2, 6);
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 14; i++) {
             const mat = new THREE.MeshBasicMaterial({
-                color: 0x22d3ee, transparent: true, opacity: 0.06,
+                color: 0x22d3ee, transparent: true, opacity: 0.07,
                 side: THREE.DoubleSide
             });
             const hex = new THREE.Mesh(hexGeo, mat);
             hex.position.set(
-                (Math.random() - 0.5) * 90,
-                (Math.random() - 0.5) * 50,
-                (Math.random() - 0.5) * 60 - 20
+                (Math.random() - 0.5) * 100,
+                (Math.random() - 0.5) * 55,
+                (Math.random() - 0.5) * 70 - 20
             );
             hex.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
             decorGroup.add(hex);
             this.hexMeshes.push({ mesh: hex, phase: Math.random() * Math.PI * 2 });
 
             const edges = new THREE.EdgesGeometry(hexGeo);
-            const outline = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x5ad8ff, transparent: true, opacity: 0.25 }));
+            const outline = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x5ad8ff, transparent: true, opacity: 0.28 }));
             outline.position.copy(hex.position);
             outline.rotation.copy(hex.rotation);
             decorGroup.add(outline);
@@ -381,6 +414,23 @@ class Background3D {
                 h.mesh.position.y += Math.sin(t * 0.2 + h.phase) * 0.003;
                 h.mesh.rotation.z += 0.0008;
             });
+        }
+
+        // Núcleo de energía: pulso de escala + rotación continua
+        if (this.coreMesh) {
+            const pulse = 1 + Math.sin(t * 0.9) * 0.06;
+            this.coreMesh.scale.setScalar(pulse);
+            this.coreMesh.rotation.y += 0.003;
+            this.coreMesh.rotation.x += 0.0015;
+            if (this.coreOutline) {
+                this.coreOutline.scale.setScalar(pulse);
+                this.coreOutline.rotation.copy(this.coreMesh.rotation);
+            }
+        }
+
+        // Campo de estrellas: deriva muy lenta, como fondo espacial vivo
+        if (this.starField) {
+            this.starField.rotation.y += 0.00015;
         }
 
         // Recorrido suave de cámara + paralaje del mouse

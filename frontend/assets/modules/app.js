@@ -321,9 +321,12 @@ class InfrastructureMonitor {
         }
 
         // --- Anillos pequeños, uno por proyecto, en vidrio 3D coloreado por criticidad ---
-        ringsContainer.innerHTML = this.projects.map(p => `
-            <div class="text-center">
-                <div id="indicator-ring-${p.id}" class="position-relative mx-auto" style="width:100px; height:100px;">
+        ringsContainer.innerHTML = this.projects.map(p => {
+            const idx = this.projects.findIndex(pr => pr.id === p.id);
+            return `
+            <div class="text-center" role="button" style="cursor:pointer;"
+                onclick="monitor.openBitacora(${idx})" title="Ver bitácora de ${this.escapeHtml(p.name)}">
+                <div id="indicator-ring-${p.id}" class="position-relative mx-auto" style="width:100px; height:100px; pointer-events:none;">
                     <span class="position-absolute top-50 start-50 translate-middle hud-ring-value"
                         style="z-index:6; pointer-events:none;">${p.progress}%</span>
                 </div>
@@ -331,7 +334,8 @@ class InfrastructureMonitor {
                     ${this.escapeHtml(p.name)}
                 </div>
             </div>
-        `).join('') || `<div class="text-muted small">Sin proyectos activos.</div>`;
+        `;
+        }).join('') || `<div class="text-muted small">Sin proyectos activos.</div>`;
 
         if (this.glassRing3D) {
             this.projects.forEach(p => {

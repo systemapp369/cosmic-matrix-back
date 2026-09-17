@@ -21,12 +21,26 @@ class GlassRing3D {
      * @param {string} colorHex - color de criticidad del proyecto
      */
     register(elementId, percent, colorHex) {
+        const currentEl = document.getElementById(elementId);
+        if (!currentEl) return;
+
         let inst = this.instances.get(elementId);
 
+        // Si el HTML del panel se reconstruyó (innerHTML), el <div> original
+        // fue reemplazado por uno NUEVO con el mismo id. La instancia vieja
+        // sigue "viva" en el mapa pero apunta a un nodo ya desconectado del
+        // DOM — hay que descartarla y crear una nueva sobre el nodo actual.
+        if (inst && (inst.container !== currentEl || !inst.container.isConnected)) {
+            inst.renderer.dispose();
+            if (inst.renderer.domElement.parentNode) {
+                inst.renderer.domElement.parentNode.removeChild(inst.renderer.domElement);
+            }
+            this.instances.delete(elementId);
+            inst = null;
+        }
+
         if (!inst) {
-            const container = document.getElementById(elementId);
-            if (!container) return;
-            inst = this._createInstance(container);
+            inst = this._createInstance(currentEl);
             if (!inst) return;
             this.instances.set(elementId, inst);
         }

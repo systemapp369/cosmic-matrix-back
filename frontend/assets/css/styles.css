@@ -358,3 +358,19 @@ body {
   font-size: 1.2rem;
 }
 
+/* ============================================================
+   Efecto vidrio (glassmorphism): fondo translúcido + blur, para
+   que se alcance a ver el fondo 3D detrás del panel.
+   ============================================================ */
+.hud-glass {
+  background: rgba(15, 23, 42, 0.32) !important;
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+}
+
+.hud-glass .hud-icon-row {
+  background: rgba(15, 23, 42, 0.28);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
