@@ -20,6 +20,7 @@
     <script src="./assets/modules/StorageManager.js"></script>
     <script src="./assets/modules/Background3D.js"></script>
     <script src="./assets/modules/GlassRing3D.js"></script>
+    <script src="./assets/modules/HexTower3D.js"></script>
 
 </head>
 
@@ -75,31 +76,33 @@
             </div>
         </header>
 
-        <div class="card hud-panel hud-glass mb-4 p-3 shadow-sm no-print" style="--hud-color:#22d3ee;">
-            <h6 class="fw-bold text-uppercase mb-3 data-label" style="font-size:0.8rem;">
-                <i class="ti ti-chart-donut"></i> Panel de Indicadores
-            </h6>
+        <div class="card hex-panel mb-4 shadow-sm no-print p-4">
+            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                <h6 class="fw-bold text-uppercase mb-0 hex-panel-title">
+                    <i class="ti ti-hexagon"></i> Vista de Torres &middot; Infraestructura
+                </h6>
+                <div class="d-flex align-items-center gap-2">
+                    <button onclick="monitor.hexPrevPage()" class="btn btn-sm hex-nav-btn" id="hexPrevBtn">
+                        <i class="ti ti-chevron-left"></i>
+                    </button>
+                    <span class="small hex-panel-subtitle" id="hexPageLabel">1 / 1</span>
+                    <button onclick="monitor.hexNextPage()" class="btn btn-sm hex-nav-btn" id="hexNextBtn">
+                        <i class="ti ti-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+
             <div class="row g-4">
-                <div class="col-12 col-lg-5">
-                    <div class="d-flex justify-content-center mb-3">
-                        <div id="indicator-total-ring" class="position-relative mx-auto" style="width:150px; height:150px;">
-                            <span class="position-absolute top-50 start-50 translate-middle hud-ring-value fs-3"
-                                id="indicator-total-value" style="z-index:6; pointer-events:none;">0%</span>
-                        </div>
-                    </div>
-                    <div class="text-center small text-muted mb-4" id="indicator-total-label">Promedio General &middot; 0 Activos</div>
-                    <div id="indicator-rings" class="d-flex flex-wrap justify-content-center gap-3"></div>
-                </div>
-
                 <div class="col-12 col-lg-4">
-                    <div class="d-flex gap-2">
-                        <div id="indicator-bars" class="flex-grow-1 d-flex flex-column gap-2"></div>
-                        <div id="indicator-heatstrip" class="hud-heat-strip"></div>
+                    <div class="hex-chart-box p-2">
+                        <div class="hex-panel-subtitle small mb-1"><i class="ti ti-crown"></i> INFOGRAPHIC INFORMATION</div>
+                        <div id="hex-line-chart" style="width:100%; height:170px;"></div>
                     </div>
+                    <div id="hex-rings-row" class="d-flex justify-content-around mt-3"></div>
                 </div>
 
-                <div class="col-12 col-lg-3">
-                    <div id="indicator-icon-rows" class="d-flex flex-column gap-2"></div>
+                <div class="col-12 col-lg-8">
+                    <div id="hex-towers-row" class="d-flex justify-content-around flex-wrap gap-3"></div>
                 </div>
             </div>
         </div>

@@ -374,3 +374,128 @@ body {
   -webkit-backdrop-filter: blur(6px);
 }
 
+/* ============================================================
+   Vista de Torres: panel claro/pastel, estilo isométrico elegante,
+   deliberadamente distinto del tema oscuro del resto de la app.
+   ============================================================ */
+.hex-panel {
+  background: linear-gradient(160deg, #eef4fb 0%, #dce8f5 100%);
+  border: 1px solid #cbd8e8;
+  border-radius: 18px;
+  color: #334155;
+}
+
+.hex-panel-title {
+  color: #1e3a5f;
+  letter-spacing: 1px;
+  font-size: 0.85rem;
+}
+
+.hex-panel-subtitle {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.hex-nav-btn {
+  background: #ffffff;
+  border: 1px solid #cbd8e8;
+  color: #3b82f6;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.hex-nav-btn:disabled {
+  opacity: 0.35;
+}
+
+.hex-chart-box {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px -6px rgba(30, 58, 95, 0.15);
+}
+
+.hex-tower-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 130px;
+  cursor: pointer;
+}
+
+.hex-tower-3d {
+  position: relative;
+}
+
+.hex-tower-value {
+  position: absolute;
+  top: 28%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 6;
+  font-weight: 800;
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+
+.hex-step-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 1px;
+  margin-top: -6px;
+}
+
+.hex-connector {
+  width: 2px;
+  height: 22px;
+  border-left: 2px dashed var(--hex-color, #60a5fa);
+  position: relative;
+  margin: 2px 0;
+}
+
+.hex-connector-dot {
+  position: absolute;
+  bottom: -5px;
+  left: -5px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--hex-color, #60a5fa);
+}
+
+.hex-data-option {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid var(--hex-color, #60a5fa);
+  border-radius: 8px;
+  padding: 8px 10px;
+  width: 100%;
+  box-shadow: 0 3px 10px -5px rgba(30, 58, 95, 0.18);
+}
+
+.hex-data-option .fw-bold {
+  color: #1e293b;
+}
+
+.hex-data-desc {
+  font-size: 0.7rem;
+  color: #64748b;
+  line-height: 1.25;
+  margin-top: 2px;
+}
+
+.hex-ring-value {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #1e293b;
+  z-index: 6;
+  pointer-events: none;
+}
+

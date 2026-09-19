@@ -45,6 +45,8 @@ class InfrastructureMonitor {
         // --- ACTIVACIÓN DEL FONDO 3D INTERACTIVO (red de proyectos) ---
         this.background3D = new Background3D('canvas-container');
         this.glassRing3D = new GlassRing3D();
+        this.hexTower3D = new HexTower3D();
+        this.hexPage = 0;
         await this.loadProjectsFromRemote();
 
         // Renderizado Inicial
@@ -198,7 +200,7 @@ class InfrastructureMonitor {
             this.background3D.syncProjects(this.projects);
         }
 
-        this.renderIndicatorsPanel();
+        this.renderHexTowerPanel();
         this.activeMiniCharts.forEach(chart => chart.dispose());
         this.activeMiniCharts = [];
 
@@ -294,112 +296,132 @@ class InfrastructureMonitor {
     }
 
     /**
-     * Panel de Indicadores: anillos circulares punteados (uno por proyecto +
-     * uno grande de agregado), barras horizontales + tira de calor con
-     * degradado, y filas de ícono+descripción — todo con datos reales.
+     * Vista de Torres: torres hexagonales 3D (una por proyecto, altura y
+     * color según su progreso/criticidad en tono pastel), anillos 3D a juego,
+     * gráfica de puntos, y descripción real de cada proyecto — en grupos de 5.
      */
-    renderIndicatorsPanel() {
-        const ringsContainer = document.getElementById('indicator-rings');
-        const barsContainer = document.getElementById('indicator-bars');
-        const heatstripContainer = document.getElementById('indicator-heatstrip');
-        const iconRowsContainer = document.getElementById('indicator-icon-rows');
-        const totalRing = document.getElementById('indicator-total-ring');
-        const totalValue = document.getElementById('indicator-total-value');
-        const totalLabel = document.getElementById('indicator-total-label');
-        if (!ringsContainer || !barsContainer || !heatstripContainer || !iconRowsContainer) return;
-
-        const total = this.projects.length;
-        const avgProgress = total > 0
-            ? Math.round(this.projects.reduce((sum, p) => sum + Number(p.progress || 0), 0) / total)
-            : 0;
-
-        // --- Anillo grande de agregado (promedio general, vidrio neutro cian) ---
-        if (totalLabel) totalLabel.textContent = `Promedio General · ${total} Activo${total === 1 ? '' : 's'}`;
-        if (totalValue) totalValue.textContent = `${avgProgress}%`;
-        if (this.glassRing3D && totalRing) {
-            this.glassRing3D.register('indicator-total-ring', avgProgress, '#22d3ee');
+    getPastelColor(level) {
+        switch (level) {
+            case 'CRÍTICA': return '#f87171';
+            case 'ALTA': return '#fbbf24';
+            case 'NORMAL': return '#34d399';
+            case 'BAJA': return '#a78bfa';
+            default: return '#60a5fa';
         }
+    }
 
-        // --- Anillos pequeños, uno por proyecto, en vidrio 3D coloreado por criticidad ---
-        ringsContainer.innerHTML = this.projects.map(p => {
-            const idx = this.projects.findIndex(pr => pr.id === p.id);
-            return `
-            <div class="text-center" role="button" style="cursor:pointer;"
-                onclick="monitor.openBitacora(${idx})" title="Ver bitácora de ${this.escapeHtml(p.name)}">
-                <div id="indicator-ring-${p.id}" class="position-relative mx-auto" style="width:100px; height:100px; pointer-events:none;">
-                    <span class="position-absolute top-50 start-50 translate-middle hud-ring-value"
-                        style="z-index:6; pointer-events:none;">${p.progress}%</span>
-                </div>
-                <div class="small text-muted text-truncate mt-1" style="max-width:100px;" title="${this.escapeHtml(p.name)}">
-                    ${this.escapeHtml(p.name)}
-                </div>
-            </div>
-        `;
-        }).join('') || `<div class="text-muted small">Sin proyectos activos.</div>`;
-
-        if (this.glassRing3D) {
-            this.projects.forEach(p => {
-                const color = this.getLevelColor(p.level);
-                this.glassRing3D.register(`indicator-ring-${p.id}`, p.progress, color);
-            });
-            this.glassRing3D.pruneTo(['indicator-total-ring', ...this.projects.map(p => `indicator-ring-${p.id}`)]);
+    hexNextPage() {
+        const maxPage = Math.ceil(this.projects.length / 5) - 1;
+        if (this.hexPage < maxPage) {
+            this.hexPage++;
+            this.renderHexTowerPanel();
         }
+    }
 
-        // --- Barras horizontales + tira de calor con degradado ---
-        barsContainer.innerHTML = this.projects.map(p => {
-            const color = this.getLevelColor(p.level);
-            return `
-                <div>
-                    <div class="d-flex justify-content-between small text-muted mb-1">
-                        <span class="text-truncate" style="max-width:70%;">${this.escapeHtml(p.name)}</span>
-                        <span class="font-monospace">${p.progress}%</span>
-                    </div>
-                    <div style="height:8px; background:rgba(148,163,184,0.15);">
-                        <div style="height:100%; width:${p.progress}%; background:${color}; box-shadow:0 0 6px ${color};"></div>
-                    </div>
-                </div>
-            `;
-        }).join('') || `<div class="text-muted small">Sin proyectos activos.</div>`;
+    hexPrevPage() {
+        if (this.hexPage > 0) {
+            this.hexPage--;
+            this.renderHexTowerPanel();
+        }
+    }
 
-        heatstripContainer.innerHTML = this.projects.map(p => {
-            const color = this.getLevelColor(p.level);
-            const opacity = 0.25 + (p.progress / 100) * 0.75;
-            return `<div class="hud-heat-cell" style="--cell-color:${color}; --cell-opacity:${opacity.toFixed(2)};" title="${this.escapeHtml(p.name)}: ${p.progress}%"></div>`;
-        }).join('');
+    renderHexTowerPanel() {
+        const towersRow = document.getElementById('hex-towers-row');
+        const ringsRow = document.getElementById('hex-rings-row');
+        const chartEl = document.getElementById('hex-line-chart');
+        const pageLabel = document.getElementById('hexPageLabel');
+        if (!towersRow || !ringsRow || !chartEl) return;
 
-        // --- Filas de ícono + descripción, una por proyecto ---
-        iconRowsContainer.innerHTML = this.projects.map((p) => {
+        this.hexPage = this.hexPage || 0;
+        const pageSize = 5;
+        const maxPage = Math.max(0, Math.ceil(this.projects.length / pageSize) - 1);
+        if (this.hexPage > maxPage) this.hexPage = maxPage;
+
+        const start = this.hexPage * pageSize;
+        const group = this.projects.slice(start, start + pageSize);
+
+        if (pageLabel) pageLabel.textContent = `${this.hexPage + 1} / ${maxPage + 1}`;
+        const prevBtn = document.getElementById('hexPrevBtn');
+        const nextBtn = document.getElementById('hexNextBtn');
+        if (prevBtn) prevBtn.disabled = this.hexPage === 0;
+        if (nextBtn) nextBtn.disabled = this.hexPage >= maxPage;
+
+        // --- Torres hexagonales 3D + su "DATA OPTION" (descripción real) ---
+        towersRow.innerHTML = group.map((p, i) => {
             const idx = this.projects.findIndex(pr => pr.id === p.id);
-            const color = this.getLevelColor(p.level);
-            const icon = this.getIconForDescription(p.description);
+            const color = this.getPastelColor(p.level);
             const desc = p.description
                 ? this.escapeHtml(p.description)
-                : '<span class="fst-italic text-muted">Sin descripción aún — agrégala en Editar.</span>';
+                : 'Sin descripción aún.';
             return `
-                <div class="hud-icon-row" role="button" style="--hud-color:${color}; cursor:pointer;"
-                    onclick="monitor.openModal(${idx})" title="Ver detalle de ${this.escapeHtml(p.name)}">
-                    <span class="hud-icon-box" style="--hud-color:${color};"><i class="ti ${icon}"></i></span>
-                    <div class="flex-grow-1" style="min-width:0;">
-                        <div class="d-flex align-items-center justify-content-between gap-2">
-                            <div class="fw-bold small text-truncate">${this.escapeHtml(p.name)}</div>
-                            <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                                <button type="button" onclick="event.stopPropagation(); monitor.openBitacora(${idx});"
-                                    class="btn btn-link btn-sm p-0 text-decoration-none text-info" title="Bitácora de Avances"
-                                    style="font-size:0.7rem;">
-                                    <i class="ti ti-folder"></i>
-                                </button>
-                                <button type="button" onclick="event.stopPropagation(); monitor.openModal(${idx});"
-                                    class="btn btn-link btn-sm p-0 text-decoration-none text-primary" title="Editar"
-                                    style="font-size:0.7rem;">
-                                    <i class="ti ti-edit"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="small text-muted" style="font-size:0.7rem; line-height:1.2;">${desc}</div>
+                <div class="hex-tower-col" role="button" onclick="monitor.openModal(${idx})"
+                    title="Ver detalle de ${this.escapeHtml(p.name)}">
+                    <div id="hex-tower-${p.id}" class="hex-tower-3d" style="width:100px; height:180px;">
+                        <span class="hex-tower-value">${p.progress}%</span>
+                    </div>
+                    <div class="hex-step-label">STEP 0${i + 1}</div>
+                    <div class="hex-connector" style="--hex-color:${color};">
+                        <span class="hex-connector-dot"></span>
+                    </div>
+                    <div class="hex-data-option" style="--hex-color:${color};">
+                        <div class="fw-bold small">${this.escapeHtml(p.name)}</div>
+                        <div class="hex-data-desc">${desc}</div>
                     </div>
                 </div>
             `;
         }).join('') || `<div class="text-muted small">Sin proyectos activos.</div>`;
+
+        if (this.hexTower3D) {
+            group.forEach(p => {
+                this.hexTower3D.register(`hex-tower-${p.id}`, p.progress, this.getPastelColor(p.level));
+            });
+            this.hexTower3D.pruneTo(group.map(p => `hex-tower-${p.id}`));
+        }
+
+        // --- Anillos pequeños a juego, mismo grupo de 5 ---
+        ringsRow.innerHTML = group.map(p => `
+            <div class="text-center">
+                <div id="hex-ring-${p.id}" class="position-relative mx-auto" style="width:56px; height:56px;">
+                    <span class="position-absolute top-50 start-50 translate-middle hex-ring-value">${p.progress}%</span>
+                </div>
+            </div>
+        `).join('');
+
+        if (this.glassRing3D) {
+            group.forEach(p => {
+                this.glassRing3D.register(`hex-ring-${p.id}`, p.progress, this.getPastelColor(p.level));
+            });
+            this.glassRing3D.pruneTo(group.map(p => `hex-ring-${p.id}`));
+        }
+
+        // --- Gráfica de puntos (progreso de cada proyecto del grupo) ---
+        if (!this.hexLineChart) {
+            this.hexLineChart = echarts.init(chartEl);
+        }
+        this.hexLineChart.setOption({
+            grid: { left: 30, right: 10, top: 15, bottom: 24 },
+            xAxis: {
+                type: 'category',
+                data: group.map(p => p.name),
+                axisLabel: { fontSize: 9, color: '#64748b', interval: 0, rotate: 20 },
+                axisLine: { lineStyle: { color: '#cbd5e1' } }
+            },
+            yAxis: {
+                type: 'value', max: 100,
+                axisLabel: { fontSize: 9, color: '#64748b', formatter: '{value}%' },
+                splitLine: { lineStyle: { color: '#e2e8f0' } }
+            },
+            series: [{
+                type: 'line',
+                data: group.map(p => p.progress),
+                smooth: true,
+                symbolSize: 7,
+                lineStyle: { color: '#60a5fa', width: 3 },
+                itemStyle: { color: '#3b82f6' },
+                areaStyle: { color: 'rgba(96,165,250,0.15)' }
+            }]
+        });
+        this.hexLineChart.resize();
     }
 
     /**
