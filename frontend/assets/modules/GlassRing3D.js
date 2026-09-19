@@ -94,12 +94,12 @@ class GlassRing3D {
         scene.add(accentLight);
 
         const ringGroup = new THREE.Group();
-        ringGroup.rotation.x = Math.PI / 2.5;
+        ringGroup.rotation.x = Math.PI / 3.4;
         scene.add(ringGroup);
 
         // Pista de fondo: vidrio esmerilado tenue, neutro
         const trackMesh = new THREE.Mesh(
-            new THREE.TorusGeometry(1, 0.09, 20, 80),
+            new THREE.TorusGeometry(1, 0.16, 20, 80),
             new THREE.MeshPhysicalMaterial({
                 color: 0xaeb9cc, transparent: true, opacity: 0.18,
                 roughness: 0.25, transmission: 0.55, thickness: 0.4,
@@ -110,7 +110,7 @@ class GlassRing3D {
 
         // Arco de progreso: vidrio de color real (criticidad), con clearcoat brillante
         const progressMesh = new THREE.Mesh(
-            new THREE.TorusGeometry(1, 0.115, 20, 80, 0.001),
+            new THREE.TorusGeometry(1, 0.19, 20, 80, 0.001),
             new THREE.MeshPhysicalMaterial({
                 color: 0x22d3ee, transparent: true, opacity: 0.72,
                 roughness: 0.1, transmission: 0.4, thickness: 0.5,
@@ -138,7 +138,7 @@ class GlassRing3D {
         const key = Math.max(0, Math.min(100, Math.round(percent)));
         if (!inst.arcCache.has(key)) {
             const arc = Math.max(0.001, (key / 100) * Math.PI * 2 - 0.001);
-            inst.arcCache.set(key, new THREE.TorusGeometry(1, 0.115, 20, 80, arc));
+            inst.arcCache.set(key, new THREE.TorusGeometry(1, 0.19, 20, 80, arc));
         }
         return inst.arcCache.get(key);
     }

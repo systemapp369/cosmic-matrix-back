@@ -77,9 +77,9 @@ class HexTower3D {
         container.insertBefore(renderer.domElement, container.firstChild);
 
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(28, width / height, 0.1, 20);
-        camera.position.set(2.2, 1.6, 3.2);
-        camera.lookAt(0, -0.2, 0);
+        const camera = new THREE.PerspectiveCamera(22, width / height, 0.1, 20);
+        camera.position.set(2.6, 1.9, 2.6);
+        camera.lookAt(0, -0.15, 0);
 
         scene.add(new THREE.AmbientLight(0xffffff, 0.85));
         const key = new THREE.DirectionalLight(0xffffff, 0.9);

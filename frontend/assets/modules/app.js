@@ -346,20 +346,30 @@ class InfrastructureMonitor {
         if (prevBtn) prevBtn.disabled = this.hexPage === 0;
         if (nextBtn) nextBtn.disabled = this.hexPage >= maxPage;
 
+        // Paleta fija por posición (igual que la imagen de referencia):
+        // amarillo, naranja, azul, cian, verde — no depende de la criticidad.
+        const stepPalette = ['#fbbf24', '#fb923c', '#3b82f6', '#38bdf8', '#22c55e'];
+
         // --- Torres hexagonales 3D + su "DATA OPTION" (descripción real) ---
         towersRow.innerHTML = group.map((p, i) => {
             const idx = this.projects.findIndex(pr => pr.id === p.id);
-            const color = this.getPastelColor(p.level);
+            const color = stepPalette[i % stepPalette.length];
+            const critColor = this.getLevelColor(p.level);
             const desc = p.description
                 ? this.escapeHtml(p.description)
                 : 'Sin descripción aún.';
+            // Efecto "escalera": cada torre sube un poco más que la anterior
+            const lift = i * 26;
             return `
                 <div class="hex-tower-col" role="button" onclick="monitor.openModal(${idx})"
-                    title="Ver detalle de ${this.escapeHtml(p.name)}">
-                    <div id="hex-tower-${p.id}" class="hex-tower-3d" style="width:100px; height:180px;">
+                    title="Ver detalle de ${this.escapeHtml(p.name)}" style="margin-bottom:${lift}px;">
+                    <div id="hex-tower-${p.id}" class="hex-tower-3d" style="width:110px; height:${160 + lift}px;">
                         <span class="hex-tower-value">${p.progress}%</span>
                     </div>
-                    <div class="hex-step-label">STEP 0${i + 1}</div>
+                    <div class="hex-step-label">
+                        STEP 0${i + 1}
+                        <span class="hex-crit-dot" style="background:${critColor};" title="Criticidad: ${p.level}"></span>
+                    </div>
                     <div class="hex-connector" style="--hex-color:${color};">
                         <span class="hex-connector-dot"></span>
                     </div>
@@ -372,8 +382,8 @@ class InfrastructureMonitor {
         }).join('') || `<div class="text-muted small">Sin proyectos activos.</div>`;
 
         if (this.hexTower3D) {
-            group.forEach(p => {
-                this.hexTower3D.register(`hex-tower-${p.id}`, p.progress, this.getPastelColor(p.level));
+            group.forEach((p, i) => {
+                this.hexTower3D.register(`hex-tower-${p.id}`, p.progress, stepPalette[i % stepPalette.length]);
             });
             this.hexTower3D.pruneTo(group.map(p => `hex-tower-${p.id}`));
         }
@@ -381,15 +391,15 @@ class InfrastructureMonitor {
         // --- Anillos pequeños a juego, mismo grupo de 5 ---
         ringsRow.innerHTML = group.map(p => `
             <div class="text-center">
-                <div id="hex-ring-${p.id}" class="position-relative mx-auto" style="width:56px; height:56px;">
+                <div id="hex-ring-${p.id}" class="position-relative mx-auto" style="width:64px; height:64px;">
                     <span class="position-absolute top-50 start-50 translate-middle hex-ring-value">${p.progress}%</span>
                 </div>
             </div>
         `).join('');
 
         if (this.glassRing3D) {
-            group.forEach(p => {
-                this.glassRing3D.register(`hex-ring-${p.id}`, p.progress, this.getPastelColor(p.level));
+            group.forEach((p, i) => {
+                this.glassRing3D.register(`hex-ring-${p.id}`, p.progress, stepPalette[i % stepPalette.length]);
             });
             this.glassRing3D.pruneTo(group.map(p => `hex-ring-${p.id}`));
         }

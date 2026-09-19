@@ -76,34 +76,31 @@
             </div>
         </header>
 
-        <div class="card hex-panel mb-4 shadow-sm no-print p-4">
-            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-                <h6 class="fw-bold text-uppercase mb-0 hex-panel-title">
-                    <i class="ti ti-hexagon"></i> Vista de Torres &middot; Infraestructura
-                </h6>
-                <div class="d-flex align-items-center gap-2">
-                    <button onclick="monitor.hexPrevPage()" class="btn btn-sm hex-nav-btn" id="hexPrevBtn">
-                        <i class="ti ti-chevron-left"></i>
-                    </button>
-                    <span class="small hex-panel-subtitle" id="hexPageLabel">1 / 1</span>
-                    <button onclick="monitor.hexNextPage()" class="btn btn-sm hex-nav-btn" id="hexNextBtn">
-                        <i class="ti ti-chevron-right"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="row g-4">
-                <div class="col-12 col-lg-4">
-                    <div class="hex-chart-box p-2">
-                        <div class="hex-panel-subtitle small mb-1"><i class="ti ti-crown"></i> INFOGRAPHIC INFORMATION</div>
-                        <div id="hex-line-chart" style="width:100%; height:170px;"></div>
+        <div class="hex-panel-wrap no-print mb-4">
+            <div class="card hex-panel shadow-sm p-4">
+                <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                    <h6 class="fw-bold text-uppercase mb-0 hex-panel-title">
+                        <i class="ti ti-hexagon"></i> Vista de Torres &middot; Infraestructura
+                    </h6>
+                    <div class="d-flex align-items-center gap-2">
+                        <button onclick="monitor.hexPrevPage()" class="btn btn-sm hex-nav-btn" id="hexPrevBtn">
+                            <i class="ti ti-chevron-left"></i>
+                        </button>
+                        <span class="small hex-panel-subtitle" id="hexPageLabel">1 / 1</span>
+                        <button onclick="monitor.hexNextPage()" class="btn btn-sm hex-nav-btn" id="hexNextBtn">
+                            <i class="ti ti-chevron-right"></i>
+                        </button>
                     </div>
-                    <div id="hex-rings-row" class="d-flex justify-content-around mt-3"></div>
                 </div>
 
-                <div class="col-12 col-lg-8">
-                    <div id="hex-towers-row" class="d-flex justify-content-around flex-wrap gap-3"></div>
+                <div class="hex-chart-box p-2 mb-4" style="max-width:320px;">
+                    <div class="hex-panel-subtitle small mb-1"><i class="ti ti-crown"></i> INFOGRAPHIC INFORMATION</div>
+                    <div id="hex-line-chart" style="width:100%; height:150px;"></div>
                 </div>
+
+                <div id="hex-towers-row" class="hex-staircase"></div>
+
+                <div id="hex-rings-row" class="d-flex justify-content-end gap-3 mt-4"></div>
             </div>
         </div>
 
