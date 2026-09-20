@@ -94,7 +94,7 @@ class GlassRing3D {
         scene.add(accentLight);
 
         const ringGroup = new THREE.Group();
-        ringGroup.rotation.x = Math.PI / 3.4;
+        ringGroup.rotation.x = Math.PI / 6.5;
         scene.add(ringGroup);
 
         // Pista de fondo: vidrio esmerilado tenue, neutro
@@ -154,7 +154,7 @@ class GlassRing3D {
         requestAnimationFrame(this._animate);
         this.instances.forEach(inst => {
             if (!inst.container.isConnected) return;
-            inst.ringGroup.rotation.z = ts * 0.0001;
+            // Sin rotación: quedan fijos para poder apreciarlos bien.
             inst.renderer.render(inst.scene, inst.camera);
         });
     }

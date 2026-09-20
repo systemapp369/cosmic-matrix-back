@@ -333,7 +333,8 @@ class InfrastructureMonitor {
         if (!towersRow || !ringsRow || !chartEl) return;
 
         this.hexPage = this.hexPage || 0;
-        const pageSize = 5;
+        // Siempre trata de mostrar más activos, sin superar 16 por página.
+        const pageSize = 16;
         const maxPage = Math.max(0, Math.ceil(this.projects.length / pageSize) - 1);
         if (this.hexPage > maxPage) this.hexPage = maxPage;
 
@@ -358,16 +359,17 @@ class InfrastructureMonitor {
             const desc = p.description
                 ? this.escapeHtml(p.description)
                 : 'Sin descripción aún.';
-            // Efecto "escalera": cada torre sube un poco más que la anterior
-            const lift = i * 26;
+            // Efecto "escalera" acotado (se repite cada 8 elementos, para que
+            // no crezca sin límite cuando hay muchos proyectos en la página).
+            const lift = (i % 8) * 20;
             return `
                 <div class="hex-tower-col" role="button" onclick="monitor.openModal(${idx})"
                     title="Ver detalle de ${this.escapeHtml(p.name)}" style="margin-bottom:${lift}px;">
-                    <div id="hex-tower-${p.id}" class="hex-tower-3d" style="width:110px; height:${160 + lift}px;">
+                    <div id="hex-tower-${p.id}" class="hex-tower-3d" style="width:100px; height:${150 + lift}px;">
                         <span class="hex-tower-value">${p.progress}%</span>
                     </div>
                     <div class="hex-step-label">
-                        STEP 0${i + 1}
+                        STEP ${String(i + 1).padStart(2, '0')}
                         <span class="hex-crit-dot" style="background:${critColor};" title="Criticidad: ${p.level}"></span>
                     </div>
                     <div class="hex-connector" style="--hex-color:${color};">
@@ -388,18 +390,25 @@ class InfrastructureMonitor {
             this.hexTower3D.pruneTo(group.map(p => `hex-tower-${p.id}`));
         }
 
-        // --- Anillos pequeños a juego, mismo grupo de 5 ---
-        ringsRow.innerHTML = group.map(p => `
+        // --- Anillos, mismo grupo, ahora con el color de CRITICIDAD + nombre ---
+        ringsRow.innerHTML = group.map(p => {
+            const critColor = this.getLevelColor(p.level);
+            return `
             <div class="text-center">
                 <div id="hex-ring-${p.id}" class="position-relative mx-auto" style="width:64px; height:64px;">
                     <span class="position-absolute top-50 start-50 translate-middle hex-ring-value">${p.progress}%</span>
                 </div>
+                <div class="hex-ring-name" style="--hex-color:${critColor};" title="${this.escapeHtml(p.name)}">
+                    ${this.escapeHtml(p.name)}
+                </div>
             </div>
-        `).join('');
+        `;
+        }).join('');
 
         if (this.glassRing3D) {
-            group.forEach((p, i) => {
-                this.glassRing3D.register(`hex-ring-${p.id}`, p.progress, stepPalette[i % stepPalette.length]);
+            group.forEach((p) => {
+                const critColor = this.getLevelColor(p.level);
+                this.glassRing3D.register(`hex-ring-${p.id}`, p.progress, critColor);
             });
             this.glassRing3D.pruneTo(group.map(p => `hex-ring-${p.id}`));
         }

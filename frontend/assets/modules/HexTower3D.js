@@ -1,9 +1,10 @@
 /**
  * HexTower3D.js
- * Torres hexagonales en 3D real (prismas de 6 caras, THREE.CylinderGeometry
- * con radialSegments=6), una por proyecto: la altura representa su % de
- * avance y el color su criticidad (en tono pastel). Remate superior en
- * blanco/crema, como en la referencia isométrica.
+ * "Torres" en 3D real: un contenedor hexagonal de altura fija (representa
+ * 100%), relleno con líquido de color hasta el % real de avance, y VIDRIO
+ * real (MeshPhysicalMaterial) en la parte vacía de arriba. La superficie del
+ * líquido tiene un ligero vaivén animado (oleaje). Sin rotación continua,
+ * para que se puedan apreciar bien de frente.
  *
  * Mismo patrón seguro que Gauge3D/GlassRing3D: un mini WebGLRenderer
  * independiente dentro de cada contenedor, sin cálculos manuales de
@@ -108,41 +109,91 @@ class HexTower3D {
     }
 
     _applyValue(inst) {
-        // Reconstruye el prisma hexagonal con la altura correspondiente al %
+        // Reconstruye el contenedor: líquido de color (según %) + vidrio real
+        // arriba, con una superficie que "ondula" ligeramente (oleaje).
         if (inst.tower) {
             inst.towerGroup.remove(inst.tower);
-            inst.tower.children.forEach(c => { c.geometry.dispose(); c.material.dispose(); });
+            inst.tower.traverse(c => {
+                if (c.geometry) c.geometry.dispose();
+                if (c.material) c.material.dispose();
+            });
         }
 
-        const h = 0.6 + (inst.percent / 100) * 2.4;
+        const maxH = 3.0; // altura fija del "contenedor" (representa 100%)
+        const fillH = Math.max(0.08, (inst.percent / 100) * maxH);
         const radius = 0.62;
-
-        const sideMat = new THREE.MeshStandardMaterial({ color: inst.colorHex, roughness: 0.45, metalness: 0.15 });
-        const capMat = new THREE.MeshStandardMaterial({ color: 0xfdfdfd, roughness: 0.5, metalness: 0.05 });
-
-        const geo = new THREE.CylinderGeometry(radius, radius, h, 6, 1, false);
-        const tower = new THREE.Mesh(geo, [sideMat, capMat, capMat]);
-        tower.position.y = h / 2 - 1.5;
+        const baseY = -1.5;
 
         const group = new THREE.Group();
-        group.add(tower);
+
+        // --- Líquido de color, hasta la altura del % ---
+        const liquidMat = new THREE.MeshStandardMaterial({
+            color: inst.colorHex, roughness: 0.35, metalness: 0.15,
+            emissive: inst.colorHex, emissiveIntensity: 0.12
+        });
+        const liquidGeo = new THREE.CylinderGeometry(radius, radius, fillH, 6, 1, false);
+        const liquid = new THREE.Mesh(liquidGeo, liquidMat);
+        liquid.position.y = baseY + fillH / 2;
+        group.add(liquid);
+
+        // --- Vidrio real en la parte vacía (arriba del líquido) ---
+        const glassH = Math.max(0.001, maxH - fillH);
+        if (glassH > 0.02) {
+            const glassMat = new THREE.MeshPhysicalMaterial({
+                color: 0xdfeaf7, transparent: true, opacity: 0.35,
+                roughness: 0.1, transmission: 0.7, thickness: 0.4,
+                clearcoat: 1, clearcoatRoughness: 0.05, ior: 1.45
+            });
+            const glassGeo = new THREE.CylinderGeometry(radius, radius, glassH, 6, 1, false);
+            const glass = new THREE.Mesh(glassGeo, glassMat);
+            glass.position.y = baseY + fillH + glassH / 2;
+            group.add(glass);
+
+            const glassEdges = new THREE.LineSegments(
+                new THREE.EdgesGeometry(glassGeo),
+                new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 })
+            );
+            glassEdges.position.copy(glass.position);
+            group.add(glassEdges);
+        }
+
+        // --- Superficie del líquido (oleaje): disco que "respira" con el tiempo ---
+        const waveMat = new THREE.MeshStandardMaterial({
+            color: inst.colorHex, roughness: 0.25, metalness: 0.1,
+            emissive: inst.colorHex, emissiveIntensity: 0.35, transparent: true, opacity: 0.9
+        });
+        const wave = new THREE.Mesh(new THREE.CircleGeometry(radius * 0.98, 24), waveMat);
+        wave.rotation.x = -Math.PI / 2;
+        wave.position.y = baseY + fillH + 0.01;
+        group.add(wave);
 
         const edges = new THREE.LineSegments(
-            new THREE.EdgesGeometry(geo),
-            new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.25 })
+            new THREE.EdgesGeometry(liquidGeo),
+            new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.2 })
         );
-        edges.position.copy(tower.position);
+        edges.position.copy(liquid.position);
         group.add(edges);
 
         inst.towerGroup.add(group);
         inst.tower = group;
+        inst.wave = wave;
+        inst.wavePhase = Math.random() * Math.PI * 2;
+        inst.waveBaseY = wave.position.y;
     }
 
-    _animate() {
+    _animate(ts) {
         requestAnimationFrame(this._animate);
+        const t = (ts || 0) * 0.001;
         this.instances.forEach(inst => {
             if (!inst.container.isConnected) return;
-            inst.towerGroup.rotation.y += 0.003;
+            // Sin rotación: las torres quedan fijas para poder apreciarlas bien.
+            // El "oleaje" se simula con un ligero vaivén vertical + brillo pulsante
+            // en la superficie del líquido.
+            if (inst.wave) {
+                const bob = Math.sin(t * 1.6 + inst.wavePhase) * 0.025;
+                inst.wave.position.y = inst.waveBaseY + bob;
+                inst.wave.material.emissiveIntensity = 0.3 + Math.sin(t * 2 + inst.wavePhase) * 0.1;
+            }
             inst.renderer.render(inst.scene, inst.camera);
         });
     }

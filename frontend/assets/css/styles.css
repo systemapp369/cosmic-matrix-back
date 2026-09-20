@@ -437,9 +437,9 @@ body {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  gap: 18px;
-  flex-wrap: nowrap;
-  overflow-x: auto;
+  gap: 16px;
+  flex-wrap: wrap;
+  row-gap: 28px;
   padding: 10px 6px 0;
 }
 
@@ -447,7 +447,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 140px;
+  width: 128px;
   flex-shrink: 0;
   cursor: pointer;
 }
@@ -533,5 +533,16 @@ body {
   color: #1e293b;
   z-index: 6;
   pointer-events: none;
+}
+
+.hex-ring-name {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--hex-color, #64748b);
+  max-width: 70px;
+  margin: 3px auto 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
