@@ -81,8 +81,8 @@ class HexTower3D {
         const ctx = canvas.getContext('2d');
 
         const c = new THREE.Color(colorHex);
-        const light = c.clone().lerp(new THREE.Color(0xffffff), 0.45);
-        const dark = c.clone().lerp(new THREE.Color(0x000000), 0.25);
+        const light = c.clone().lerp(new THREE.Color(0xffffff), 0.22);
+        const dark = c.clone().lerp(new THREE.Color(0x000000), 0.12);
 
         const grad = ctx.createLinearGradient(0, 0, 0, 256);
         grad.addColorStop(0, `#${light.getHexString()}`);
@@ -168,6 +168,7 @@ class HexTower3D {
         // --- Líquido de color con degradado vertical premium ---
         const liquidMat = new THREE.MeshPhysicalMaterial({
             map: this._getGradientTexture(inst.colorHex),
+            emissive: inst.colorHex, emissiveIntensity: 0.18,
             roughness: 0.25, metalness: 0.1, clearcoat: 0.6, clearcoatRoughness: 0.2
         });
         const liquidGeo = new THREE.CylinderGeometry(radius, radius, fillH, radialSegments, 1, false);

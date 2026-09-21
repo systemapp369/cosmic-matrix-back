@@ -349,7 +349,7 @@ class InfrastructureMonitor {
 
         // Paleta fija por posición (igual que la imagen de referencia):
         // amarillo, naranja, azul, cian, verde — no depende de la criticidad.
-        const stepPalette = ['#fbbf24', '#fb923c', '#3b82f6', '#38bdf8', '#22c55e'];
+        const stepPalette = ['#facc15', '#f97316', '#2563eb', '#06b6d4', '#16a34a'];
 
         // --- Torres hexagonales 3D + su "DATA OPTION" (descripción real) ---
         towersRow.innerHTML = group.map((p, i) => {
@@ -916,11 +916,11 @@ class InfrastructureMonitor {
      */
     getLevelColor(level) {
         switch (level) {
-            case 'CRÍTICA': return '#ef4444';
-            case 'ALTA': return '#f59e0b';
-            case 'NORMAL': return '#10b981';
-            case 'BAJA': return '#8443c0';
-            default: return '#3b82f6';
+            case 'CRÍTICA': return '#f43f5e';
+            case 'ALTA': return '#f97316';
+            case 'NORMAL': return '#22c55e';
+            case 'BAJA': return '#a855f7';
+            default: return '#2563eb';
         }
     }
 
