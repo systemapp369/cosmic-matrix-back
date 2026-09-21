@@ -385,7 +385,8 @@ class InfrastructureMonitor {
 
         if (this.hexTower3D) {
             group.forEach((p, i) => {
-                this.hexTower3D.register(`hex-tower-${p.id}`, p.progress, stepPalette[i % stepPalette.length]);
+                const nextColor = stepPalette[(i + 1) % stepPalette.length];
+                this.hexTower3D.register(`hex-tower-${p.id}`, p.progress, stepPalette[i % stepPalette.length], nextColor);
             });
             this.hexTower3D.pruneTo(group.map(p => `hex-tower-${p.id}`));
         }

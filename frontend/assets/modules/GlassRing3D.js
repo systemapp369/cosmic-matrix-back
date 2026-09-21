@@ -101,21 +101,21 @@ class GlassRing3D {
         const trackMesh = new THREE.Mesh(
             new THREE.TorusGeometry(1, 0.16, 20, 80),
             new THREE.MeshPhysicalMaterial({
-                color: 0xaeb9cc, transparent: true, opacity: 0.18,
-                roughness: 0.25, transmission: 0.55, thickness: 0.4,
-                clearcoat: 1, clearcoatRoughness: 0.15, ior: 1.45
+                color: 0xaeb9cc, transparent: true, opacity: 0.22,
+                roughness: 0.25, clearcoat: 1, clearcoatRoughness: 0.15
             })
         );
         ringGroup.add(trackMesh);
 
-        // Arco de progreso: vidrio de color real (criticidad), con clearcoat brillante
+        // Arco de progreso: color vivo con clearcoat brillante (sin
+        // "transmission": en un canvas con fondo transparente no tiene nada
+        // detrás que refractar y termina viéndose negro sólido)
         const progressMesh = new THREE.Mesh(
             new THREE.TorusGeometry(1, 0.19, 20, 80, 0.001),
             new THREE.MeshPhysicalMaterial({
-                color: 0x22d3ee, transparent: true, opacity: 0.72,
-                roughness: 0.1, transmission: 0.4, thickness: 0.5,
-                clearcoat: 1, clearcoatRoughness: 0.05, ior: 1.5,
-                emissive: 0x22d3ee, emissiveIntensity: 0.25
+                color: 0x22d3ee, transparent: true, opacity: 0.85,
+                roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.05,
+                emissive: 0x22d3ee, emissiveIntensity: 0.3
             })
         );
         ringGroup.add(progressMesh);

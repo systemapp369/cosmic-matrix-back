@@ -26,7 +26,7 @@ class HexTower3D {
         requestAnimationFrame(this._animate);
     }
 
-    register(elementId, percent, colorHex) {
+    register(elementId, percent, colorHex, secondColorHex) {
         const currentEl = document.getElementById(elementId);
         if (!currentEl) return;
 
@@ -47,7 +47,9 @@ class HexTower3D {
             this.instances.set(elementId, inst);
         }
 
-        if (!inst.initialized || inst.percent !== percent || inst.colorHex !== colorHex) {
+        const finalSecondColor = secondColorHex || colorHex;
+        if (!inst.initialized || inst.percent !== percent || inst.colorHex !== colorHex || inst.secondColorHex !== finalSecondColor) {
+            inst.secondColorHex = finalSecondColor;
             inst.percent = percent;
             inst.colorHex = colorHex;
             inst.initialized = true;
@@ -72,28 +74,30 @@ class HexTower3D {
      * el color del líquido — look "glass tube" premium en vez de color plano.
      * Se cachea por color para no regenerar canvas de más.
      */
-    _getGradientTexture(colorHex) {
-        if (this._textureCache.has(colorHex)) return this._textureCache.get(colorHex);
+    _getGradientTexture(colorHex, secondColorHex) {
+        if (this._textureCache.has(colorHex + secondColorHex)) return this._textureCache.get(colorHex + secondColorHex);
 
         const canvas = document.createElement('canvas');
         canvas.width = 8;
         canvas.height = 256;
         const ctx = canvas.getContext('2d');
 
-        const c = new THREE.Color(colorHex);
-        const light = c.clone().lerp(new THREE.Color(0xffffff), 0.22);
-        const dark = c.clone().lerp(new THREE.Color(0x000000), 0.12);
+        const c1 = new THREE.Color(colorHex);
+        const c2 = new THREE.Color(secondColorHex || colorHex);
+        const top = c1.clone().lerp(new THREE.Color(0xffffff), 0.18);
+        const bottom = c2.clone().lerp(new THREE.Color(0x000000), 0.08);
 
         const grad = ctx.createLinearGradient(0, 0, 0, 256);
-        grad.addColorStop(0, `#${light.getHexString()}`);
-        grad.addColorStop(0.55, `#${c.getHexString()}`);
-        grad.addColorStop(1, `#${dark.getHexString()}`);
+        grad.addColorStop(0, `#${top.getHexString()}`);
+        grad.addColorStop(0.5, `#${c1.getHexString()}`);
+        grad.addColorStop(0.55, `#${c2.getHexString()}`);
+        grad.addColorStop(1, `#${bottom.getHexString()}`);
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, 8, 256);
 
         const texture = new THREE.CanvasTexture(canvas);
         texture.wrapS = THREE.RepeatWrapping;
-        this._textureCache.set(colorHex, texture);
+        this._textureCache.set(colorHex + secondColorHex, texture);
         return texture;
     }
 
@@ -165,11 +169,11 @@ class HexTower3D {
 
         const group = new THREE.Group();
 
-        // --- Líquido de color con degradado vertical premium ---
+        // --- Líquido de color con degradado vertical de DOS tonos (más vivo) ---
         const liquidMat = new THREE.MeshPhysicalMaterial({
-            map: this._getGradientTexture(inst.colorHex),
-            emissive: inst.colorHex, emissiveIntensity: 0.18,
-            roughness: 0.25, metalness: 0.1, clearcoat: 0.6, clearcoatRoughness: 0.2
+            map: this._getGradientTexture(inst.colorHex, inst.secondColorHex),
+            emissive: inst.colorHex, emissiveIntensity: 0.22,
+            roughness: 0.22, metalness: 0.12, clearcoat: 0.7, clearcoatRoughness: 0.15
         });
         const liquidGeo = new THREE.CylinderGeometry(radius, radius, fillH, radialSegments, 1, false);
         const liquid = new THREE.Mesh(liquidGeo, liquidMat);
@@ -179,35 +183,37 @@ class HexTower3D {
         // --- Destello especular (streak), como en renders de producto ---
         const streak = new THREE.Mesh(
             new THREE.PlaneGeometry(0.05, fillH * 0.75),
-            new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35, side: THREE.DoubleSide })
+            new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.4, side: THREE.DoubleSide })
         );
         streak.position.set(radius * 0.62, baseY + fillH / 2, radius * 0.62);
         streak.rotation.y = Math.PI / 4;
         group.add(streak);
 
-        // --- Remates metálicos/cromados (arriba del líquido y en la base) ---
-        const chromeMat = new THREE.MeshStandardMaterial({ color: 0xd8dee8, roughness: 0.15, metalness: 0.95 });
-        const topRim = new THREE.Mesh(new THREE.CylinderGeometry(radius * 1.03, radius * 1.03, 0.045, radialSegments), chromeMat);
+        // --- Remates con el color de la torre (no gris/cromado, para más viveza) ---
+        const rimMat = new THREE.MeshStandardMaterial({ color: inst.colorHex, roughness: 0.3, metalness: 0.55 });
+        const topRim = new THREE.Mesh(new THREE.CylinderGeometry(radius * 1.03, radius * 1.03, 0.045, radialSegments), rimMat);
         topRim.position.y = baseY + fillH + 0.02;
         group.add(topRim);
-        const baseRim = new THREE.Mesh(new THREE.CylinderGeometry(radius * 1.05, radius * 1.05, 0.05, radialSegments), chromeMat);
+        const baseRim = new THREE.Mesh(new THREE.CylinderGeometry(radius * 1.05, radius * 1.05, 0.05, radialSegments), rimMat);
         baseRim.position.y = baseY - 0.02;
         group.add(baseRim);
 
-        // --- Vidrio real en la parte vacía (arriba del líquido) ---
+        // --- Vidrio en la parte vacía: SIN "transmission" (en un canvas con
+        // fondo transparente no tiene nada detrás que refractar y termina
+        // viéndose negro sólido). Vidrio simple translúcido + brillo. ---
         const glassH = Math.max(0.001, maxH - fillH);
         if (glassH > 0.02) {
             const glassMat = new THREE.MeshPhysicalMaterial({
-                color: 0xdfeaf7, transparent: true, opacity: 0.32,
-                roughness: 0.08, transmission: 0.75, thickness: 0.4,
-                clearcoat: 1, clearcoatRoughness: 0.05, ior: 1.45
+                color: 0xeaf3fb, transparent: true, opacity: 0.22,
+                roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.05,
+                metalness: 0, side: THREE.DoubleSide
             });
             const glassGeo = new THREE.CylinderGeometry(radius, radius, glassH, radialSegments, 1, false);
             const glass = new THREE.Mesh(glassGeo, glassMat);
             glass.position.y = baseY + fillH + glassH / 2;
             group.add(glass);
 
-            const capMat = new THREE.MeshStandardMaterial({ color: 0xf4f8fc, roughness: 0.2, metalness: 0.3 });
+            const capMat = new THREE.MeshStandardMaterial({ color: 0xf4f8fc, roughness: 0.2, metalness: 0.3, transparent: true, opacity: 0.85 });
             const topCap = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, 0.03, radialSegments), capMat);
             topCap.position.y = baseY + maxH;
             group.add(topCap);
