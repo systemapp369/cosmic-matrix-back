@@ -18,6 +18,10 @@ class HexTower3D {
   injectProfessionalDashboard() {
     if (document.getElementById('cm-dashboard')) return;
     document.body.classList.add('cm-professional-dashboard');
+    const css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = './assets/styles/dashboard-redesign.css';
+    document.head.appendChild(css);
     const old = document.querySelector('.container-xl');
     if (old) old.style.display = 'none';
     const bg = document.getElementById('canvas-container');
@@ -86,7 +90,7 @@ class HexTower3D {
   renderCylinders(list=this.getProjects()) {
     const box=document.getElementById('cm-cylinders'); if(!box)return;
     const visible=list.slice(0,8);
-    box.innerHTML=visible.map((p,i)=>{const progress=Math.max(0,Math.min(100,Number(p.progress)||0)); const c=this.color(p); const h=Math.max(8,progress); const idx=this.getProjects().findIndex(x=>x.id===p.id); const status=p.level==='CRÍTICA'?'Crítico':p.level==='ALTA'?'Atención':'En progreso'; return `<div class="cm-project" onclick="monitor.openModal(${idx})" title="Abrir ${this.escape(p.name)}"><div class="cm-cylinder-wrap"><div class="cm-cylinder" style="--h:${h}%;--c:${c}"><span class="cm-cylinder-value">${progress}%</span><div class="cm-liquid"></div></div></div><div class="cm-project-name">${this.escape(p.name)}</div><div class="cm-status"><span class="cm-status-dot" style="color:${c}"></span>${status}</div></div>`}).join('') || '<div class="text-muted p-4">Sin proyectos activos.</div>';
+    box.innerHTML=visible.map((p)=>{const progress=Math.max(0,Math.min(100,Number(p.progress)||0)); const c=this.color(p); const h=Math.max(8,progress); const idx=this.getProjects().findIndex(x=>x.id===p.id); const status=p.level==='CRÍTICA'?'Crítico':p.level==='ALTA'?'Atención':'En progreso'; return `<div class="cm-project" onclick="monitor.openModal(${idx})" title="Abrir ${this.escape(p.name)}"><div class="cm-cylinder-wrap"><div class="cm-cylinder" style="--h:${h}%;--c:${c}"><span class="cm-cylinder-value">${progress}%</span><div class="cm-liquid"></div></div></div><div class="cm-project-name">${this.escape(p.name)}</div><div class="cm-status"><span class="cm-status-dot" style="color:${c}"></span>${status}</div></div>`}).join('') || '<div class="text-muted p-4">Sin proyectos activos.</div>';
   }
 
   renderRisks() {
