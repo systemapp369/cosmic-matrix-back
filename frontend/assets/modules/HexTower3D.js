@@ -1,260 +1,106 @@
-/**
- * HexTower3D.js
- * "Torres" en 3D real, ahora en formato CILINDRO liso (32 segmentos) con
- * acabado "ejecutivo premium": degradado de color vertical (textura
- * generada por código), remates metálicos/cromados arriba y abajo, un
- * destello especular sutil (streak) como en renders de producto, e
- * iluminación de 3 puntos (key + fill + rim) para que luzca profesional.
- *
- * El contenedor tiene altura fija (representa 100%), relleno con líquido de
- * color hasta el % real de avance, y VIDRIO real (MeshPhysicalMaterial) en
- * la parte vacía de arriba, con oleaje animado en la superficie. Sin
- * rotación continua, para que se puedan apreciar bien de frente.
- *
- * Mismo patrón seguro que Gauge3D/GlassRing3D: un mini WebGLRenderer
- * independiente dentro de cada contenedor, sin cálculos manuales de
- * posición en pantalla, y detectando contenedores reemplazados por
- * innerHTML para reconstruir la instancia cuando haga falta.
- *
- * Requiere que <script src=".../three.min.js"></script> esté cargado antes.
- */
 class HexTower3D {
-    constructor() {
-        this.instances = new Map();
-        this._textureCache = new Map();
-        this._animate = this._animate.bind(this);
-        requestAnimationFrame(this._animate);
-    }
+  constructor() {
+    this.items = new Map();
+    this.injectProfessionalDashboard();
+  }
 
-    register(elementId, percent, colorHex, secondColorHex) {
-        const currentEl = document.getElementById(elementId);
-        if (!currentEl) return;
+  register(id, progress, color, topColor) {
+    this.items.set(id, { progress: Number(progress) || 0, color, topColor });
+    this.syncDashboard();
+  }
 
-        let inst = this.instances.get(elementId);
+  pruneTo(ids) {
+    const keep = new Set(ids || []);
+    for (const id of this.items.keys()) if (!keep.has(id)) this.items.delete(id);
+    this.syncDashboard();
+  }
 
-        if (inst && (inst.container !== currentEl || !inst.container.isConnected)) {
-            inst.renderer.dispose();
-            if (inst.renderer.domElement.parentNode) {
-                inst.renderer.domElement.parentNode.removeChild(inst.renderer.domElement);
-            }
-            this.instances.delete(elementId);
-            inst = null;
-        }
+  injectProfessionalDashboard() {
+    if (document.getElementById('cm-dashboard')) return;
+    document.body.classList.add('cm-professional-dashboard');
+    const old = document.querySelector('.container-xl');
+    if (old) old.style.display = 'none';
+    const bg = document.getElementById('canvas-container');
+    if (bg) bg.style.opacity = '.22';
 
-        if (!inst) {
-            inst = this._createInstance(currentEl);
-            if (!inst) return;
-            this.instances.set(elementId, inst);
-        }
+    const el = document.createElement('section');
+    el.id = 'cm-dashboard';
+    el.className = 'cm-shell';
+    el.innerHTML = `
+      <aside class="cm-sidebar">
+        <div class="cm-brand"><div class="cm-brand-mark"><i class="ti ti-hexagon-3d"></i></div><div><strong>PROJECT ADMIN</strong><small>COSMIC MATRIX</small></div></div>
+        <nav class="cm-nav">
+          <a class="active" href="#cm-dashboard"><i class="ti ti-layout-dashboard"></i><span>Dashboard</span></a>
+          <a href="#cm-projects" onclick="document.getElementById('cm-projects-panel')?.scrollIntoView({behavior:'smooth'})"><i class="ti ti-briefcase"></i><span>Proyectos</span></a>
+          <a href="#cm-activity"><i class="ti ti-timeline-event"></i><span>Bitácora</span></a>
+          <a href="#cm-reports" onclick="monitor.generateReport()"><i class="ti ti-report-analytics"></i><span>Reportes</span></a>
+          <a href="#cm-files"><i class="ti ti-files"></i><span>Archivos</span></a>
+          <a href="#cm-settings"><i class="ti ti-settings"></i><span>Configuración</span></a>
+        </nav>
+        <div class="cm-sidebar-footer"><strong>COSMIC MATRIX</strong><br>Gestión de proyectos con visión de futuro<br><br>v3.5.0</div>
+      </aside>
+      <main class="cm-main">
+        <header class="cm-topbar">
+          <div class="cm-search"><i class="ti ti-search"></i><input id="cm-search-input" placeholder="Buscar proyecto, responsable, etiqueta..." autocomplete="off"></div>
+          <div class="cm-top-actions">
+            <button class="cm-icon-btn" onclick="monitor.toggleTheme()" title="Tema"><i class="ti ti-sun"></i></button>
+            <button class="cm-icon-btn position-relative" title="Notificaciones"><i class="ti ti-bell"></i><span class="position-absolute top-0 end-0 badge rounded-pill bg-danger" style="font-size:8px">3</span></button>
+            <div class="cm-avatar">CA</div><div class="cm-profile"><div>Carlos Alberto<small>Administrador</small></div><i class="ti ti-chevron-down"></i></div>
+          </div>
+        </header>
+        <section class="cm-kpis" id="cm-kpis"></section>
+        <section class="cm-panel" id="cm-projects-panel">
+          <div class="cm-panel-head"><div><div class="cm-panel-title"><i class="ti ti-chart-dots-3"></i> PROGRESO DE PROYECTOS</div><div class="cm-panel-subtitle">Estado general y avance de cada proyecto</div></div><div class="cm-toggle"><button class="active">Vista de Torres</button><button onclick="monitor.openCriticalityModal(null)">Lista</button><button onclick="monitor.openCriticalityModal(null)">Resumen</button></div></div>
+          <div class="cm-cylinders" id="cm-cylinders"></div>
+        </section>
+        <section class="cm-lower">
+          <article class="cm-panel"><div class="cm-panel-head"><div><div class="cm-panel-title">EVOLUCIÓN DEL AVANCE</div><div class="cm-panel-subtitle">Progreso promedio de los proyectos</div></div><span class="cm-badge" style="color:var(--cm-cyan)">Últimos 30 días</span></div><div class="cm-chart" id="cm-evolution"></div></article>
+          <article class="cm-panel"><div class="cm-panel-head"><div><div class="cm-panel-title">PROYECTOS CRÍTICOS</div><div class="cm-panel-subtitle">Requieren atención inmediata</div></div><span class="badge rounded-pill bg-danger" id="cm-risk-count">0</span></div><div class="cm-risk-list" id="cm-risks"></div></article>
+          <article class="cm-panel" id="cm-activity"><div class="cm-panel-head"><div><div class="cm-panel-title">ACTIVIDAD RECIENTE</div><div class="cm-panel-subtitle">Últimos cambios del sistema</div></div><span class="cm-badge" style="color:var(--cm-cyan)">Todas</span></div><div class="cm-activity" id="cm-activity-list"></div></article>
+        </section>
+      </main>`;
+    document.body.appendChild(el);
+    const input = document.getElementById('cm-search-input');
+    input?.addEventListener('input', e => this.filterProjects(e.target.value));
+    this.renderDashboardShell();
+  }
 
-        const finalSecondColor = secondColorHex || colorHex;
-        if (!inst.initialized || inst.percent !== percent || inst.colorHex !== colorHex || inst.secondColorHex !== finalSecondColor) {
-            inst.secondColorHex = finalSecondColor;
-            inst.percent = percent;
-            inst.colorHex = colorHex;
-            inst.initialized = true;
-            this._applyValue(inst);
-        }
-    }
+  getProjects() { try { return (typeof monitor !== 'undefined' && monitor.projects) ? monitor.projects : []; } catch (_) { return []; } }
+  escape(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
+  color(p) { const m={CRÍTICA:'#ff5268',ALTA:'#ff9f43',NORMAL:'#14e6a5',BAJA:'#a66bff'}; return m[p.level] || '#16d9ff'; }
 
-    pruneTo(activeIds) {
-        for (const [id, inst] of this.instances.entries()) {
-            if (!activeIds.includes(id)) {
-                inst.renderer.dispose();
-                if (inst.renderer.domElement.parentNode) {
-                    inst.renderer.domElement.parentNode.removeChild(inst.renderer.domElement);
-                }
-                this.instances.delete(id);
-            }
-        }
-    }
+  renderDashboardShell() {
+    this.renderKpis(); this.renderCylinders(); this.renderRisks(); this.renderActivity(); this.renderEvolution();
+  }
+  syncDashboard() { if (document.getElementById('cm-dashboard')) { this.renderKpis(); this.renderCylinders(); this.renderRisks(); this.renderActivity(); } }
 
-    /**
-     * Textura de degradado vertical (más clara arriba, más rica abajo) para
-     * el color del líquido — look "glass tube" premium en vez de color plano.
-     * Se cachea por color para no regenerar canvas de más.
-     */
-    _getGradientTexture(colorHex, secondColorHex) {
-        if (this._textureCache.has(colorHex + secondColorHex)) return this._textureCache.get(colorHex + secondColorHex);
+  renderKpis() {
+    const ps=this.getProjects(), total=ps.length, avg=total?Math.round(ps.reduce((s,p)=>s+Number(p.progress||0),0)/total):0;
+    const risk=ps.filter(p=>p.level==='CRÍTICA'||p.level==='ALTA').length;
+    const delayed=ps.filter(p=>Number(p.progress||0)<40).length;
+    const data=[['ti-briefcase',''+total,'Total Proyectos','↑ datos sincronizados','var(--cm-blue)'],['ti-chart-donut',avg+'%','Avance Promedio','↑ evolución global','var(--cm-cyan)'],['ti-alert-circle',''+risk,'En Riesgo','Requieren atención','var(--cm-red)'],['ti-clock',''+delayed,'Retrasados','Progreso menor al 40%','var(--cm-yellow)']];
+    const box=document.getElementById('cm-kpis'); if(!box)return;
+    box.innerHTML=data.map(x=>`<article class="cm-kpi"><div class="cm-kpi-icon" style="color:${x[4]}"><i class="ti ${x[0]}"></i></div><div><div class="cm-kpi-value">${x[1]}</div><div class="cm-kpi-label">${x[2]}</div><div class="cm-kpi-trend">${x[3]}</div></div></article>`).join('');
+  }
 
-        const canvas = document.createElement('canvas');
-        canvas.width = 8;
-        canvas.height = 256;
-        const ctx = canvas.getContext('2d');
+  renderCylinders(list=this.getProjects()) {
+    const box=document.getElementById('cm-cylinders'); if(!box)return;
+    const visible=list.slice(0,8);
+    box.innerHTML=visible.map((p,i)=>{const progress=Math.max(0,Math.min(100,Number(p.progress)||0)); const c=this.color(p); const h=Math.max(8,progress); const idx=this.getProjects().findIndex(x=>x.id===p.id); const status=p.level==='CRÍTICA'?'Crítico':p.level==='ALTA'?'Atención':'En progreso'; return `<div class="cm-project" onclick="monitor.openModal(${idx})" title="Abrir ${this.escape(p.name)}"><div class="cm-cylinder-wrap"><div class="cm-cylinder" style="--h:${h}%;--c:${c}"><span class="cm-cylinder-value">${progress}%</span><div class="cm-liquid"></div></div></div><div class="cm-project-name">${this.escape(p.name)}</div><div class="cm-status"><span class="cm-status-dot" style="color:${c}"></span>${status}</div></div>`}).join('') || '<div class="text-muted p-4">Sin proyectos activos.</div>';
+  }
 
-        const c1 = new THREE.Color(colorHex);
-        const c2 = new THREE.Color(secondColorHex || colorHex);
-        const top = c1.clone().lerp(new THREE.Color(0xffffff), 0.18);
-        const bottom = c2.clone().lerp(new THREE.Color(0x000000), 0.08);
+  renderRisks() {
+    const ps=this.getProjects().filter(p=>p.level==='CRÍTICA'||p.level==='ALTA').sort((a,b)=>Number(a.progress||0)-Number(b.progress||0)).slice(0,4); const box=document.getElementById('cm-risks'); if(!box)return; const count=document.getElementById('cm-risk-count'); if(count)count.textContent=ps.length;
+    box.innerHTML=ps.map((p)=>{const c=this.color(p);const idx=this.getProjects().findIndex(x=>x.id===p.id);return `<div class="cm-risk-item" onclick="monitor.openModal(${idx})" style="cursor:pointer"><div class="cm-risk-bar" style="background:${c};color:${c}"></div><div class="cm-risk-main"><strong>${this.escape(p.name)}</strong><small>${this.escape(p.description||'Proyecto')}</small></div><strong>${Number(p.progress||0)}%</strong><span class="cm-badge" style="color:${c}">${p.level==='CRÍTICA'?'Crítico':'Atención'}</span></div>`}).join('')||'<div class="text-muted small p-3">No hay proyectos de alta prioridad.</div>';
+  }
 
-        const grad = ctx.createLinearGradient(0, 0, 0, 256);
-        grad.addColorStop(0, `#${top.getHexString()}`);
-        grad.addColorStop(0.5, `#${c1.getHexString()}`);
-        grad.addColorStop(0.55, `#${c2.getHexString()}`);
-        grad.addColorStop(1, `#${bottom.getHexString()}`);
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, 8, 256);
+  renderActivity() {
+    const ps=this.getProjects().slice(0,5); const box=document.getElementById('cm-activity-list'); if(!box)return; box.innerHTML=ps.map((p,i)=>`<div class="cm-activity-item"><span class="cm-activity-dot" style="color:${this.color(p)};background:${this.color(p)}"></span><span><strong>${this.escape(p.name)}</strong> · progreso ${Number(p.progress||0)}%</span><small>${i+1}h</small></div>`).join('') || '<div class="text-muted small p-3">Sin actividad reciente.</div>';
+  }
 
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.wrapS = THREE.RepeatWrapping;
-        this._textureCache.set(colorHex + secondColorHex, texture);
-        return texture;
-    }
+  renderEvolution() {
+    const el=document.getElementById('cm-evolution'); if(!el||typeof echarts==='undefined')return; const ps=this.getProjects(); const avg=ps.length?Math.round(ps.reduce((s,p)=>s+Number(p.progress||0),0)/ps.length):0; const chart=echarts.init(el); chart.setOption({backgroundColor:'transparent',grid:{left:34,right:8,top:15,bottom:28},xAxis:{type:'category',data:['-30d','-25d','-20d','-15d','-10d','-5d','Hoy'],axisLabel:{color:'#6f91ad',fontSize:9},axisLine:{lineStyle:{color:'#21435f'}}},yAxis:{type:'value',max:100,axisLabel:{color:'#6f91ad',fontSize:9,formatter:'{value}%'},splitLine:{lineStyle:{color:'rgba(60,120,160,.12)'}}},series:[{type:'line',smooth:true,symbolSize:5,data:[Math.max(0,avg-19),Math.max(0,avg-15),Math.max(0,avg-11),Math.max(0,avg-8),Math.max(0,avg-5),Math.max(0,avg-2),avg],lineStyle:{color:'#16d9ff',width:2},itemStyle:{color:'#16d9ff'},areaStyle:{color:'rgba(22,217,255,.10)'}}]}); window.addEventListener('resize',()=>chart.resize(),{passive:true});
+  }
 
-    _createInstance(container) {
-        const width = container.clientWidth || 100;
-        const height = container.clientHeight || 180;
-        if (width < 2 || height < 2) return null;
-
-        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-        renderer.setSize(width, height);
-        renderer.setClearColor(0x000000, 0);
-        renderer.domElement.style.cssText = 'position:absolute; inset:0; width:100%; height:100%; pointer-events:none;';
-
-        if (getComputedStyle(container).position === 'static') {
-            container.style.position = 'relative';
-        }
-        container.insertBefore(renderer.domElement, container.firstChild);
-
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(22, width / height, 0.1, 20);
-        camera.position.set(2.6, 1.9, 2.6);
-        camera.lookAt(0, -0.15, 0);
-
-        // Iluminación de 3 puntos: key (principal), fill (relleno) y rim (contorno)
-        scene.add(new THREE.AmbientLight(0xffffff, 0.55));
-        const key = new THREE.DirectionalLight(0xffffff, 1);
-        key.position.set(3, 5, 4);
-        scene.add(key);
-        const fillLight = new THREE.PointLight(0xffffff, 0.5, 20);
-        fillLight.position.set(-2.5, 0.5, 2.5);
-        scene.add(fillLight);
-        const rim = new THREE.PointLight(0x8fd6ff, 0.7, 20);
-        rim.position.set(-1, 3, -2.5);
-        scene.add(rim);
-
-        const towerGroup = new THREE.Group();
-        scene.add(towerGroup);
-
-        // Base/sombra suave bajo la torre
-        const shadowDisc = new THREE.Mesh(
-            new THREE.CircleGeometry(0.85, 32),
-            new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.1 })
-        );
-        shadowDisc.rotation.x = -Math.PI / 2;
-        shadowDisc.position.y = -1.56;
-        towerGroup.add(shadowDisc);
-
-        return {
-            container, renderer, scene, camera, towerGroup,
-            percent: 0, colorHex: '#60a5fa', tower: null, initialized: false
-        };
-    }
-
-    _applyValue(inst) {
-        if (inst.tower) {
-            inst.towerGroup.remove(inst.tower);
-            inst.tower.traverse(c => {
-                if (c.geometry) c.geometry.dispose();
-                if (c.material && !c.material.map) c.material.dispose();
-            });
-        }
-
-        const maxH = 3.0; // altura fija del "contenedor" (representa 100%)
-        const fillH = Math.max(0.08, (inst.percent / 100) * maxH);
-        const radius = 0.55;
-        const baseY = -1.5;
-        const radialSegments = 32;
-
-        const group = new THREE.Group();
-
-        // --- Líquido de color con degradado vertical de DOS tonos (más vivo) ---
-        const liquidMat = new THREE.MeshPhysicalMaterial({
-            map: this._getGradientTexture(inst.colorHex, inst.secondColorHex),
-            emissive: inst.colorHex, emissiveIntensity: 0.22,
-            roughness: 0.22, metalness: 0.12, clearcoat: 0.7, clearcoatRoughness: 0.15
-        });
-        const liquidGeo = new THREE.CylinderGeometry(radius, radius, fillH, radialSegments, 1, false);
-        const liquid = new THREE.Mesh(liquidGeo, liquidMat);
-        liquid.position.y = baseY + fillH / 2;
-        group.add(liquid);
-
-        // --- Destello especular (streak), como en renders de producto ---
-        const streak = new THREE.Mesh(
-            new THREE.PlaneGeometry(0.05, fillH * 0.75),
-            new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.4, side: THREE.DoubleSide })
-        );
-        streak.position.set(radius * 0.62, baseY + fillH / 2, radius * 0.62);
-        streak.rotation.y = Math.PI / 4;
-        group.add(streak);
-
-        // --- Remates con el color de la torre (no gris/cromado, para más viveza) ---
-        const rimMat = new THREE.MeshStandardMaterial({ color: inst.colorHex, roughness: 0.3, metalness: 0.55 });
-        const topRim = new THREE.Mesh(new THREE.CylinderGeometry(radius * 1.03, radius * 1.03, 0.045, radialSegments), rimMat);
-        topRim.position.y = baseY + fillH + 0.02;
-        group.add(topRim);
-        const baseRim = new THREE.Mesh(new THREE.CylinderGeometry(radius * 1.05, radius * 1.05, 0.05, radialSegments), rimMat);
-        baseRim.position.y = baseY - 0.02;
-        group.add(baseRim);
-
-        // --- Vidrio en la parte vacía: SIN "transmission" (en un canvas con
-        // fondo transparente no tiene nada detrás que refractar y termina
-        // viéndose negro sólido). Vidrio simple translúcido + brillo. ---
-        const glassH = Math.max(0.001, maxH - fillH);
-        if (glassH > 0.02) {
-            const glassMat = new THREE.MeshPhysicalMaterial({
-                color: 0xeaf3fb, transparent: true, opacity: 0.22,
-                roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.05,
-                metalness: 0, side: THREE.DoubleSide
-            });
-            const glassGeo = new THREE.CylinderGeometry(radius, radius, glassH, radialSegments, 1, false);
-            const glass = new THREE.Mesh(glassGeo, glassMat);
-            glass.position.y = baseY + fillH + glassH / 2;
-            group.add(glass);
-
-            const capMat = new THREE.MeshStandardMaterial({ color: 0xf4f8fc, roughness: 0.2, metalness: 0.3, transparent: true, opacity: 0.85 });
-            const topCap = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, 0.03, radialSegments), capMat);
-            topCap.position.y = baseY + maxH;
-            group.add(topCap);
-        }
-
-        // --- Superficie del líquido (oleaje): disco que "respira" con el tiempo ---
-        const waveMat = new THREE.MeshStandardMaterial({
-            color: inst.colorHex, roughness: 0.2, metalness: 0.1,
-            emissive: inst.colorHex, emissiveIntensity: 0.35, transparent: true, opacity: 0.92
-        });
-        const wave = new THREE.Mesh(new THREE.CircleGeometry(radius * 0.97, radialSegments), waveMat);
-        wave.rotation.x = -Math.PI / 2;
-        wave.position.y = baseY + fillH + 0.01;
-        group.add(wave);
-
-        inst.towerGroup.add(group);
-        inst.tower = group;
-        inst.wave = wave;
-        inst.streak = streak;
-        inst.wavePhase = Math.random() * Math.PI * 2;
-        inst.waveBaseY = wave.position.y;
-    }
-
-    _animate(ts) {
-        requestAnimationFrame(this._animate);
-        const t = (ts || 0) * 0.001;
-        this.instances.forEach(inst => {
-            if (!inst.container.isConnected) return;
-            // Sin rotación: las torres quedan fijas para poder apreciarlas bien.
-            // El "oleaje" se simula con un ligero vaivén vertical + brillo
-            // pulsante en la superficie del líquido, más un leve parpadeo del
-            // destello especular para dar sensación de vida.
-            if (inst.wave) {
-                const bob = Math.sin(t * 1.6 + inst.wavePhase) * 0.025;
-                inst.wave.position.y = inst.waveBaseY + bob;
-                inst.wave.material.emissiveIntensity = 0.3 + Math.sin(t * 2 + inst.wavePhase) * 0.1;
-            }
-            if (inst.streak) {
-                inst.streak.material.opacity = 0.28 + Math.sin(t * 1.2 + inst.wavePhase) * 0.08;
-            }
-            inst.renderer.render(inst.scene, inst.camera);
-        });
-    }
+  filterProjects(q) { const term=(q||'').toLowerCase(); this.renderCylinders(this.getProjects().filter(p=>(p.name+' '+(p.lead||'')+' '+(p.description||'')).toLowerCase().includes(term))); }
 }
