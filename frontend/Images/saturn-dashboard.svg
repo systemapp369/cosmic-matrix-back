@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 180" role="img" aria-label="Saturno">
+<defs>
+  <radialGradient id="planet" cx="35%" cy="28%" r="75%"><stop offset="0" stop-color="#dff6ff"/><stop offset=".24" stop-color="#74b8d9"/><stop offset=".58" stop-color="#2b668d"/><stop offset="1" stop-color="#10283f"/></radialGradient>
+  <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#dff9ff" stop-opacity=".9"/><stop offset=".35" stop-color="#5bb9df" stop-opacity=".65"/><stop offset=".7" stop-color="#8d6cff" stop-opacity=".55"/><stop offset="1" stop-color="#19d9ff" stop-opacity=".15"/></linearGradient>
+  <filter id="glow"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<ellipse cx="130" cy="104" rx="112" ry="35" fill="none" stroke="url(#ring)" stroke-width="11" opacity=".8" transform="rotate(-12 130 104)" filter="url(#glow)"/>
+<ellipse cx="130" cy="104" rx="93" ry="28" fill="none" stroke="#d8f7ff" stroke-opacity=".35" stroke-width="3" transform="rotate(-12 130 104)"/>
+<circle cx="130" cy="82" r="48" fill="url(#planet)" filter="url(#glow)"/>
+<path d="M88 65c27 10 57 12 84 1M85 80c28 8 59 8 90-1M90 96c25 6 53 6 81-2" fill="none" stroke="#d7f6ff" stroke-opacity=".18" stroke-width="5" stroke-linecap="round"/>
+<ellipse cx="130" cy="104" rx="101" ry="31" fill="none" stroke="#19d9ff" stroke-opacity=".18" stroke-width="2" transform="rotate(-12 130 104)"/>
+</svg>
