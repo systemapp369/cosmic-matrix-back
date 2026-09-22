@@ -20,6 +20,7 @@
     <script src="./assets/modules/Background3D.js"></script>
     <script src="./assets/modules/GlassRing3D.js"></script>
     <script src="./assets/modules/HexTower3D.js"></script>
+    <script src="./assets/modules/dashboard-v2.js"></script>
     <script src="./assets/modules/dashboard-compat.js"></script>
 </head>
 <body>
@@ -27,56 +28,19 @@
     <div class="scanner-bar"></div>
     <div id="canvas-container" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:-1;overflow:hidden;pointer-events:none;"></div>
 
-    <!-- El dashboard visible se genera exclusivamente desde HexTower3D.js.
-         Se eliminó el dashboard legacy de index.html para evitar duplicidad,
-         recursos visuales superpuestos y renderizados innecesarios. -->
-
     <div class="modal fade" id="crudModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
             <div class="modal-content shadow-lg border-0">
-                <div class="modal-header border-bottom-0 pb-0">
-                    <div><h5 class="modal-title fw-bold" id="modalTitle">Modificar Parámetros</h5><p class="small text-muted mb-0" id="modalSub">Editor de Proyecto</p></div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="monitor.closeModal()"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="nodeForm" class="row g-3">
-                        <input type="hidden" id="nodeIndex">
-                        <div class="col-12"><label class="form-label small fw-medium text-muted">Nombre del Proyecto</label><input type="text" id="nodeName" class="form-control form-control-sm" required></div>
-                        <div class="col-md-6"><label class="form-label small fw-medium text-muted">Nivel de Criticidad</label><select id="nodeLevel" class="form-select form-select-sm"><option value="BAJA">Baja</option><option value="NORMAL">Normal</option><option value="ALTA">Alto</option><option value="CRÍTICA">Crítico</option></select></div>
-                        <div class="col-md-6"><label class="form-label small fw-medium text-muted">Progreso (%)</label><input type="number" id="nodeProgress" min="0" max="100" class="form-control form-control-sm" required></div>
-                        <div class="col-12"><label class="form-label small fw-medium text-muted">Responsables de Proyecto</label><input type="text" id="nodeLead" class="form-control form-control-sm"></div>
-                        <div class="col-12"><label class="form-label small fw-medium text-muted">Descripción Breve</label><input type="text" id="nodeDescription" class="form-control form-control-sm" maxlength="120"></div>
-                        <div class="col-12 d-flex gap-2 pt-2 border-top mt-3"><button type="button" id="deleteBtn" onclick="monitor.confirmDeleteNode()" class="btn id-delete-btn btn-sm btn-outline-danger">Eliminar</button><div class="flex-grow-1"></div><button type="button" onclick="monitor.closeModal()" class="btn btn-sm btn-light">Cancelar</button><button type="submit" id="submitBtn" class="btn btn-sm btn-primary">Guardar Cambios</button></div>
-                    </form>
-                    <div id="updatesSection" class="d-none mt-4 pt-3 border-top">
-                        <h6 class="fw-bold small text-uppercase text-muted mb-3"><i class="ti ti-timeline-event me-1"></i> Bitácora de Avances</h6>
-                        <textarea id="updateNote" class="form-control form-control-sm mb-2" rows="2" placeholder="Describe el avance u observación..."></textarea>
-                        <input type="file" id="updateFiles" class="form-control form-control-sm mb-2" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt">
-                        <div class="d-flex justify-content-end mb-3"><button type="button" id="addUpdateBtn" onclick="monitor.submitUpdate()" class="btn btn-sm btn-primary"><i class="ti ti-plus"></i> Agregar Avance</button></div>
-                        <div id="updatesList" class="d-flex flex-column gap-2" style="max-height:260px;overflow-y:auto;"></div>
-                    </div>
-                </div>
+                <div class="modal-header border-bottom-0 pb-0"><div><h5 class="modal-title fw-bold" id="modalTitle">Modificar Parámetros</h5><p class="small text-muted mb-0" id="modalSub">Editor de Proyecto</p></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="monitor.closeModal()"></button></div>
+                <div class="modal-body"><form id="nodeForm" class="row g-3"><input type="hidden" id="nodeIndex"><div class="col-12"><label class="form-label small fw-medium text-muted">Nombre del Proyecto</label><input type="text" id="nodeName" class="form-control form-control-sm" required></div><div class="col-md-6"><label class="form-label small fw-medium text-muted">Nivel de Criticidad</label><select id="nodeLevel" class="form-select form-select-sm"><option value="BAJA">Baja</option><option value="NORMAL">Normal</option><option value="ALTA">Alto</option><option value="CRÍTICA">Crítico</option></select></div><div class="col-md-6"><label class="form-label small fw-medium text-muted">Progreso (%)</label><input type="number" id="nodeProgress" min="0" max="100" class="form-control form-control-sm" required></div><div class="col-12"><label class="form-label small fw-medium text-muted">Responsables de Proyecto</label><input type="text" id="nodeLead" class="form-control form-control-sm"></div><div class="col-12"><label class="form-label small fw-medium text-muted">Descripción Breve</label><input type="text" id="nodeDescription" class="form-control form-control-sm" maxlength="120"></div><div class="col-12 d-flex gap-2 pt-2 border-top mt-3"><button type="button" id="deleteBtn" onclick="monitor.confirmDeleteNode()" class="btn id-delete-btn btn-sm btn-outline-danger">Eliminar</button><div class="flex-grow-1"></div><button type="button" onclick="monitor.closeModal()" class="btn btn-sm btn-light">Cancelar</button><button type="submit" id="submitBtn" class="btn btn-sm btn-primary">Guardar Cambios</button></div></form><div id="updatesSection" class="d-none mt-4 pt-3 border-top"><h6 class="fw-bold small text-uppercase text-muted mb-3"><i class="ti ti-timeline-event me-1"></i> Bitácora de Avances</h6><textarea id="updateNote" class="form-control form-control-sm mb-2" rows="2" placeholder="Describe el avance u observación..."></textarea><input type="file" id="updateFiles" class="form-control form-control-sm mb-2" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"><div class="d-flex justify-content-end mb-3"><button type="button" id="addUpdateBtn" onclick="monitor.submitUpdate()" class="btn btn-sm btn-primary"><i class="ti ti-plus"></i> Agregar Avance</button></div><div id="updatesList" class="d-flex flex-column gap-2" style="max-height:260px;overflow-y:auto;"></div></div></div>
             </div>
         </div>
     </div>
-
-    <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true" style="z-index:1065;">
-        <div class="modal-dialog modal-sm modal-dialog-centered"><div class="modal-content text-center p-3 shadow-lg"><div class="modal-body"><i class="ti ti-alert-triangle text-danger fs-1 mb-2"></i><h6 class="fw-bold mb-1">¿Confirmar Acción?</h6><p class="small text-muted mb-4">Esta acción desmantelará por completo el nodo del sistema de forma permanente.</p><div class="d-flex gap-2"><button onclick="monitor.closeConfirmModal()" class="btn btn-sm btn-light flex-fill">Cancelar</button><button onclick="monitor.executeDeleteNode()" class="btn btn-sm btn-danger flex-fill">Desconectar</button></div></div></div></div>
-    </div>
-
+    <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true" style="z-index:1065;"><div class="modal-dialog modal-sm modal-dialog-centered"><div class="modal-content text-center p-3 shadow-lg"><div class="modal-body"><i class="ti ti-alert-triangle text-danger fs-1 mb-2"></i><h6 class="fw-bold mb-1">¿Confirmar Acción?</h6><p class="small text-muted mb-4">Esta acción desmantelará por completo el nodo del sistema de forma permanente.</p><div class="d-flex gap-2"><button onclick="monitor.closeConfirmModal()" class="btn btn-sm btn-light flex-fill">Cancelar</button><button onclick="monitor.executeDeleteNode()" class="btn btn-sm btn-danger flex-fill">Desconectar</button></div></div></div></div></div>
     <div class="position-fixed bottom-0 start-0 p-4" style="z-index:1100;"><div id="toastNotification" class="toast align-items-center text-bg-dark border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true"><div class="d-flex"><div class="toast-body d-flex align-items-center gap-2 small"><div class="spinner-grow spinner-grow-sm text-info" role="status"></div><span id="toastMessage">Sistema Sincronizado</span></div></div></div></div>
-
-    <div id="pdfReportContainer" style="position:fixed;left:-9999px;top:0;width:820px;"></div>
-    <div id="reportView" class="d-none bg-white text-dark p-5 position-absolute top-0 start-0 w-100 min-vh-100 z-3"></div>
-
-    <div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"><div class="modal-content shadow-lg border-0"><div class="modal-header border-bottom"><div><h5 class="modal-title fw-bold" id="reportModalTitle"><i class="ti ti-report-analytics text-primary me-1"></i> Reporte de Infraestructura</h5><p class="small text-muted mb-0">Ecosistema Global de los Proyectos v1.5</p></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="reportModalBody"></div><div class="modal-footer border-top d-flex flex-wrap gap-2 justify-content-between"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="includeBitacoraCheck" checked><label class="form-check-label small" for="includeBitacoraCheck">Incluir Bitácora de Avances</label></div><div class="d-flex gap-2"><button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button><button type="button" id="excelReportBtn" onclick="monitor.generateExcelReport()" class="btn btn-sm btn-success"><i class="ti ti-file-spreadsheet"></i> Excel</button><button type="button" id="pdfReportBtn" onclick="monitor.generatePdfReport()" class="btn btn-sm btn-primary"><i class="ti ti-file-type-pdf"></i> PDF</button></div></div></div></div>
-    </div>
-
-    <div class="modal fade" id="criticalityModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div class="modal-content shadow-lg border-0"><div class="modal-header border-bottom"><h5 class="modal-title fw-bold" id="criticalityModalTitle">Proyectos</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="criticalityModalBody"></div><div class="modal-footer border-top"><button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button></div></div></div>
-    </div>
-
+    <div id="pdfReportContainer" style="position:fixed;left:-9999px;top:0;width:820px;"></div><div id="reportView" class="d-none bg-white text-dark p-5 position-absolute top-0 start-0 w-100 min-vh-100 z-3"></div>
+    <div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"><div class="modal-content shadow-lg border-0"><div class="modal-header border-bottom"><div><h5 class="modal-title fw-bold" id="reportModalTitle"><i class="ti ti-report-analytics text-primary me-1"></i> Reporte de Infraestructura</h5><p class="small text-muted mb-0">Ecosistema Global de los Proyectos v1.5</p></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="reportModalBody"></div><div class="modal-footer border-top d-flex flex-wrap gap-2 justify-content-between"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="includeBitacoraCheck" checked><label class="form-check-label small" for="includeBitacoraCheck">Incluir Bitácora de Avances</label></div><div class="d-flex gap-2"><button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button><button type="button" id="excelReportBtn" onclick="monitor.generateExcelReport()" class="btn btn-sm btn-success"><i class="ti ti-file-spreadsheet"></i> Excel</button><button type="button" id="pdfReportBtn" onclick="monitor.generatePdfReport()" class="btn btn-sm btn-primary"><i class="ti ti-file-type-pdf"></i> PDF</button></div></div></div></div></div>
+    <div class="modal fade" id="criticalityModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div class="modal-content shadow-lg border-0"><div class="modal-header border-bottom"><h5 class="modal-title fw-bold" id="criticalityModalTitle">Proyectos</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="criticalityModalBody"></div><div class="modal-footer border-top"><button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button></div></div></div></div>
     <script src="./vendor/bootstrap/bootstrap.bundle.min.js"></script>
     <script src="./assets/modules/app.js"></script>
 </body>
