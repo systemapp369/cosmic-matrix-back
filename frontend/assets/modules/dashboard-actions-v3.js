@@ -1,8 +1,6 @@
 (function(){
 'use strict';
 
-// InfrastructureMonitor is declared as a global lexical `const monitor` in app.js,
-// so it is not automatically exposed as window.monitor. Support both forms.
 const getMonitor=()=>{
   if(window.monitor) return window.monitor;
   try { return typeof monitor !== 'undefined' ? monitor : null; } catch(e) { return null; }
@@ -119,6 +117,9 @@ function update(){
 
 function installDashboard(){
   const m=getMonitor();if(!m||!m.hexTower3D||typeof m.hexTower3D.injectProfessionalDashboard!=='function'){setTimeout(installDashboard,200);return;}
+  // Expose the live instances for the legacy inline controls used by the dashboard.
+  window.monitor=m;
+  window.hexTower3D=m.hexTower3D;
   try{m.hexTower3D.injectProfessionalDashboard();}catch(e){console.error(e);}
   mountInlineActions();attachBell();update();
 }
