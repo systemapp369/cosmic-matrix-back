@@ -1,0 +1,223 @@
+/* Cosmic Matrix — Torre de proyectos v4
+   Visual inspirado en las barras cilíndricas de cristal de la referencia.
+   Mantiene la lógica/paginación existente del dashboard-v2. */
+#cm-dashboard-v2 .cm-tower-stage{
+  position:relative;
+  padding:42px 56px 20px;
+  overflow:hidden;
+}
+
+#cm-dashboard-v2 .cm-tower-grid{
+  align-items:end;
+  gap:18px;
+}
+
+#cm-dashboard-v2 .cm-project{
+  position:relative;
+  min-width:0;
+}
+
+#cm-dashboard-v2 .cm-cylinder-wrap{
+  position:relative;
+  height:270px;
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  isolation:isolate;
+}
+
+/* Plataforma luminosa inferior */
+#cm-dashboard-v2 .cm-cylinder-wrap::before{
+  content:"";
+  position:absolute;
+  z-index:0;
+  left:50%;
+  bottom:2px;
+  width:116px;
+  height:25px;
+  transform:translateX(-50%);
+  border:1px solid color-mix(in srgb,var(--c) 78%,#dffcff);
+  border-radius:50%;
+  background:radial-gradient(ellipse at center, color-mix(in srgb,var(--c) 30%,#061b2e), #061827 64%, #020d19 100%);
+  box-shadow:0 0 10px color-mix(in srgb,var(--c) 75%,transparent), inset 0 2px 4px #ffffff28;
+}
+
+#cm-dashboard-v2 .cm-cylinder-wrap::after{
+  content:"";
+  position:absolute;
+  z-index:0;
+  left:50%;
+  bottom:5px;
+  width:91px;
+  height:8px;
+  transform:translateX(-50%);
+  border-radius:50%;
+  background:linear-gradient(90deg,transparent 0 8%,color-mix(in srgb,var(--c) 80%,#fff) 18%,color-mix(in srgb,var(--c) 55%,#08192a) 50%,color-mix(in srgb,var(--c) 80%,#fff) 82%,transparent 92%);
+  box-shadow:0 0 12px var(--c);
+}
+
+#cm-dashboard-v2 .cm-cylinder{
+  z-index:2;
+  width:76px;
+  height:218px;
+  transform:translateY(-9px);
+  border:1px solid color-mix(in srgb,var(--c) 82%,#e8fbff);
+  border-radius:39px 39px 32px 32px;
+  overflow:hidden;
+  background:
+    linear-gradient(90deg,#ffffff10 0%,#ffffff03 17%,#071a2c99 48%,#ffffff08 76%,#ffffff14 100%);
+  box-shadow:
+    0 0 12px color-mix(in srgb,var(--c) 80%,transparent),
+    0 0 28px color-mix(in srgb,var(--c) 38%,transparent),
+    inset 8px 0 15px #ffffff0c,
+    inset -9px 0 17px #0009;
+}
+
+/* Boca de cristal */
+#cm-dashboard-v2 .cm-cylinder::before{
+  content:"";
+  position:absolute;
+  z-index:7;
+  left:-1px;
+  right:-1px;
+  top:-1px;
+  height:27px;
+  border:1px solid #e9fbffdd;
+  border-radius:50%;
+  background:linear-gradient(180deg,#16344a99,#020e1bdd 72%);
+  box-shadow:0 0 14px color-mix(in srgb,var(--c) 90%,transparent), inset 0 3px 5px #fff4;
+}
+
+/* Reflejo lateral de vidrio */
+#cm-dashboard-v2 .cm-cylinder::after{
+  content:"";
+  position:absolute;
+  z-index:8;
+  left:9px;
+  top:20px;
+  width:7px;
+  height:178px;
+  border-radius:50%;
+  background:linear-gradient(180deg,#ffffffa8,#ffffff32 34%,#ffffff06 100%);
+  filter:blur(1px);
+  opacity:.72;
+}
+
+#cm-dashboard-v2 .cm-liquid{
+  z-index:3;
+  left:1px;
+  right:1px;
+  bottom:1px;
+  border-radius:0 0 31px 31px;
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb,var(--c) 92%,#ffffff),
+      color-mix(in srgb,var(--c) 88%,#07182b) 35%,
+      color-mix(in srgb,var(--c) 72%,#001326) 100%);
+  opacity:.92;
+  box-shadow:
+    0 -8px 20px color-mix(in srgb,var(--c) 92%,transparent),
+    inset 7px 0 16px #fff2,
+    inset -8px 0 14px #0005;
+}
+
+#cm-dashboard-v2 .cm-liquid::before{
+  content:"";
+  position:absolute;
+  z-index:5;
+  left:-1px;
+  right:-1px;
+  top:-11px;
+  height:22px;
+  border:1px solid #edffffe6;
+  border-radius:50%;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--c) 65%,#eaffff),color-mix(in srgb,var(--c) 84%,#07172a));
+  box-shadow:0 0 15px var(--c),inset 0 2px 4px #fff8;
+}
+
+#cm-dashboard-v2 .cm-liquid::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(circle at 20% 25%,#ffffff88 0 1px,transparent 2px),
+    radial-gradient(circle at 70% 55%,#ffffff66 0 1px,transparent 2px),
+    radial-gradient(circle at 42% 78%,#ffffff55 0 1px,transparent 2px);
+  background-size:31px 31px,43px 43px,37px 37px;
+  animation:cm-bubbles-v4 6s linear infinite;
+}
+
+@keyframes cm-bubbles-v4{
+  to{background-position:0 -31px,0 -43px,0 -37px}
+}
+
+#cm-dashboard-v2 .cm-cylinder-value{
+  z-index:12;
+  top:-39px;
+  font-size:15px;
+  color:#edfaff;
+  text-shadow:0 0 12px var(--c),0 1px 2px #00101d;
+}
+
+#cm-dashboard-v2 .cm-project-name{
+  position:relative;
+  z-index:10;
+  margin-top:1px;
+  font-size:12px;
+  font-weight:800;
+  color:#e5f4ff;
+}
+
+#cm-dashboard-v2 .cm-status{
+  position:relative;
+  z-index:10;
+  margin-top:5px;
+  font-size:10px;
+}
+
+/* Flechas de navegación: siempre visibles, con estética de control HUD */
+#cm-dashboard-v2 .cm-arrow{
+  display:grid;
+  place-items:center;
+  top:50%;
+  width:38px;
+  height:38px;
+  padding:0;
+  border:1px solid #26719c;
+  border-radius:50%;
+  background:linear-gradient(180deg,#0b3150,#061c31);
+  color:#d7f7ff;
+  box-shadow:0 0 16px #0bbcff2e,inset 0 1px 0 #ffffff18;
+  transform:translateY(-50%);
+  transition:.2s ease;
+}
+
+#cm-dashboard-v2 .cm-arrow.prev{left:14px}
+#cm-dashboard-v2 .cm-arrow.next{right:14px}
+
+#cm-dashboard-v2 .cm-arrow:hover:not(:disabled){
+  border-color:#19d9ff;
+  background:linear-gradient(180deg,#0e4265,#08243c);
+  box-shadow:0 0 22px #19d9ff55;
+  transform:translateY(-50%) scale(1.06);
+}
+
+#cm-dashboard-v2 .cm-arrow:disabled{
+  opacity:.22;
+  box-shadow:none;
+}
+
+#cm-dashboard-v2 .cm-page-info{
+  right:22px;
+  bottom:8px;
+}
+
+@media(max-width:1200px){
+  #cm-dashboard-v2 .cm-cylinder-wrap{height:260px}
+  #cm-dashboard-v2 .cm-cylinder{height:208px;width:72px}
+}
+
+@media(max-width:760px){
+  #cm-dashboard-v2 .cm-tower-stage{padding-left:48px;padding-right:48px}
+  #cm-dashboard-v2 .cm-cylinder-wrap{height:255px}
+}
