@@ -1,8 +1,13 @@
 (function(){
 'use strict';
 
-const getMonitor=()=>window.monitor||null;
-const projects=()=>getMonitor()&&Array.isArray(getMonitor().projects)?getMonitor().projects:[];
+// InfrastructureMonitor is declared as a global lexical `const monitor` in app.js,
+// so it is not automatically exposed as window.monitor. Support both forms.
+const getMonitor=()=>{
+  if(window.monitor) return window.monitor;
+  try { return typeof monitor !== 'undefined' ? monitor : null; } catch(e) { return null; }
+};
+const projects=()=>{const m=getMonitor();return m&&Array.isArray(m.projects)?m.projects:[];};
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const toast=(msg)=>{try{getMonitor()?.showToast?.(msg);}catch(e){console.log(msg);}};
 
@@ -29,7 +34,7 @@ function deselect(){
   const m=getMonitor();
   projects().forEach(p=>p.selected=false);
   document.querySelectorAll('.selected,.active-project,.is-selected').forEach(x=>x.classList.remove('selected','active-project','is-selected'));
-  if(m){m.currentProjectId=null;m.indexToDelete=null;try{m.renderDashboard?.();}catch(e){}}
+  if(m){m.currentProjectId=null;m.indexToDelete=null;try{m.renderDashboard?.();m.hexTower3D?.renderDashboardShell?.();}catch(e){}}
   window.dispatchEvent(new CustomEvent('cm:deselect-all'));
   toast('Todas las selecciones fueron desmarcadas');
 }
@@ -96,15 +101,19 @@ function mountInlineActions(){
 
 function attachBell(){
   if(document.getElementById('cm-bell-bound'))return true;
-  const candidates=[...document.querySelectorAll('button,a,[role="button"]')].filter(x=>{const t=(x.getAttribute('aria-label')||x.title||x.textContent||'').toLowerCase();return t.includes('notific')||!!x.querySelector?.('.ti-bell,.fa-bell,.bi-bell');});
+  const scope=document.querySelector('#cm-dashboard')||document;
+  const candidates=[...scope.querySelectorAll('button,a,[role="button"]')].filter(x=>{const t=(x.getAttribute('aria-label')||x.title||x.textContent||'').toLowerCase();return t.includes('notific')||!!x.querySelector?.('.ti-bell,.fa-bell,.bi-bell');});
   const bell=candidates[0];if(!bell)return false;
   bell.dataset.cmBellBound='1';bell.addEventListener('click',function(e){e.preventDefault();e.stopImmediatePropagation();critical();},true);
   const mark=document.createElement('span');mark.id='cm-bell-bound';mark.style.display='none';document.body.appendChild(mark);return true;
 }
 
 function update(){
-  const el=document.getElementById('cm-inline-report-count');if(el)el.textContent=projects().length;
-  const count=projects().filter(p=>p.level==='CRÍTICA'||p.level==='ALTA'||Number(p.progress||0)<40).length;
+  const ps=projects();
+  const el=document.getElementById('cm-inline-report-count');if(el)el.textContent=ps.length;
+  const count=ps.filter(p=>p.level==='CRÍTICA'||p.level==='ALTA'||Number(p.progress||0)<40).length;
+  const bell=(document.querySelector('#cm-dashboard .ti-bell')||{}).closest?.('button');
+  if(bell){const badge=bell.querySelector('.badge');if(badge)badge.textContent=count;}
   document.querySelectorAll('[data-cm-critical-count]').forEach(x=>x.textContent=count);
 }
 
@@ -116,6 +125,7 @@ function installDashboard(){
 
 function boot(){installDashboard();mountInlineActions();attachBell();update();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
-window.addEventListener('load',boot);window.addEventListener('cm:projects-updated',()=>{update();attachBell();});
+window.addEventListener('load',boot);
+window.addEventListener('cm:projects-updated',()=>{update();attachBell();});
 setInterval(()=>{mountInlineActions();attachBell();update();},1200);
 })();
