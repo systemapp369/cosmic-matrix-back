@@ -1,132 +1,32 @@
 (function(){
 'use strict';
-
-const getMonitor=()=>{
-  if(window.monitor) return window.monitor;
-  try { return typeof monitor !== 'undefined' ? monitor : null; } catch(e) { return null; }
-};
+const getMonitor=()=>{if(window.monitor)return window.monitor;try{return typeof monitor!=='undefined'?monitor:null;}catch(e){return null;}};
 const projects=()=>{const m=getMonitor();return m&&Array.isArray(m.projects)?m.projects:[];};
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
-const toast=(msg)=>{try{getMonitor()?.showToast?.(msg);}catch(e){console.log(msg);}};
-
-function showBootstrapModal(id){
-  const el=document.getElementById(id); if(!el)return false;
-  if(window.bootstrap?.Modal){ window.bootstrap.Modal.getOrCreateInstance(el).show(); return true; }
-  el.classList.add('show'); el.style.display='block'; el.removeAttribute('aria-hidden'); return true;
-}
-
-function openNew(){
-  const m=getMonitor(); if(!m)return;
-  try{
-    if(typeof m.openCreateModal==='function'){m.openCreateModal();return;}
-    const form=document.getElementById('nodeForm'); form?.reset();
-    const idx=document.getElementById('nodeIndex'); if(idx)idx.value='NEW';
-    const title=document.getElementById('modalTitle'); if(title)title.textContent='Nuevo Proyecto';
-    const sub=document.getElementById('modalSub'); if(sub)sub.textContent='Registrar nuevo proyecto en Cosmic Matrix';
-    const del=document.getElementById('deleteBtn'); if(del)del.style.display='none';
-    if(m.bsCrudModal?.show)m.bsCrudModal.show(); else showBootstrapModal('crudModal');
-  }catch(e){console.error('Nuevo Proyecto',e);toast('No se pudo abrir Nuevo Proyecto');}
-}
-
-function deselect(){
-  const m=getMonitor();
-  projects().forEach(p=>p.selected=false);
-  document.querySelectorAll('.selected,.active-project,.is-selected').forEach(x=>x.classList.remove('selected','active-project','is-selected'));
-  if(m){m.currentProjectId=null;m.indexToDelete=null;try{m.renderDashboard?.();m.hexTower3D?.renderDashboardShell?.();}catch(e){}}
-  window.dispatchEvent(new CustomEvent('cm:deselect-all'));
-  toast('Todas las selecciones fueron desmarcadas');
-}
-
-function excel(){
-  const ps=projects();
-  if(!ps.length){toast('No hay proyectos para exportar');return;}
-  const rows=ps.map(p=>[p.id,p.name,p.level,p.progress,p.lead,p.description]);
-  const escCell=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  const html='<html><head><meta charset="UTF-8"></head><body><table border="1"><tr><th>ID</th><th>Proyecto</th><th>Nivel</th><th>Progreso</th><th>Responsable</th><th>Descripción</th></tr>'+rows.map(r=>'<tr>'+r.map(v=>'<td>'+escCell(v)+'</td>').join('')+'</tr>').join('')+'</table></body></html>';
-  const blob=new Blob([html],{type:'application/vnd.ms-excel;charset=utf-8'});
-  const url=URL.createObjectURL(blob),a=document.createElement('a');
-  a.href=url;a.download='cosmic-matrix-proyectos.xls';document.body.appendChild(a);a.click();a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Excel generado correctamente');
-}
-
-function ensureReportModal(){
-  let modal=document.getElementById('cmReportActionModal');
-  if(modal)return modal;
-  modal=document.createElement('div');modal.id='cmReportActionModal';modal.className='modal fade';modal.tabIndex=-1;modal.innerHTML='<div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content" style="background:#06182b;color:#dcefff;border:1px solid #1473a8;border-radius:18px"><div class="modal-header"><h5 class="modal-title">Reporte de Proyectos</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body" id="cmReportActionBody"></div><div class="modal-footer"><button type="button" class="btn btn-outline-info" data-bs-dismiss="modal">Cerrar</button></div></div></div>';
-  document.body.appendChild(modal);return modal;
-}
-
-function report(){
-  const ps=projects(),avg=ps.length?Math.round(ps.reduce((s,p)=>s+Number(p.progress||0),0)/ps.length):0;
-  const attention=ps.filter(p=>p.level==='CRÍTICA'||p.level==='ALTA'||Number(p.progress||0)<40).length;
-  const modal=ensureReportModal(),body=modal.querySelector('#cmReportActionBody');
-  body.innerHTML='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px">'+[['Proyectos',ps.length],['Avance promedio',avg+'%'],['Requieren atención',attention]].map(x=>'<div style="padding:18px;border:1px solid #15517a;border-radius:12px;background:#081f35"><div style="font-size:28px;font-weight:800">'+x[1]+'</div><div style="opacity:.7">'+x[0]+'</div></div>').join('')+'</div><div style="max-height:360px;overflow:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:8px">Proyecto</th><th>Progreso</th><th>Estado</th></tr></thead><tbody>'+ps.map(p=>'<tr><td style="padding:8px;border-top:1px solid #12334c">'+esc(p.name)+'</td><td style="text-align:center;border-top:1px solid #12334c">'+Number(p.progress||0)+'%</td><td style="text-align:center;border-top:1px solid #12334c">'+esc(p.level||'—')+'</td></tr>').join('')+'</tbody></table></div>';
-  showBootstrapModal('cmReportActionModal');
-}
-
-function ensureCriticalModal(){
-  let modal=document.getElementById('cmCriticalActionModal');
-  if(modal)return modal;
-  modal=document.createElement('div');modal.id='cmCriticalActionModal';modal.className='modal fade';modal.tabIndex=-1;modal.innerHTML='<div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content" style="background:#06182b;color:#dcefff;border:1px solid #ff3155;border-radius:18px"><div class="modal-header"><h5 class="modal-title">🔔 Proyectos críticos y en atención</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body" id="cmCriticalActionBody"></div><div class="modal-footer"><button type="button" class="btn btn-outline-info" data-bs-dismiss="modal">Cerrar</button></div></div></div>';
-  document.body.appendChild(modal);return modal;
-}
-
-function critical(){
-  const ps=projects(),list=ps.filter(p=>p.level==='CRÍTICA'||p.level==='ALTA'||Number(p.progress||0)<40).sort((a,b)=>Number(a.progress||0)-Number(b.progress||0));
-  const modal=ensureCriticalModal(),body=modal.querySelector('#cmCriticalActionBody');
-  body.innerHTML=list.length?list.map(p=>{const i=ps.indexOf(p);return '<button type="button" class="cm-critical-row" data-index="'+i+'" style="width:100%;margin-bottom:8px;padding:12px;border:1px solid #173b55;border-radius:10px;background:#081f35;color:#dcefff;display:flex;align-items:center;gap:10px;cursor:pointer"><span style="width:10px;height:10px;border-radius:50%;background:#ff3155;box-shadow:0 0 10px #ff3155"></span><span style="flex:1;text-align:left"><strong>'+esc(p.name)+'</strong><small style="display:block;opacity:.65">'+esc(p.description||p.lead||'Sin descripción')+'</small></span><b>'+Number(p.progress||0)+'%</b></button>';}).join(''):'<div style="padding:30px;text-align:center;opacity:.7">No hay proyectos críticos.</div>';
-  body.querySelectorAll('[data-index]').forEach(x=>x.onclick=()=>{try{window.bootstrap?.Modal.getInstance(modal)?.hide();getMonitor()?.openModal?.(Number(x.dataset.index));}catch(e){}});
-  showBootstrapModal('cmCriticalActionModal');
-}
-
-function findHost(){
-  const input=[...document.querySelectorAll('input')].find(x=>/Buscar proyecto, responsable, etiqueta/i.test(x.placeholder||''));
-  if(!input)return null;
-  let node=input;
-  for(let i=0;i<7&&node;i++,node=node.parentElement){if(node.tagName==='HEADER'||node.classList.contains('header')||node.classList.contains('topbar')||node.querySelector?.('.avatar'))return node;}
-  return input.parentElement?.parentElement||input.parentElement;
-}
-
-function mountInlineActions(){
-  if(document.getElementById('cm-inline-actions'))return true;
-  const host=findHost();if(!host)return false;
-  const style=document.createElement('style');style.id='cm-inline-actions-style';style.textContent='#cm-inline-actions{position:absolute;right:245px;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:9px;z-index:80;white-space:nowrap}#cm-inline-actions .cm-inline-btn{height:40px;padding:0 15px;border:1px solid #315e83;border-radius:21px;background:linear-gradient(180deg,#092944,#061b2f);color:#bdd9ed;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:7px;cursor:pointer}#cm-inline-actions .primary,#cm-inline-actions .report{background:linear-gradient(135deg,#087cf4,#1687ff);border-color:#1ca5ff;color:#fff}#cm-production-commandbar{display:none!important}@media(max-width:1450px){#cm-inline-actions{right:245px;gap:6px}#cm-inline-actions .cm-inline-btn{padding:0 11px;font-size:12px}}';document.head.appendChild(style);
-  const wrap=document.createElement('div');wrap.id='cm-inline-actions';wrap.innerHTML='<button class="cm-inline-btn primary" id="cm-inline-new"><i class="ti ti-plus"></i> Nuevo Proyecto</button><button class="cm-inline-btn" id="cm-inline-deselect"><i class="ti ti-checkbox"></i> Desmarcar Todos</button><button class="cm-inline-btn" id="cm-inline-excel"><i class="ti ti-file-spreadsheet"></i> Excel</button><button class="cm-inline-btn report" id="cm-inline-report"><i class="ti ti-file-text"></i> Reporte (<span id="cm-inline-report-count">0</span>)</button>';
-  host.style.position=host.style.position||'relative';host.appendChild(wrap);
-  wrap.querySelector('#cm-inline-new').onclick=openNew;wrap.querySelector('#cm-inline-deselect').onclick=deselect;wrap.querySelector('#cm-inline-excel').onclick=excel;wrap.querySelector('#cm-inline-report').onclick=report;
-  return true;
-}
-
-function attachBell(){
-  if(document.getElementById('cm-bell-bound'))return true;
-  const scope=document.querySelector('#cm-dashboard')||document;
-  const candidates=[...scope.querySelectorAll('button,a,[role="button"]')].filter(x=>{const t=(x.getAttribute('aria-label')||x.title||x.textContent||'').toLowerCase();return t.includes('notific')||!!x.querySelector?.('.ti-bell,.fa-bell,.bi-bell');});
-  const bell=candidates[0];if(!bell)return false;
-  bell.dataset.cmBellBound='1';bell.addEventListener('click',function(e){e.preventDefault();e.stopImmediatePropagation();critical();},true);
-  const mark=document.createElement('span');mark.id='cm-bell-bound';mark.style.display='none';document.body.appendChild(mark);return true;
-}
-
-function update(){
-  const ps=projects();
-  const el=document.getElementById('cm-inline-report-count');if(el)el.textContent=ps.length;
-  const count=ps.filter(p=>p.level==='CRÍTICA'||p.level==='ALTA'||Number(p.progress||0)<40).length;
-  const bell=(document.querySelector('#cm-dashboard .ti-bell')||{}).closest?.('button');
-  if(bell){const badge=bell.querySelector('.badge');if(badge)badge.textContent=count;}
-  document.querySelectorAll('[data-cm-critical-count]').forEach(x=>x.textContent=count);
-}
-
-function installDashboard(){
-  const m=getMonitor();if(!m||!m.hexTower3D||typeof m.hexTower3D.injectProfessionalDashboard!=='function'){setTimeout(installDashboard,200);return;}
-  // Expose the live instances for the legacy inline controls used by the dashboard.
-  window.monitor=m;
-  window.hexTower3D=m.hexTower3D;
-  try{m.hexTower3D.injectProfessionalDashboard();}catch(e){console.error(e);}
-  mountInlineActions();attachBell();update();
-}
-
+const esc=s=>String(s??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[c]));
+const toast=msg=>{try{getMonitor()?.showToast?.(msg);}catch(e){console.log(msg);}};
+const API='https://cosmic-matrix-back.vercel.app/api';
+const severityColor=l=>({CRÍTICA:'#ff3155',ALTA:'#ffb51b',NORMAL:'#00d7a7',BAJA:'#a259ff'}[String(l||'').toUpperCase()]||'#7ca5c4');
+const severityBg=l=>({CRÍTICA:'rgba(255,49,85,.12)',ALTA:'rgba(255,181,27,.12)',NORMAL:'rgba(0,215,167,.10)',BAJA:'rgba(162,89,255,.12)'}[String(l||'').toUpperCase()]||'rgba(124,165,196,.08)');
+function showBootstrapModal(id){const el=document.getElementById(id);if(!el)return false;if(window.bootstrap?.Modal){window.bootstrap.Modal.getOrCreateInstance(el).show();return true;}el.classList.add('show');el.style.display='block';el.removeAttribute('aria-hidden');return true;}
+function openNew(){const m=getMonitor();if(!m)return;try{if(typeof m.openCreateModal==='function'){m.openCreateModal();return;}const form=document.getElementById('nodeForm');form?.reset();const idx=document.getElementById('nodeIndex');if(idx)idx.value='NEW';const title=document.getElementById('modalTitle');if(title)title.textContent='Nuevo Proyecto';const sub=document.getElementById('modalSub');if(sub)sub.textContent='Registrar nuevo proyecto en Cosmic Matrix';const del=document.getElementById('deleteBtn');if(del)del.style.display='none';if(m.bsCrudModal?.show)m.bsCrudModal.show();else showBootstrapModal('crudModal');}catch(e){console.error(e);toast('No se pudo abrir Nuevo Proyecto');}}
+function deselect(){const m=getMonitor();projects().forEach(p=>p.selected=false);document.querySelectorAll('.selected,.active-project,.is-selected').forEach(x=>x.classList.remove('selected','active-project','is-selected'));if(m){m.currentProjectId=null;m.indexToDelete=null;try{m.renderDashboard?.();m.hexTower3D?.renderDashboardShell?.();}catch(e){}}window.dispatchEvent(new CustomEvent('cm:deselect-all'));toast('Todas las selecciones fueron desmarcadas');}
+async function getUpdates(project){try{const r=await fetch(`${API}/projects/${encodeURIComponent(project.id)}/updates`,{cache:'no-store'});if(!r.ok)return[];const d=await r.json();return Array.isArray(d)?d:[];}catch(e){console.warn('Bitácora',project.id,e);return[];}}
+function ensureReportModal(){let modal=document.getElementById('cmReportActionModal');if(modal)return modal;modal=document.createElement('div');modal.id='cmReportActionModal';modal.className='modal fade';modal.tabIndex=-1;modal.innerHTML='<div class="modal-dialog modal-xl modal-dialog-centered"><div class="modal-content" style="background:#06182b;color:#dcefff;border:1px solid #1473a8;border-radius:18px;overflow:hidden"><div class="modal-header"><div><h5 class="modal-title" style="font-weight:800">Reporte de Proyectos</h5><small style="color:#78a6c7">Selecciona los proyectos que quieres incluir.</small></div><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body" id="cmReportActionBody" style="padding:0"></div><div class="modal-footer" style="justify-content:space-between"><div style="display:flex;gap:8px"><button type="button" class="btn btn-outline-info" id="cmReportSelectAll">Seleccionar todos</button><button type="button" class="btn btn-outline-secondary" id="cmReportClearAll">Ninguno</button></div><div style="display:flex;gap:8px"><button type="button" class="btn btn-outline-danger" id="cmReportPdf">📄 Generar PDF</button><button type="button" class="btn btn-success" id="cmReportExcel">📊 Generar Excel + Bitácora</button><button type="button" class="btn btn-outline-info" data-bs-dismiss="modal">Cerrar</button></div></div></div></div>';document.body.appendChild(modal);modal.querySelector('#cmReportSelectAll').onclick=()=>setAllReportChecks(true);modal.querySelector('#cmReportClearAll').onclick=()=>setAllReportChecks(false);modal.querySelector('#cmReportPdf').onclick=generatePdf;modal.querySelector('#cmReportExcel').onclick=generateExcelWithBitacora;return modal;}
+function selectedReportProjects(){const ps=projects();return ps.filter((p,i)=>{const cb=document.querySelector(`#cmReportActionModal input[data-project-index="${i}"]`);return cb?cb.checked:true;});}
+function setAllReportChecks(v){document.querySelectorAll('#cmReportActionModal input[data-project-index]').forEach(x=>x.checked=v);updateReportSelectionCount();}
+function updateReportSelectionCount(){const selected=selectedReportProjects().length,el=document.getElementById('cmReportSelectedCount');if(el)el.textContent=`${selected} seleccionados`;const pdf=document.getElementById('cmReportPdf'),xlsx=document.getElementById('cmReportExcel');if(pdf)pdf.disabled=!selected;if(xlsx)xlsx.disabled=!selected;}
+function report(){const ps=projects(),avg=ps.length?Math.round(ps.reduce((s,p)=>s+Number(p.progress||0),0)/ps.length):0,attention=ps.filter(p=>p.level==='CRÍTICA'||p.level==='ALTA'||Number(p.progress||0)<40).length,modal=ensureReportModal(),body=modal.querySelector('#cmReportActionBody');body.innerHTML='<div style="padding:18px 20px 10px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px">'+[['Proyectos',ps.length],['Avance promedio',avg+'%'],['Requieren atención',attention]].map(x=>'<div style="padding:16px;border:1px solid #15517a;border-radius:12px;background:#081f35"><div style="font-size:27px;font-weight:800">'+x[1]+'</div><div style="opacity:.7">'+x[0]+'</div></div>').join('')+'</div><div style="padding:8px 20px 12px;display:flex;justify-content:space-between"><strong>Proyectos a incluir</strong><span id="cmReportSelectedCount" style="color:#56c8ff">'+ps.length+' seleccionados</span></div><div style="max-height:420px;overflow:auto;padding:0 14px 18px"><table style="width:100%;border-collapse:collapse"><thead style="position:sticky;top:0;background:#06182b;z-index:2"><tr><th style="width:50px;padding:11px">✓</th><th style="text-align:left;padding:11px">Proyecto</th><th style="text-align:center;padding:11px">Progreso</th><th style="text-align:center;padding:11px">Criticidad</th><th style="text-align:center;padding:11px">Responsable</th></tr></thead><tbody>'+ps.map((p,i)=>{const c=severityColor(p.level),bg=severityBg(p.level);return '<tr style="border-top:1px solid #12334c"><td style="text-align:center;padding:10px"><input type="checkbox" data-project-index="'+i+'" checked style="width:18px;height:18px;accent-color:#159cff;cursor:pointer"></td><td style="padding:10px"><strong>'+esc(p.name)+'</strong><small style="display:block;color:#7196b2">'+esc(p.description||'Sin descripción')+'</small></td><td style="text-align:center;padding:10px;font-weight:800">'+Number(p.progress||0)+'%</td><td style="text-align:center;padding:10px"><span style="display:inline-block;padding:5px 11px;border-radius:999px;border:1px solid '+c+';color:'+c+';background:'+bg+';font-size:12px;font-weight:800">'+esc(p.level||'—')+'</span></td><td style="text-align:center;padding:10px;color:#9ec0d7">'+esc(p.lead||'—')+'</td></tr>';}).join('')+'</tbody></table></div>';body.querySelectorAll('input[data-project-index]').forEach(x=>x.addEventListener('change',updateReportSelectionCount));showBootstrapModal('cmReportActionModal');updateReportSelectionCount();}
+function buildReportHtml(ps,updatesByProject,title='Reporte de Proyectos'){const avg=ps.length?Math.round(ps.reduce((s,p)=>s+Number(p.progress||0),0)/ps.length):0;let rows='';ps.forEach(p=>{const ups=updatesByProject[p.id]||[];rows+='<tr><td>'+esc(p.name)+'</td><td>'+Number(p.progress||0)+'%</td><td style="color:'+severityColor(p.level)+';font-weight:700">'+esc(p.level||'—')+'</td><td>'+esc(p.lead||'—')+'</td><td>'+esc(p.description||'—')+'</td></tr>';ups.forEach(u=>{rows+='<tr class="update"><td colspan="2"><b>Bitácora</b><br>'+esc(u.createdAt?new Date(u.createdAt).toLocaleString('es-MX'):'')+'</td><td colspan="3">'+esc(u.note||'')+(u.files?.length?' <small>['+u.files.length+' archivo(s)]</small>':'')+'</td></tr>';});});return '<!doctype html><html><head><meta charset="utf-8"><title>'+esc(title)+'</title><style>body{font-family:Arial,sans-serif;background:#06182b;color:#e5f4ff;padding:28px}h1{margin:0 0 8px}.meta{color:#8fb2cb;margin-bottom:22px}.cards{display:flex;gap:14px;margin-bottom:24px}.card{border:1px solid #175b82;border-radius:12px;padding:15px 20px;min-width:160px}.card b{font-size:26px;display:block}table{width:100%;border-collapse:collapse;background:#081f35}th,td{padding:10px;border:1px solid #173c56;text-align:left}th{background:#0b2b45}.update td{background:#071b2d;color:#b9d5e7}@media print{body{background:white;color:#111;padding:15px}.card,table,th,td{border-color:#aaa}.card{color:#111}table{background:white}th{background:#eee;color:#111}}</style></head><body><h1>'+esc(title)+'</h1><div class="meta">Generado el '+new Date().toLocaleString('es-MX')+'</div><div class="cards"><div class="card"><b>'+ps.length+'</b>Proyectos</div><div class="card"><b>'+avg+'%</b>Avance promedio</div><div class="card"><b>'+ps.filter(p=>p.level==='CRÍTICA'||p.level==='ALTA'||Number(p.progress||0)<40).length+'</b>Requieren atención</div></div><table><thead><tr><th>Proyecto</th><th>Progreso</th><th>Criticidad</th><th>Responsable</th><th>Descripción / Bitácora</th></tr></thead><tbody>'+rows+'</tbody></table></body></html>';}
+async function generatePdf(){const ps=selectedReportProjects();if(!ps.length)return toast('Selecciona al menos un proyecto');toast('Preparando PDF…');const updates=Object.fromEntries(await Promise.all(ps.map(async p=>[p.id,await getUpdates(p)])));const w=window.open('','_blank');if(!w)return toast('El navegador bloqueó la ventana del PDF');w.document.write(buildReportHtml(ps,updates));w.document.close();setTimeout(()=>{w.focus();w.print();},400);}
+async function generateExcelWithBitacora(){const ps=selectedReportProjects();if(!ps.length)return toast('Selecciona al menos un proyecto');toast('Recopilando bitácoras…');const pairs=await Promise.all(ps.map(async p=>[p,await getUpdates(p)]));const rows=[['ID','Proyecto','Criticidad','Progreso','Responsable','Descripción','Fecha bitácora','Nota','Archivos']];pairs.forEach(([p,ups])=>{if(!ups.length)rows.push([p.id,p.name,p.level,p.progress,p.lead||'',p.description||'','','','']);else ups.forEach(u=>rows.push([p.id,p.name,p.level,p.progress,p.lead||'',p.description||'',u.createdAt?new Date(u.createdAt).toLocaleString('es-MX'):'',u.note||'',(u.files||[]).map(f=>f.fileName||f.fileUrl||'').join(' | ')]));});const cell=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;');const html='<html><head><meta charset="UTF-8"><style>td,th{border:1px solid #9aaabb;padding:6px}th{font-weight:bold;background:#0b4265;color:white}</style></head><body><table>'+rows.map((r,i)=>'<tr>'+r.map(v=>'<'+(i===0?'th':'td')+'>'+cell(v)+'</'+(i===0?'th':'td')+'>').join('')+'</tr>').join('')+'</table></body></html>';const blob=new Blob([html],{type:'application/vnd.ms-excel;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='cosmic-matrix-reporte-bitacora.xls';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Excel con bitácora generado correctamente');}
+async function excel(){return generateExcelWithBitacora();}
+function ensureCriticalModal(){let modal=document.getElementById('cmCriticalActionModal');if(modal)return modal;modal=document.createElement('div');modal.id='cmCriticalActionModal';modal.className='modal fade';modal.tabIndex=-1;modal.innerHTML='<div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content" style="background:#06182b;color:#dcefff;border:1px solid #ff3155;border-radius:18px"><div class="modal-header"><h5 class="modal-title">🔔 Proyectos críticos y en atención</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body" id="cmCriticalActionBody"></div><div class="modal-footer"><button type="button" class="btn btn-outline-info" data-bs-dismiss="modal">Cerrar</button></div></div></div>';document.body.appendChild(modal);return modal;}
+function critical(){const ps=projects(),list=ps.filter(p=>p.level==='CRÍTICA'||p.level==='ALTA'||Number(p.progress||0)<40).sort((a,b)=>Number(a.progress||0)-Number(b.progress||0)),modal=ensureCriticalModal(),body=modal.querySelector('#cmCriticalActionBody');body.innerHTML=list.length?list.map(p=>{const i=ps.indexOf(p),c=severityColor(p.level);return '<button type="button" class="cm-critical-row" data-index="'+i+'" style="width:100%;margin-bottom:8px;padding:12px;border:1px solid '+c+';border-radius:10px;background:'+severityBg(p.level)+';color:#dcefff;display:flex;align-items:center;gap:10px;cursor:pointer"><span style="width:10px;height:10px;border-radius:50%;background:'+c+';box-shadow:0 0 10px '+c+'"></span><span style="flex:1;text-align:left"><strong>'+esc(p.name)+'</strong><small style="display:block;opacity:.65">'+esc(p.description||p.lead||'Sin descripción')+'</small></span><b>'+Number(p.progress||0)+'%</b></button>';}).join(''):'<div style="padding:30px;text-align:center;opacity:.7">No hay proyectos críticos.</div>';body.querySelectorAll('[data-index]').forEach(x=>x.onclick=()=>{try{window.bootstrap?.Modal.getInstance(modal)?.hide();getMonitor()?.openModal?.(Number(x.dataset.index));}catch(e){}});showBootstrapModal('cmCriticalActionModal');}
+function findHost(){const input=[...document.querySelectorAll('input')].find(x=>/Buscar proyecto, responsable, etiqueta/i.test(x.placeholder||''));if(!input)return null;let node=input;for(let i=0;i<7&&node;i++,node=node.parentElement){if(node.tagName==='HEADER'||node.classList.contains('header')||node.classList.contains('topbar')||node.querySelector?.('.avatar'))return node;}return input.parentElement?.parentElement||input.parentElement;}
+function mountInlineActions(){if(document.getElementById('cm-inline-actions'))return true;const host=findHost();if(!host)return false;const style=document.createElement('style');style.id='cm-inline-actions-style';style.textContent='#cm-inline-actions{position:absolute;right:245px;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:9px;z-index:80;white-space:nowrap}#cm-inline-actions .cm-inline-btn{height:40px;padding:0 15px;border:1px solid #315e83;border-radius:21px;background:linear-gradient(180deg,#092944,#061b2f);color:#bdd9ed;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:7px;cursor:pointer}#cm-inline-actions .primary,#cm-inline-actions .report{background:linear-gradient(135deg,#087cf4,#1687ff);border-color:#1ca5ff;color:#fff}#cm-production-commandbar{display:none!important}@media(max-width:1450px){#cm-inline-actions{right:245px;gap:6px}#cm-inline-actions .cm-inline-btn{padding:0 11px;font-size:12px}}';document.head.appendChild(style);const wrap=document.createElement('div');wrap.id='cm-inline-actions';wrap.innerHTML='<button class="cm-inline-btn primary" id="cm-inline-new"><i class="ti ti-plus"></i> Nuevo Proyecto</button><button class="cm-inline-btn" id="cm-inline-deselect"><i class="ti ti-checkbox"></i> Desmarcar Todos</button><button class="cm-inline-btn" id="cm-inline-excel"><i class="ti ti-file-spreadsheet"></i> Excel</button><button class="cm-inline-btn report" id="cm-inline-report"><i class="ti ti-file-text"></i> Reporte (<span id="cm-inline-report-count">0</span>)</button>';host.style.position=host.style.position||'relative';host.appendChild(wrap);wrap.querySelector('#cm-inline-new').onclick=openNew;wrap.querySelector('#cm-inline-deselect').onclick=deselect;wrap.querySelector('#cm-inline-excel').onclick=excel;wrap.querySelector('#cm-inline-report').onclick=report;return true;}
+function attachBell(){if(document.getElementById('cm-bell-bound'))return true;const scope=document.querySelector('#cm-dashboard')||document,candidates=[...scope.querySelectorAll('button,a,[role="button"]')].filter(x=>{const t=(x.getAttribute('aria-label')||x.title||x.textContent||'').toLowerCase();return t.includes('notific')||!!x.querySelector?.('.ti-bell,.fa-bell,.bi-bell');}),bell=candidates[0];if(!bell)return false;bell.dataset.cmBellBound='1';bell.addEventListener('click',function(e){e.preventDefault();e.stopImmediatePropagation();critical();},true);const mark=document.createElement('span');mark.id='cm-bell-bound';mark.style.display='none';document.body.appendChild(mark);return true;}
+function update(){const ps=projects(),el=document.getElementById('cm-inline-report-count');if(el)el.textContent=ps.length;const count=ps.filter(p=>p.level==='CRÍTICA'||p.level==='ALTA'||Number(p.progress||0)<40).length,bell=(document.querySelector('#cm-dashboard .ti-bell')||{}).closest?.('button');if(bell){const badge=bell.querySelector('.badge');if(badge)badge.textContent=count;}document.querySelectorAll('[data-cm-critical-count]').forEach(x=>x.textContent=count);}
+function installDashboard(){const m=getMonitor();if(!m||!m.hexTower3D||typeof m.hexTower3D.injectProfessionalDashboard!=='function'){setTimeout(installDashboard,200);return;}window.monitor=m;window.hexTower3D=m.hexTower3D;try{m.hexTower3D.injectProfessionalDashboard();}catch(e){console.error(e);}mountInlineActions();attachBell();update();}
 function boot(){installDashboard();mountInlineActions();attachBell();update();}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
-window.addEventListener('load',boot);
-window.addEventListener('cm:projects-updated',()=>{update();attachBell();});
-setInterval(()=>{mountInlineActions();attachBell();update();},1200);
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();window.addEventListener('load',boot);window.addEventListener('cm:projects-updated',()=>{update();attachBell();});setInterval(()=>{mountInlineActions();attachBell();update();},1200);
 })();
