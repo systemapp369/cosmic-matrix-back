@@ -1,87 +1,79 @@
-/* Cosmic Matrix — Cilindros de cristal v5
-   Torre de proyectos inspirada en la referencia suministrada.
-   Mantiene la paginación y los datos reales del dashboard. */
+/* Cosmic Matrix — Cilindros de cristal v6
+   Referencia visual: cilindros de vidrio con líquido, aro/base luminosa y navegación lateral. */
 #cm-dashboard-v2 .cm-tower-stage{
   position:relative;
-  padding:42px 56px 22px;
+  padding:42px 58px 24px;
   overflow:hidden;
   background:radial-gradient(ellipse at 50% 100%,#082b43 0%,#041b2f 34%,transparent 68%);
 }
-
 #cm-dashboard-v2 .cm-tower-grid{
   align-items:end;
-  gap:18px;
+  gap:20px;
+  min-height:290px;
 }
-
-#cm-dashboard-v2 .cm-project{position:relative;min-width:0;}
-
+#cm-dashboard-v2 .cm-project{position:relative;min-width:0;text-align:center;cursor:pointer;}
 #cm-dashboard-v2 .cm-cylinder-wrap{
   position:relative;
-  height:270px;
+  height:282px;
   display:flex;
   align-items:flex-end;
   justify-content:center;
   isolation:isolate;
   filter:drop-shadow(0 12px 15px #0008);
 }
-
-/* Base circular de cristal/metal, con anillo exterior y segmentos luminosos */
+/* Base circular tipo plataforma de cristal */
 #cm-dashboard-v2 .cm-cylinder-wrap::before{
-  content:"";
-  position:absolute;
-  z-index:0;
-  left:50%;
-  bottom:2px;
-  width:126px;
-  height:34px;
-  transform:translateX(-50%);
-  border:1px solid color-mix(in srgb,var(--c) 78%,#e9fbff);
-  border-radius:50%;
-  background:
-    radial-gradient(ellipse at center,#102e42 0 31%,#071522 32% 48%,color-mix(in srgb,var(--c) 32%,#071522) 49% 53%,#020b14 54% 100%);
-  box-shadow:0 0 12px color-mix(in srgb,var(--c) 82%,transparent),0 7px 20px #0009,inset 0 2px 5px #fff5;
-}
-
-#cm-dashboard-v2 .cm-cylinder-wrap::after{
   content:"";
   position:absolute;
   z-index:1;
   left:50%;
-  bottom:5px;
-  width:104px;
-  height:16px;
+  bottom:2px;
+  width:112px;
+  height:30px;
   transform:translateX(-50%);
+  border:1px solid color-mix(in srgb,var(--c) 82%,#e9fbff);
   border-radius:50%;
   background:
-    repeating-linear-gradient(90deg,
-      transparent 0 9px,
-      color-mix(in srgb,var(--c) 92%,#fff) 10px 17px,
-      transparent 18px 26px);
-  opacity:.95;
-  filter:drop-shadow(0 0 7px var(--c));
-  mask-image:radial-gradient(ellipse,#000 48%,transparent 70%);
+    radial-gradient(ellipse at center,#18364a 0 25%,#071522 26% 45%,color-mix(in srgb,var(--c) 42%,#071522) 46% 53%,#020b14 54% 100%);
+  box-shadow:
+    0 0 12px color-mix(in srgb,var(--c) 90%,transparent),
+    0 7px 20px #000b,
+    inset 0 2px 5px #fff7;
+  pointer-events:none;
 }
-
-/* Disco inferior que une el cilindro con la base */
+#cm-dashboard-v2 .cm-cylinder-wrap::after{
+  content:"";
+  position:absolute;
+  z-index:2;
+  left:50%;
+  bottom:5px;
+  width:92px;
+  height:14px;
+  transform:translateX(-50%);
+  border-radius:50%;
+  background:repeating-linear-gradient(90deg,transparent 0 7px,color-mix(in srgb,var(--c) 96%,#fff) 8px 14px,transparent 15px 22px);
+  opacity:.96;
+  filter:drop-shadow(0 0 7px var(--c));
+  mask-image:radial-gradient(ellipse,#000 45%,transparent 72%);
+  pointer-events:none;
+}
+/* Cuerpo de cristal */
 #cm-dashboard-v2 .cm-cylinder{
   position:relative;
-  z-index:2;
-  width:78px;
+  z-index:3;
+  width:72px;
   height:220px;
-  transform:translateY(-13px);
-  border:1px solid color-mix(in srgb,var(--c) 88%,#ecffff);
-  border-radius:39px 39px 29px 29px;
+  transform:translateY(-14px);
+  border:1px solid color-mix(in srgb,var(--c) 90%,#ecffff);
+  border-radius:36px 36px 25px 25px;
   overflow:hidden;
-  background:
-    linear-gradient(90deg,#ffffff13 0%,#ffffff05 15%,#071b2d99 45%,#ffffff08 73%,#ffffff17 100%);
+  background:linear-gradient(90deg,#ffffff16 0%,#ffffff06 17%,#071b2d99 48%,#ffffff08 73%,#ffffff16 100%);
   box-shadow:
-    0 0 13px color-mix(in srgb,var(--c) 88%,transparent),
+    0 0 14px color-mix(in srgb,var(--c) 90%,transparent),
     0 0 30px color-mix(in srgb,var(--c) 38%,transparent),
-    inset 8px 0 15px #ffffff0d,
-    inset -10px 0 18px #000b;
+    inset 8px 0 15px #ffffff0e,
+    inset -10px 0 18px #000c;
 }
-
-/* Reflejo curvo superior: aspecto de vidrio real */
 #cm-dashboard-v2 .cm-cylinder::before{
   content:"";
   position:absolute;
@@ -89,44 +81,38 @@
   left:-1px;
   right:-1px;
   top:-1px;
-  height:28px;
-  border:1px solid #ecffffe8;
+  height:27px;
+  border:1px solid #ecffffed;
   border-radius:50%;
-  background:linear-gradient(180deg,#22445b99,#020e1ddd 72%);
-  box-shadow:0 0 14px color-mix(in srgb,var(--c) 90%,transparent),inset 0 3px 6px #fff6;
+  background:linear-gradient(180deg,#274a61a8,#020e1ddd 72%);
+  box-shadow:0 0 14px color-mix(in srgb,var(--c) 90%,transparent),inset 0 3px 6px #fff7;
 }
-
 #cm-dashboard-v2 .cm-cylinder::after{
   content:"";
   position:absolute;
   z-index:8;
-  left:9px;
-  top:20px;
+  left:8px;
+  top:22px;
   width:7px;
   height:178px;
   border-radius:50%;
-  background:linear-gradient(180deg,#ffffffb8,#ffffff38 35%,#ffffff08 100%);
+  background:linear-gradient(180deg,#ffffffc0,#ffffff3d 35%,#ffffff08 100%);
   filter:blur(1px);
   opacity:.72;
 }
-
 /* Líquido */
 #cm-dashboard-v2 .cm-liquid{
-  z-index:3;
+  position:absolute!important;
+  z-index:4;
   left:1px;
   right:1px;
   bottom:1px;
-  border-radius:0 0 28px 28px;
-  background:
-    linear-gradient(180deg,
-      color-mix(in srgb,var(--c) 94%,#ffffff),
-      color-mix(in srgb,var(--c) 88%,#081a2b) 36%,
-      color-mix(in srgb,var(--c) 72%,#001326) 100%);
-  opacity:.93;
+  border-radius:0 0 24px 24px;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--c) 94%,#fff),color-mix(in srgb,var(--c) 88%,#081a2b) 36%,color-mix(in srgb,var(--c) 72%,#001326) 100%);
+  opacity:.94;
   box-shadow:0 -8px 20px color-mix(in srgb,var(--c) 92%,transparent),inset 7px 0 16px #fff2,inset -8px 0 14px #0006;
   transition:height .65s ease;
 }
-
 #cm-dashboard-v2 .cm-liquid::before{
   content:"";
   position:absolute;
@@ -135,86 +121,62 @@
   right:-1px;
   top:-11px;
   height:22px;
-  border:1px solid #edffffe8;
+  border:1px solid #edffffee;
   border-radius:50%;
   background:linear-gradient(180deg,color-mix(in srgb,var(--c) 66%,#eaffff),color-mix(in srgb,var(--c) 84%,#07172a));
   box-shadow:0 0 15px var(--c),inset 0 2px 4px #fff9;
 }
-
 #cm-dashboard-v2 .cm-liquid::after{
   content:"";
   position:absolute;
   inset:0;
-  background:
-    radial-gradient(circle at 20% 25%,#ffffff88 0 1px,transparent 2px),
-    radial-gradient(circle at 70% 55%,#ffffff66 0 1px,transparent 2px),
-    radial-gradient(circle at 42% 78%,#ffffff55 0 1px,transparent 2px);
+  background:radial-gradient(circle at 20% 25%,#ffffff88 0 1px,transparent 2px),radial-gradient(circle at 70% 55%,#ffffff66 0 1px,transparent 2px),radial-gradient(circle at 42% 78%,#ffffff55 0 1px,transparent 2px);
   background-size:31px 31px,43px 43px,37px 37px;
-  animation:cm-bubbles-v5 6s linear infinite;
+  animation:cm-bubbles-v6 6s linear infinite;
 }
-
-@keyframes cm-bubbles-v5{to{background-position:0 -31px,0 -43px,0 -37px}}
-
+@keyframes cm-bubbles-v6{to{background-position:0 -31px,0 -43px,0 -37px}}
 #cm-dashboard-v2 .cm-cylinder-value{
+  position:absolute!important;
   z-index:12;
-  top:-43px;
+  top:-43px!important;
+  left:0;
+  right:0;
   font-size:15px;
+  font-weight:900;
   color:#edfaff;
   text-shadow:0 0 12px var(--c),0 1px 2px #00101d;
 }
-
 #cm-dashboard-v2 .cm-project-name{position:relative;z-index:10;margin-top:1px;font-size:12px;font-weight:800;color:#e5f4ff;}
 #cm-dashboard-v2 .cm-status{position:relative;z-index:10;margin-top:5px;font-size:10px;}
-
-/* Flechas HUD */
+#cm-dashboard-v2 .cm-status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;box-shadow:0 0 8px currentColor}
+/* Flechas de desplazamiento, visibles sobre la galería */
 #cm-dashboard-v2 .cm-arrow{
-  display:grid;
+  position:absolute!important;
+  display:grid!important;
   place-items:center;
-  top:50%;
-  width:38px;
-  height:38px;
-  padding:0;
-  border:1px solid #26719c;
-  border-radius:50%;
-  background:linear-gradient(180deg,#0b3150,#061c31);
-  color:#d7f7ff;
+  z-index:30!important;
+  top:50%!important;
+  width:38px!important;
+  height:38px!important;
+  padding:0!important;
+  border:1px solid #26719c!important;
+  border-radius:50%!important;
+  background:linear-gradient(180deg,#0b3150,#061c31)!important;
+  color:#d7f7ff!important;
   box-shadow:0 0 16px #0bbcff2e,inset 0 1px 0 #ffffff18;
   transform:translateY(-50%);
+  cursor:pointer;
   transition:.2s ease;
 }
-#cm-dashboard-v2 .cm-arrow.prev{left:14px}
-#cm-dashboard-v2 .cm-arrow.next{right:14px}
-#cm-dashboard-v2 .cm-arrow:hover:not(:disabled){border-color:#19d9ff;background:linear-gradient(180deg,#0e4265,#08243c);box-shadow:0 0 22px #19d9ff55;transform:translateY(-50%) scale(1.06)}
-#cm-dashboard-v2 .cm-arrow:disabled{opacity:.22;box-shadow:none}
+#cm-dashboard-v2 .cm-arrow.prev{left:12px!important}
+#cm-dashboard-v2 .cm-arrow.next{right:12px!important}
+#cm-dashboard-v2 .cm-arrow:hover:not(:disabled){border-color:#19d9ff!important;background:linear-gradient(180deg,#0e4265,#08243c)!important;box-shadow:0 0 22px #19d9ff55;transform:translateY(-50%) scale(1.06)}
+#cm-dashboard-v2 .cm-arrow:disabled{opacity:.22!important;box-shadow:none}
 #cm-dashboard-v2 .cm-page-info{right:22px;bottom:8px}
-
+#cm-dashboard-v2 .cm-tower-stage .cm-scroll-hint{display:none}
 /* Saturno de marca en la esquina inferior del sidebar */
-#cm-dashboard-v2 .cm-sidebar-footer{
-  position:relative;
-  padding-top:126px!important;
-  overflow:visible;
-}
-#cm-dashboard-v2 .cm-sidebar-footer::before{
-  content:"";
-  position:absolute;
-  left:50%;
-  top:0;
-  width:190px;
-  height:118px;
-  transform:translateX(-50%);
-  background:url("../../Images/saturn-dashboard.svg") center/contain no-repeat;
-  filter:drop-shadow(0 0 13px #1687ff) drop-shadow(0 0 28px #19d9ff55);
-  pointer-events:none;
-}
+#cm-dashboard-v2 .cm-sidebar-footer{position:relative;padding-top:126px!important;overflow:visible}
+#cm-dashboard-v2 .cm-sidebar-footer::before{content:"";position:absolute;left:50%;top:0;width:190px;height:118px;transform:translateX(-50%);background:url("../../Images/saturn-dashboard.svg") center/contain no-repeat;filter:drop-shadow(0 0 13px #1687ff) drop-shadow(0 0 28px #19d9ff55);pointer-events:none}
 #cm-dashboard-v2 .cm-sidebar-footer strong{position:relative;z-index:2;color:#19d9ff;letter-spacing:1.5px}
-
-@media(max-width:1200px){
-  #cm-dashboard-v2 .cm-cylinder-wrap{height:260px}
-  #cm-dashboard-v2 .cm-cylinder{height:208px;width:74px}
-}
-@media(max-width:760px){
-  #cm-dashboard-v2 .cm-tower-stage{padding-left:48px;padding-right:48px}
-  #cm-dashboard-v2 .cm-cylinder-wrap{height:255px}
-  #cm-dashboard-v2 .cm-sidebar-footer{padding-top:105px!important}
-  #cm-dashboard-v2 .cm-sidebar-footer::before{width:160px;height:100px}
-}
+@media(max-width:1200px){#cm-dashboard-v2 .cm-cylinder-wrap{height:270px}#cm-dashboard-v2 .cm-cylinder{height:208px;width:70px}}
+@media(max-width:760px){#cm-dashboard-v2 .cm-tower-stage{padding-left:48px;padding-right:48px}#cm-dashboard-v2 .cm-cylinder-wrap{height:255px}#cm-dashboard-v2 .cm-sidebar-footer{padding-top:105px!important}#cm-dashboard-v2 .cm-sidebar-footer::before{width:160px;height:100px}}
