@@ -67,7 +67,7 @@ class HexTower3D {
   getProjects(){try{return(typeof monitor!=='undefined'&&Array.isArray(monitor.projects))?monitor.projects:[]}catch(_){return[]}}
   escape(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
   color(p){const m={CRÍTICA:'#ff3d63',ALTA:'#ffb52e',NORMAL:'#00e6a1',BAJA:'#a45cff'};return m[p.level]||'#12c9ff'}
-  status(p){return p.level==='CRÍTICA'?'Crítico':p.level==='ALTA'?'Atención':Number(p.progress||0)>=90?'Completado':'En progreso'}
+  status(p){if(p.status)return p.status;return p.level==='CRÍTICA'?'Crítico':p.level==='ALTA'?'Atención':Number(p.progress||0)>=90?'Completado':'En progreso'}
   renderDashboardShell(){this.renderKpis();this.renderCylinders();this.renderRisks();this.renderActivity();this.renderEvolution()}
   syncDashboard(){this.renderDashboardShell()}
 
