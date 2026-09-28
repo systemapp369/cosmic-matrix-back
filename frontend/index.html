@@ -197,6 +197,10 @@
 #bitacoraModal .cm-history-line{height:1px;flex:1;background:rgba(34,211,238,.18);}
 #bitacoraModal #bitacoraList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-height:360px;overflow:auto;padding-right:3px;}
 #bitacoraModal #bitacoraList>*{border:1px solid rgba(34,211,238,.14);background:rgba(4,25,39,.68);border-radius:10px;padding:12px;}
+#crudModal #nodeForm>div:nth-of-type(6){display:block!important;border:0!important;padding:0!important;margin:0!important;min-height:0!important;}
+#crudModal #nodeForm>div:nth-of-type(6):before{display:none!important;content:none!important;}
+#crudModal .cm-project-form #nodeDescription{height:112px!important;min-height:112px!important;}
+#crudModal .cm-project-form .field-files input[type=file]{height:auto!important;}
 @media(max-width:720px){
   #crudModal .cm-editor-dialog{width:calc(100vw - 18px);max-width:calc(100vw - 18px);}
   #crudModal .cm-project-form .modal-header,#crudModal .cm-project-form .modal-body{padding-left:20px!important;padding-right:20px!important;}
