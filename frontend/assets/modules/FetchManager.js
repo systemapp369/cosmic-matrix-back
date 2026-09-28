@@ -109,6 +109,19 @@ class FetchManager {
         });
     }
 
+    /** Obtiene los archivos asociados directamente al proyecto. */
+    async getProjectFiles(projectId) {
+        return await this._request(`projects/${projectId}/files`);
+    }
+
+    /** Guarda referencias de archivos ya subidos a Supabase Storage. */
+    async addProjectFiles(projectId, files = []) {
+        return await this._request(`projects/${projectId}/files`, {
+            method: 'POST',
+            body: JSON.stringify({ files })
+        });
+    }
+
     // --- MÉTODOS PÚBLICOS: BITÁCORA DE AVANCES ---
 
     /**
