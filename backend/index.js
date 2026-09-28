@@ -31,7 +31,8 @@ async function initDB() {
         progress INT NOT NULL,
         lead VARCHAR(100),
         last_update DATE DEFAULT CURRENT_DATE,
-        selected BOOLEAN DEFAULT TRUE
+        selected BOOLEAN DEFAULT TRUE,
+        status VARCHAR(50) NOT NULL DEFAULT 'ACTIVO'
       );
     `);
 
@@ -121,6 +122,19 @@ async function initDB() {
     `);
 
         await pool.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS description TEXT;`);
+        await pool.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS status VARCHAR(50) NOT NULL DEFAULT 'ACTIVO';`);
+
+        // Archivos asociados directamente al proyecto (independientes de la bitácora).
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS project_files (
+            id SERIAL PRIMARY KEY,
+            project_id VARCHAR(50) NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            file_url TEXT NOT NULL,
+            file_name TEXT,
+            file_type TEXT,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+          );
+        `);
 
         await pool.query(`ALTER TABLE project_updates ADD COLUMN IF NOT EXISTS project_id VARCHAR(50);`);
         await pool.query(`ALTER TABLE project_updates ADD COLUMN IF NOT EXISTS note TEXT;`);
@@ -141,7 +155,7 @@ initDB();
 // 1. LISTAR PROYECTOS (GET)
 app.get('/api/projects', async (req, res) => {
     try {
-        const result = await pool.query('SELECT id, name, level, progress, lead, description, last_update AS "lastUpdate", selected FROM projects ORDER BY id ASC');
+        const result = await pool.query('SELECT id, name, level, progress, lead, description, status, last_update AS "lastUpdate", selected FROM projects ORDER BY id ASC');
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -150,16 +164,16 @@ app.get('/api/projects', async (req, res) => {
 
 // 2. INSERTAR / ACTUALIZAR PROYECTO (POST)
 app.post('/api/projects', async (req, res) => {
-    const { id, name, level, progress, lead, description, selected } = req.body;
+    const { id, name, level, progress, lead, description, status, selected } = req.body;
     try {
         const query = `
-      INSERT INTO projects (id, name, level, progress, lead, description, selected) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      INSERT INTO projects (id, name, level, progress, lead, description, status, selected) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       ON CONFLICT (id) 
-      DO UPDATE SET name = $2, level = $3, progress = $4, lead = $5, description = $6, selected = $7
+      DO UPDATE SET name = $2, level = $3, progress = $4, lead = $5, description = $6, status = $7, selected = $8
       RETURNING *;
     `;
-        const result = await pool.query(query, [id, name, level, progress, lead, description ?? null, selected ?? true]);
+        const result = await pool.query(query, [id, name, level, progress, lead, description ?? null, status || 'ACTIVO', selected ?? true]);
         res.json({ success: true, project: result.rows[0] });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -177,7 +191,47 @@ app.delete('/api/projects/:id', async (req, res) => {
     }
 });
 
-// 4. LISTAR AVANCES DE UN PROYECTO (GET)
+// 4. ARCHIVOS DIRECTOS DEL PROYECTO (GET)
+app.get('/api/projects/:id/files', async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT id, file_url AS "fileUrl", file_name AS "fileName", file_type AS "fileType", created_at AS "createdAt" FROM project_files WHERE project_id = $1 ORDER BY created_at DESC',
+            [req.params.id]
+        );
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 5. REGISTRAR ARCHIVOS DIRECTOS DEL PROYECTO (POST)
+app.post('/api/projects/:id/files', async (req, res) => {
+    const { files } = req.body;
+    if (!Array.isArray(files) || files.length === 0) {
+        return res.status(400).json({ error: 'No se recibieron archivos.' });
+    }
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const saved = [];
+        for (const f of files) {
+            const result = await client.query(
+                'INSERT INTO project_files (project_id, file_url, file_name, file_type) VALUES ($1, $2, $3, $4) RETURNING id, file_url AS "fileUrl", file_name AS "fileName", file_type AS "fileType", created_at AS "createdAt"',
+                [req.params.id, f.url, f.name || null, f.type || null]
+            );
+            saved.push(result.rows[0]);
+        }
+        await client.query('COMMIT');
+        res.json({ success: true, files: saved });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        res.status(500).json({ error: err.message });
+    } finally {
+        client.release();
+    }
+});
+
+// 6. LISTAR AVANCES DE UN PROYECTO (GET)
 app.get('/api/projects/:id/updates', async (req, res) => {
     const { id } = req.params;
     try {
@@ -213,7 +267,7 @@ app.get('/api/projects/:id/updates', async (req, res) => {
     }
 });
 
-// 5. REGISTRAR UN AVANCE (POST) - la fecha/hora la pone el servidor automáticamente (created_at = NOW())
+// 7. REGISTRAR UN AVANCE (POST) - la fecha/hora la pone el servidor automáticamente (created_at = NOW())
 app.post('/api/projects/:id/updates', async (req, res) => {
     const { id } = req.params;
     const { note, files } = req.body; // files: [{ url, name, type }], ya subidos a Supabase Storage
@@ -253,7 +307,7 @@ app.post('/api/projects/:id/updates', async (req, res) => {
     }
 });
 
-// 6. ELIMINAR UN AVANCE PUNTUAL (DELETE) - por si el usuario se equivoca al capturar
+// 8. ELIMINAR UN AVANCE PUNTUAL (DELETE) - por si el usuario se equivoca al capturar
 app.delete('/api/updates/:updateId', async (req, res) => {
     const { updateId } = req.params;
     try {
