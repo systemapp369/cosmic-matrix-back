@@ -97,6 +97,7 @@ class InfrastructureMonitor {
             progress: parseInt(document.getElementById('nodeProgress').value),
             lead: document.getElementById('nodeLead').value || 'UNASSIGNED',
             description: document.getElementById('nodeDescription').value || '',
+            status: document.getElementById('nodeStatus').value || 'ACTIVO',
             selected: true
         };
 
@@ -127,6 +128,12 @@ class InfrastructureMonitor {
 
 
             if (result.success) {
+                const filesEl = document.getElementById('nodeFiles');
+                if (filesEl && filesEl.files && filesEl.files.length > 0) {
+                    this.showToast('Subiendo archivos del proyecto...');
+                    const uploadedFiles = await this.storageManager.uploadFiles(filesEl.files, data.id);
+                    await this.apiClient.addProjectFiles(data.id, uploadedFiles);
+                }
                 this.closeModal();
                 // Recarga y renderiza limpio desde la nube
                 await this.loadProjectsFromRemote();
@@ -576,13 +583,10 @@ class InfrastructureMonitor {
         document.getElementById('nodeProgress').value = p.progress;
         document.getElementById('nodeLead').value = p.lead;
         document.getElementById('nodeDescription').value = p.description || '';
+        document.getElementById('nodeStatus').value = p.status || 'ACTIVO';
+        document.getElementById('nodeFiles').value = '';
         document.getElementById('deleteBtn').classList.remove('d-none');
-
-        // Bitácora de avances: solo aplica a proyectos ya existentes
         this.currentProjectId = p.id;
-        document.getElementById('updatesSection').classList.remove('d-none');
-        this.loadUpdates(p.id);
-
         this.bsCrudModal.show();
     }
 
@@ -592,18 +596,19 @@ class InfrastructureMonitor {
      */
     openBitacora(index) {
         const p = this.projects[index];
-        document.getElementById('modalTitle').textContent = "Bitácora de Avances";
-        document.getElementById('modalSub').textContent = p.name;
-        document.getElementById('nodeIndex').value = index;
-
-        // Oculta el formulario de edición: en este acceso solo interesa la bitácora
-        document.getElementById('nodeForm').classList.add('d-none');
-
+        if (!p) return;
         this.currentProjectId = p.id;
-        document.getElementById('updatesSection').classList.remove('d-none');
+        const title = document.getElementById('bitacoraModalTitle');
+        const sub = document.getElementById('bitacoraModalSub');
+        if (title) title.textContent = 'Bitácora de Avances';
+        if (sub) sub.textContent = p.name;
+        const note = document.getElementById('bitacoraNote');
+        const files = document.getElementById('bitacoraFiles');
+        if (note) note.value = '';
+        if (files) files.value = '';
         this.loadUpdates(p.id);
-
-        this.bsCrudModal.show();
+        const modal = document.getElementById('bitacoraModal');
+        if (modal) bootstrap.Modal.getOrCreateInstance(modal).show();
     }
 
     openCreateModal() {
@@ -616,15 +621,10 @@ class InfrastructureMonitor {
         document.getElementById('nodeProgress').value = "0";
         document.getElementById('nodeLead').value = "";
         document.getElementById('nodeDescription').value = "";
+        document.getElementById('nodeStatus').value = 'ACTIVO';
+        document.getElementById('nodeFiles').value = '';
         document.getElementById('deleteBtn').classList.add('d-none');
-
-        // Aún no existe el proyecto, no se puede documentar avances todavía
         this.currentProjectId = null;
-        document.getElementById('updatesSection').classList.add('d-none');
-        document.getElementById('updatesList').innerHTML = '';
-        document.getElementById('updateNote').value = '';
-        document.getElementById('updateFiles').value = '';
-
         this.bsCrudModal.show();
     }
 
@@ -638,7 +638,7 @@ class InfrastructureMonitor {
      * BITÁCORA: Carga los avances de un proyecto desde el backend
      */
     async loadUpdates(projectId) {
-        const listEl = document.getElementById('updatesList');
+        const listEl = document.getElementById('bitacoraList');
         listEl.innerHTML = `<div class="small text-muted text-center py-2">Cargando bitácora...</div>`;
         try {
             const updates = await this.apiClient.getProjectUpdates(projectId);
@@ -652,7 +652,7 @@ class InfrastructureMonitor {
      * BITÁCORA: Pinta la lista de avances con sus archivos adjuntos (imagen, video o documento)
      */
     renderUpdates(updates) {
-        const listEl = document.getElementById('updatesList');
+        const listEl = document.getElementById('bitacoraList');
         if (!updates || updates.length === 0) {
             listEl.innerHTML = `<div class="small text-muted text-center py-2">Aún no hay avances registrados.</div>`;
             return;
@@ -708,8 +708,8 @@ class InfrastructureMonitor {
     async submitUpdate() {
         if (!this.currentProjectId) return;
 
-        const noteEl = document.getElementById('updateNote');
-        const filesEl = document.getElementById('updateFiles');
+        const noteEl = document.getElementById('bitacoraNote');
+        const filesEl = document.getElementById('bitacoraFiles');
         const note = noteEl.value.trim();
 
         if (!note) {
@@ -717,7 +717,7 @@ class InfrastructureMonitor {
             return;
         }
 
-        const btn = document.getElementById('addUpdateBtn');
+        const btn = document.getElementById('addBitacoraBtn');
         btn.disabled = true;
 
         try {
