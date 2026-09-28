@@ -82,8 +82,10 @@ class HexTower3D {
     const total=list.length;const pages=Math.max(1,Math.ceil(total/this.pageSize));this.page=Math.min(this.page,pages-1);const start=this.page*this.pageSize;const visible=list.slice(start,start+this.pageSize);
     if(!visible.length){box.innerHTML='<div class="cm-loading">Esperando datos de proyectos...</div>';return}
     const cards=visible.map(p=>{const progress=Math.max(0,Math.min(100,Number(p.progress)||0)),c=this.color(p),idx=this.getProjects().findIndex(x=>x.id===p.id);return `<div class="cm-project" onclick="monitor.openModal(${idx})" title="Abrir ${this.escape(p.name)}"><div class="cm-cylinder-wrap"><div class="cm-cylinder" style="--h:${Math.max(2,progress)}%;--c:${c}"><span class="cm-cylinder-value">${progress}%</span><div class="cm-liquid"></div></div></div><div class="cm-project-name">${this.escape(p.name)}</div><div class="cm-status"><span class="cm-status-dot" style="color:${c};background:${c}"></span>${this.status(p)}</div></div>`}).join('');
-    const pager=total>this.pageSize?`<div class="cm-project-more"><span class="cm-more-count">${start+1}–${Math.min(start+this.pageSize,total)} de ${total} proyectos</span><button class="cm-more-btn" onclick="window.hexTower3D.nextPage()">Siguiente <i class="ti ti-chevron-right"></i></button></div>`:'';
+    const pager=total>this.pageSize?`<div class="cm-project-more"><span class="cm-more-count">${start+1}–${Math.min(start+this.pageSize,total)} de ${total} proyectos</span><button type="button" class="cm-more-btn" aria-label="Ver siguientes proyectos">Siguiente <i class="ti ti-chevron-right"></i></button></div>`:'';
     box.innerHTML=cards+pager;
+    const nextButton=box.querySelector('.cm-more-btn');
+    if(nextButton) nextButton.addEventListener('click',()=>this.nextPage(),{once:true});
   }
 
   nextPage(){const total=this.getProjects().length;if(!total)return;this.page=(this.page+1)%Math.max(1,Math.ceil(total/this.pageSize));this.renderCylinders();}
