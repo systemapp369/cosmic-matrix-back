@@ -146,13 +146,179 @@
         #crudModal #updatesSection #updatesList{grid-template-columns:1fr!important}
       }
     </style>
+<style id="cm-project-form-v2">
+/* ===== Alta/edición de proyecto: limpio, espacioso y coherente con el dashboard ===== */
+#crudModal .cm-editor-dialog{width:min(920px,calc(100vw - 32px));max-width:min(920px,calc(100vw - 32px));}
+#crudModal .cm-project-form{border:1px solid rgba(24,185,231,.42)!important;border-radius:18px!important;background:linear-gradient(180deg,#071c2d 0%,#061421 100%)!important;box-shadow:0 24px 80px rgba(0,0,0,.6),0 0 36px rgba(0,193,255,.10)!important;overflow:hidden;color:#eaf7ff!important;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif!important;}
+#crudModal .cm-project-form .modal-header{position:relative;min-height:112px;padding:24px 30px 20px!important;border-bottom:1px solid rgba(46,183,224,.18)!important;background:linear-gradient(90deg,rgba(12,146,196,.12),transparent 68%)!important;}
+#crudModal .cm-project-form .modal-header:before{content:"";position:absolute;left:0;top:0;width:165px;height:3px;background:#18d8ee;box-shadow:0 0 16px rgba(24,216,238,.55);}
+#crudModal .cm-project-form .modal-header:after{content:"SYSTEM / PROJECT EDITOR";position:absolute;right:30px;bottom:18px;color:#4d98b0;font:600 10px/1 Inter,sans-serif;letter-spacing:.18em;}
+#crudModal .cm-project-form .cm-editor-kicker{color:#27d5ed;font:700 10px/1 Inter,sans-serif;letter-spacing:.18em;margin-bottom:8px;}
+#crudModal .cm-project-form .modal-title{margin:0!important;color:#f3fbff!important;font:800 27px/1.15 Inter,system-ui,sans-serif!important;letter-spacing:.01em!important;text-transform:none!important;text-shadow:none!important;}
+#crudModal .cm-project-form .modal-subtitle{margin:7px 0 0;color:#78aabd;font:500 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.05em;}
+#crudModal .cm-project-form .btn-close{opacity:.72;margin-top:0;}
+#crudModal .cm-project-form .modal-body{padding:30px!important;overflow:visible!important;}
+#crudModal #nodeForm{display:grid!important;grid-template-columns:minmax(0,1.35fr) minmax(0,.65fr)!important;gap:22px 20px!important;margin:0!important;}
+#crudModal #nodeForm>div{width:auto!important;min-width:0!important;padding:0!important;margin:0!important;float:none!important;flex:none!important;}
+#crudModal #nodeForm .cm-field{display:block!important;grid-column:auto!important;border:0!important;min-height:0!important;}
+#crudModal #nodeForm .field-name{grid-column:1/-1!important;}
+#crudModal #nodeForm .field-level{grid-column:1!important;}
+#crudModal #nodeForm .field-progress{grid-column:2!important;}
+#crudModal #nodeForm .field-status{grid-column:1!important;}
+#crudModal #nodeForm .field-lead{grid-column:2!important;}
+#crudModal #nodeForm .field-description{grid-column:1/-1!important;}
+#crudModal #nodeForm .field-files{grid-column:1/-1!important;}
+#crudModal .cm-project-form .form-label{display:block!important;margin:0 0 8px!important;color:#82b6c8!important;font:700 11px/1.25 Inter,system-ui,sans-serif!important;letter-spacing:.09em!important;text-transform:uppercase!important;}
+#crudModal .cm-project-form .form-control,#crudModal .cm-project-form .form-select{width:100%!important;height:50px!important;box-sizing:border-box!important;padding:0 15px!important;border:1px solid #1b526a!important;border-radius:10px!important;background:#061a2a!important;color:#eefaff!important;font:500 15px/1.2 Inter,system-ui,sans-serif!important;letter-spacing:0!important;box-shadow:inset 0 0 0 1px rgba(34,211,238,.025)!important;}
+#crudModal .cm-project-form .form-control::placeholder{color:#66899b!important;opacity:1!important;}
+#crudModal .cm-project-form .form-select{appearance:auto!important;}
+#crudModal .cm-project-form .form-control:focus,#crudModal .cm-project-form .form-select:focus{border-color:#24d7ed!important;outline:0!important;box-shadow:0 0 0 3px rgba(36,215,237,.10),0 0 18px rgba(36,215,237,.08)!important;}
+#crudModal .cm-project-form #nodeProgress{font-size:17px!important;font-weight:800!important;}
+#crudModal .cm-project-form .cm-textarea{height:112px!important;min-height:112px!important;padding:14px 15px!important;resize:vertical!important;line-height:1.45!important;}
+#crudModal .cm-project-form .field-files .cm-filebox{padding:15px;border:1px dashed #235d74;border-radius:11px;background:rgba(4,22,36,.72);}
+#crudModal .cm-project-form .field-files input[type=file]{height:auto!important;padding:10px!important;background:#071d2d!important;cursor:pointer;}
+#crudModal .cm-project-form .cm-filehint{display:flex;align-items:center;gap:8px;margin-top:9px;color:#6f9caf;font:500 12px/1.35 Inter,sans-serif;}
+#crudModal .cm-project-form .cm-filehint i{color:#22d3ee;font-size:16px;}
+#crudModal .cm-project-form .cm-form-actions{grid-column:1/-1!important;display:flex!important;align-items:center!important;gap:12px!important;min-height:70px!important;margin-top:4px!important;padding-top:22px!important;border-top:1px solid rgba(34,211,238,.16)!important;}
+#crudModal .cm-project-form .cm-control-label{margin-right:0;color:#56899a;font:700 10px/1 Inter,sans-serif;letter-spacing:.14em;white-space:nowrap;}
+#crudModal .cm-project-form .cm-actions-spacer{flex:1;}
+#crudModal .cm-project-form .btn{min-height:46px!important;padding:11px 20px!important;border-radius:9px!important;font:700 13px/1 Inter,system-ui,sans-serif!important;letter-spacing:.01em!important;text-transform:none!important;}
+#crudModal .cm-project-form #submitBtn{background:#159be7!important;border:1px solid #2db7ff!important;color:#fff!important;box-shadow:0 8px 22px rgba(21,155,231,.18)!important;}
+#crudModal .cm-project-form #submitBtn:hover{background:#20a8f2!important;transform:translateY(-1px);}
+#crudModal .cm-project-form .btn-light{background:#102c40!important;border:1px solid #24536a!important;color:#d8edf4!important;}
+#crudModal .cm-project-form .id-delete-btn{border:1px solid #ef476f!important;background:rgba(239,71,111,.05)!important;color:#ff6f91!important;}
+#crudModal .cm-project-form .id-delete-btn.d-none{display:none!important;}
+#bitacoraModal .cm-bitacora-modal{border:1px solid rgba(24,185,231,.38);border-radius:18px;background:linear-gradient(180deg,#071c2d,#061421);color:#eaf7ff;box-shadow:0 24px 80px rgba(0,0,0,.62),0 0 35px rgba(0,193,255,.08);overflow:hidden;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;}
+#bitacoraModal .modal-header{padding:22px 26px;border-bottom:1px solid rgba(46,183,224,.18);background:linear-gradient(90deg,rgba(12,146,196,.10),transparent 70%);}
+#bitacoraModal .modal-body{padding:24px 26px;}
+#bitacoraModal .form-control{border:1px solid #1b526a;background:#061a2a;color:#eefaff;border-radius:10px;}
+#bitacoraModal .form-control:focus{border-color:#24d7ed;box-shadow:0 0 0 3px rgba(36,215,237,.10);outline:0;}
+#bitacoraModal .cm-history-title{display:flex;align-items:center;gap:10px;margin:24px 0 12px;color:#dff7ff;font-weight:800;}
+#bitacoraModal .cm-history-line{height:1px;flex:1;background:rgba(34,211,238,.18);}
+#bitacoraModal #bitacoraList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-height:360px;overflow:auto;padding-right:3px;}
+#bitacoraModal #bitacoraList>*{border:1px solid rgba(34,211,238,.14);background:rgba(4,25,39,.68);border-radius:10px;padding:12px;}
+@media(max-width:720px){
+  #crudModal .cm-editor-dialog{width:calc(100vw - 18px);max-width:calc(100vw - 18px);}
+  #crudModal .cm-project-form .modal-header,#crudModal .cm-project-form .modal-body{padding-left:20px!important;padding-right:20px!important;}
+  #crudModal #nodeForm{grid-template-columns:1fr!important;gap:18px!important;}
+  #crudModal #nodeForm .cm-field,#crudModal #nodeForm .field-name,#crudModal #nodeForm .field-level,#crudModal #nodeForm .field-progress,#crudModal #nodeForm .field-status,#crudModal #nodeForm .field-lead,#crudModal #nodeForm .field-description,#crudModal #nodeForm .field-files{grid-column:1/-1!important;}
+  #crudModal .cm-project-form .cm-form-actions{flex-wrap:wrap!important;}
+  #crudModal .cm-project-form .cm-control-label{width:100%;}
+  #bitacoraModal #bitacoraList{grid-template-columns:1fr;}
+}
+</style>
 </head>
 <body>
     <div class="scanline-overlay"></div>
     <div class="scanner-bar"></div>
     <div id="canvas-container" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:-1;overflow:hidden;pointer-events:none;"></div>
-    <div class="modal fade" id="crudModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog cm-editor-dialog modal-dialog-centered modal-xl modal-dialog-scrollable"><div class="modal-content cm-editor-hud shadow-lg border-0"><div class="modal-header border-bottom-0 pb-0"><div><h5 class="modal-title fw-bold" id="modalTitle">Modificar Parámetros</h5><p class="small text-muted mb-0" id="modalSub">Editor de Proyecto</p></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="monitor.closeModal()"></button></div><div class="modal-body"><form id="nodeForm" class="row g-3"><input type="hidden" id="nodeIndex"><div class="col-12"><label class="form-label small fw-medium text-muted">Nombre del Proyecto</label><input type="text" id="nodeName" class="form-control form-control-sm" required></div><div class="col-md-6"><label class="form-label small fw-medium text-muted">Nivel de Criticidad</label><select id="nodeLevel" class="form-select form-select-sm"><option value="BAJA">Baja</option><option value="NORMAL">Normal</option><option value="ALTA">Alto</option><option value="CRÍTICA">Crítico</option></select></div><div class="col-md-6"><label class="form-label small fw-medium text-muted">Progreso (%)</label><input type="number" id="nodeProgress" min="0" max="100" class="form-control form-control-sm" required></div><div class="col-12"><label class="form-label small fw-medium text-muted">Responsables de Proyecto</label><input type="text" id="nodeLead" class="form-control form-control-sm"></div><div class="col-12"><label class="form-label small fw-medium text-muted">Descripción Breve</label><input type="text" id="nodeDescription" class="form-control form-control-sm" maxlength="120"></div><div class="col-12 d-flex gap-2 pt-2 border-top mt-3"><button type="button" id="deleteBtn" onclick="monitor.confirmDeleteNode()" class="btn id-delete-btn btn-sm btn-outline-danger">Eliminar</button><div class="flex-grow-1"></div><button type="button" onclick="monitor.closeModal()" class="btn btn-sm btn-light">Cancelar</button><button type="submit" id="submitBtn" class="btn btn-sm btn-primary">Guardar Cambios</button></div></form><div id="updatesSection" class="d-none mt-4 pt-3 border-top"><h6 class="fw-bold small text-uppercase text-muted mb-3"><i class="ti ti-timeline-event me-1"></i> Bitácora de Avances</h6><textarea id="updateNote" class="form-control form-control-sm mb-2" rows="2" placeholder="Describe el avance u observación..."></textarea><input type="file" id="updateFiles" class="form-control form-control-sm mb-2" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"><div class="d-flex justify-content-end mb-3"><button type="button" id="addUpdateBtn" onclick="monitor.submitUpdate()" class="btn btn-sm btn-primary"><i class="ti ti-plus"></i> Agregar Avance</button></div><div id="updatesList" class="d-flex flex-column gap-2" style="max-height:260px;overflow-y:auto;"></div></div></div></div></div></div>
-    <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-sm modal-dialog-centered"><div class="modal-content text-center p-3 shadow-lg"><div class="modal-body"><i class="ti ti-alert-triangle text-danger fs-1 mb-2"></i><h6 class="fw-bold mb-1">¿Confirmar Acción?</h6><p class="small text-muted mb-4">Esta acción desmantelará por completo el nodo del sistema de forma permanente.</p><div class="d-flex gap-2"><button onclick="monitor.closeConfirmModal()" class="btn btn-sm btn-light flex-fill">Cancelar</button><button onclick="monitor.executeDeleteNode()" class="btn btn-sm btn-danger flex-fill">Desconectar</button></div></div></div>
+    <div class="modal fade" id="crudModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog cm-editor-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content cm-editor-hud cm-project-form shadow-lg border-0">
+          <div class="modal-header">
+            <div>
+              <div class="cm-editor-kicker">PROJECT MANAGEMENT</div>
+              <h5 class="modal-title" id="modalTitle">Nuevo Proyecto</h5>
+              <p id="modalSub" class="modal-subtitle">Registrar proyecto nuevo</p>
+            </div>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar" onclick="monitor.closeModal()"></button>
+          </div>
+          <div class="modal-body">
+            <form id="nodeForm" novalidate>
+              <input type="hidden" id="nodeIndex">
+
+              <div class="cm-field field-name">
+                <label for="nodeName" class="form-label">Nombre del proyecto</label>
+                <input type="text" id="nodeName" class="form-control" placeholder="Ej. Implementación de infraestructura" required maxlength="255">
+              </div>
+
+              <div class="cm-field field-level">
+                <label for="nodeLevel" class="form-label">Criticidad</label>
+                <select id="nodeLevel" class="form-select" required>
+                  <option value="BAJA">Baja</option>
+                  <option value="NORMAL" selected>Normal</option>
+                  <option value="ALTA">Alta</option>
+                  <option value="CRÍTICA">Crítica</option>
+                </select>
+              </div>
+
+              <div class="cm-field field-progress">
+                <label for="nodeProgress" class="form-label">Avance (%)</label>
+                <input type="number" id="nodeProgress" class="form-control" min="0" max="100" step="1" value="0" required>
+              </div>
+
+              <div class="cm-field field-status">
+                <label for="nodeStatus" class="form-label">Estatus</label>
+                <select id="nodeStatus" class="form-select" required>
+                  <option value="ACTIVO" selected>Activo</option>
+                  <option value="EN PROGRESO">En progreso</option>
+                  <option value="EN ESPERA">En espera</option>
+                  <option value="COMPLETADO">Completado</option>
+                  <option value="CANCELADO">Cancelado</option>
+                </select>
+              </div>
+
+              <div class="cm-field field-lead">
+                <label for="nodeLead" class="form-label">Responsable del proyecto</label>
+                <input type="text" id="nodeLead" class="form-control" placeholder="Nombre o área responsable" maxlength="100">
+              </div>
+
+              <div class="cm-field field-description">
+                <label for="nodeDescription" class="form-label">Descripción breve</label>
+                <textarea id="nodeDescription" class="form-control cm-textarea" maxlength="500" placeholder="Describe el objetivo, alcance o contexto del proyecto"></textarea>
+              </div>
+
+              <div class="cm-field field-files">
+                <label for="nodeFiles" class="form-label">Cargar archivos</label>
+                <div class="cm-filebox">
+                  <input type="file" id="nodeFiles" class="form-control" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv">
+                  <div class="cm-filehint"><i class="ti ti-cloud-upload"></i><span>Adjunta documentos, imágenes o evidencias del proyecto. Los archivos se guardan asociados al proyecto.</span></div>
+                </div>
+              </div>
+
+              <div class="cm-form-actions">
+                <div class="cm-control-label">PROJECT CONTROL</div>
+                <button type="button" id="deleteBtn" onclick="monitor.confirmDeleteNode()" class="btn id-delete-btn">Eliminar</button>
+                <div class="cm-actions-spacer"></div>
+                <button type="button" onclick="monitor.closeModal()" class="btn btn-light">Cancelar</button>
+                <button type="submit" id="submitBtn" class="btn btn-primary">Guardar proyecto</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="bitacoraModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content cm-bitacora-modal">
+          <div class="modal-header">
+            <div>
+              <div class="cm-editor-kicker">PROJECT ACTIVITY</div>
+              <h5 class="modal-title" id="bitacoraModalTitle">Bitácora de Avances</h5>
+              <p class="modal-subtitle" id="bitacoraModalSub">Proyecto</p>
+            </div>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body">
+            <div class="cm-bitacora-compose">
+              <label for="bitacoraNote" class="form-label">Nuevo avance u observación</label>
+              <textarea id="bitacoraNote" class="form-control cm-textarea" rows="4" placeholder="Describe el avance, incidencia u observación..."></textarea>
+              <label for="bitacoraFiles" class="form-label mt-3">Archivos de la bitácora</label>
+              <input type="file" id="bitacoraFiles" class="form-control" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt">
+              <div class="d-flex justify-content-end mt-3">
+                <button type="button" id="addBitacoraBtn" onclick="monitor.submitUpdate()" class="btn btn-primary"><i class="ti ti-plus"></i> Agregar avance</button>
+              </div>
+            </div>
+            <div class="cm-bitacora-history">
+              <div class="cm-history-title"><span>Historial</span><span class="cm-history-line"></span></div>
+              <div id="bitacoraList"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+ tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-sm modal-dialog-centered"><div class="modal-content text-center p-3 shadow-lg"><div class="modal-body"><i class="ti ti-alert-triangle text-danger fs-1 mb-2"></i><h6 class="fw-bold mb-1">¿Confirmar Acción?</h6><p class="small text-muted mb-4">Esta acción desmantelará por completo el nodo del sistema de forma permanente.</p><div class="d-flex gap-2"><button onclick="monitor.closeConfirmModal()" class="btn btn-sm btn-light flex-fill">Cancelar</button><button onclick="monitor.executeDeleteNode()" class="btn btn-sm btn-danger flex-fill">Desconectar</button></div></div></div>
     <div class="position-fixed bottom-0 start-0 p-4" style="z-index:1100;"><div id="toastNotification" class="toast align-items-center text-bg-dark border-0 shadow"><div class="d-flex"><div class="toast-body d-flex align-items-center gap-2 small"><div class="spinner-grow spinner-grow-sm text-info"></div><span id="toastMessage">Sistema Sincronizado</span></div></div></div></div>
     <div id="pdfReportContainer" style="position:fixed;left:-9999px;top:0;width:820px;"></div><div id="reportView" class="d-none bg-white text-dark p-5 position-absolute top-0 start-0 w-100 min-vh-100 z-3"></div>
     <div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"><div class="modal-content shadow-lg border-0"><div class="modal-header border-bottom"><div><h5 class="modal-title fw-bold" id="reportModalTitle"><i class="ti ti-report-analytics text-primary me-1"></i> Reporte de Infraestructura</h5><p class="small text-muted mb-0">Ecosistema Global de los Proyectos v1.5</p></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="reportModalBody"></div><div class="modal-footer border-top d-flex flex-wrap gap-2 justify-content-between"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="includeBitacoraCheck" checked><label class="form-check-label small" for="includeBitacoraCheck">Incluir Bitácora de Avances</label></div><div class="d-flex gap-2"><button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button><button type="button" id="excelReportBtn" onclick="monitor.generateExcelReport()" class="btn btn-sm btn-success"><i class="ti ti-file-spreadsheet"></i> Excel</button><button type="button" id="pdfReportBtn" onclick="monitor.generatePdfReport()" class="btn btn-sm btn-primary"><i class="ti ti-file-type-pdf"></i> PDF</button></div></div></div></div></div>
