@@ -60,13 +60,20 @@
     ? `<div class="cmx-files">${list.map(f => fileCard(f, removable)).join('')}</div>`
     : `<div class="cmx-empty">${empty}</div>`;
 
-  function updatesHtml(ups) {
+  function updatesHtml(ups, removable) {
     if (!ups || !ups.length) return '<div class="cmx-empty">Aún no hay avances registrados.</div>';
-    return ups.map(u => `<article class="cmx-update">
-        <div class="cmx-update-date"><i class="ti ti-clock"></i> ${fmtDate(u.createdAt, true)}</div>
+    return ups.map(u => {
+      const canDel = removable && u.id != null;
+      return `<article class="cmx-update" data-update-id="${esc(u.id)}">
+        <div class="cmx-update-head">
+          <div class="cmx-update-date"><i class="ti ti-clock"></i> ${fmtDate(u.createdAt, true)}</div>
+          ${canDel ? '<button type="button" class="cmx-up-del" data-act="ask-up" title="Eliminar avance completo" aria-label="Eliminar avance completo"><i class="ti ti-trash"></i></button>' : ''}
+        </div>
         <div class="cmx-update-note">${esc(u.note)}</div>
-        ${(u.files || []).length ? `<div class="cmx-files cmx-files-sm">${u.files.map(fileCard).join('')}</div>` : ''}
-      </article>`).join('');
+        ${(u.files || []).length ? `<div class="cmx-files cmx-files-sm">${u.files.map(f => fileCard(f, canDel)).join('')}</div>` : ''}
+        ${canDel ? '<div class="cmx-up-confirm"><span>¿Eliminar este avance y sus archivos?</span><div><button type="button" class="cmx-btn cmx-danger" data-act="yes-up">Eliminar</button><button type="button" class="cmx-btn" data-act="no-up">Cancelar</button></div></div>' : ''}
+      </article>`;
+    }).join('');
   }
 
   /* ---------- Utilidades de modal ---------- */
@@ -285,31 +292,67 @@
   async function removeFile(projectId, wrap) {
     const m = M();
     const fileId = wrap.dataset.fileId;
+    const upEl = wrap.closest('.cmx-update');            // si está dentro de un avance
     wrap.classList.remove('confirming');
     wrap.classList.add('removing');
     try {
-      const res = await m.apiClient.deleteProjectFile(projectId, fileId);
+      const res = upEl
+        ? await m.apiClient.deleteUpdateFile(upEl.dataset.updateId, fileId)
+        : await m.apiClient.deleteProjectFile(projectId, fileId);
       if (!res || !res.success) throw new Error('El servidor no confirmó la eliminación');
+      const grid = wrap.parentElement;
       wrap.remove();
-      const grid = document.querySelector('#cmxBtFiles .cmx-files');
-      if (grid && !grid.children.length) grid.outerHTML = EMPTY_FILES;
-      toast('Archivo quitado del proyecto');
-      // Limpieza del objeto en Supabase Storage (mejor esfuerzo: depende de las políticas del bucket)
+      if (upEl) { if (grid && grid.classList.contains('cmx-files') && !grid.children.length) grid.remove(); }
+      else {
+        const g = document.querySelector('#cmxBtFiles .cmx-files');
+        if (g && !g.children.length) g.outerHTML = EMPTY_FILES;
+      }
+      toast(upEl ? 'Archivo quitado del avance' : 'Archivo quitado del proyecto');
       const freed = res.file && res.file.fileUrl ? await m.storageManager.removeByUrl(res.file.fileUrl) : false;
-      if (!freed) console.info('El archivo se desvinculó del proyecto; el objeto sigue en Storage (sin permiso de borrado o URL externa).');
+      if (!freed) console.info('El archivo se desvinculó; el objeto sigue en Storage (sin permiso de borrado o URL externa).');
     } catch (err) {
       wrap.classList.remove('removing');
       toast('No se pudo quitar el archivo: ' + (err.message || err));
     }
   }
 
+  async function removeUpdate(art) {
+    const m = M();
+    art.classList.remove('confirming');
+    art.classList.add('removing');
+    try {
+      const res = await m.apiClient.deleteProjectUpdate(art.dataset.updateId);
+      if (!res || !res.success) throw new Error('El servidor no confirmó la eliminación');
+      const list = art.parentElement;
+      art.remove();
+      if (list && !list.querySelector('.cmx-update')) list.innerHTML = updatesHtml([]);
+      toast('Avance eliminado');
+      for (const f of (res.files || [])) { if (f.fileUrl) await m.storageManager.removeByUrl(f.fileUrl); }
+    } catch (err) {
+      art.classList.remove('removing');
+      toast('No se pudo eliminar el avance: ' + (err.message || err));
+    }
+  }
+
+  function clearConfirms() {
+    document.querySelectorAll('.cmx-file-wrap.confirming,.cmx-update.confirming').forEach(w => w.classList.remove('confirming'));
+  }
+
   function onFilesClick(e) {
     const btn = e.target.closest('[data-act]');
     if (!btn) return;
+    const act = btn.dataset.act;
+    if (act.endsWith('-up')) {
+      const art = btn.closest('.cmx-update');
+      if (!art) return;
+      if (act === 'ask-up') { clearConfirms(); art.classList.add('confirming'); }
+      else if (act === 'no-up') art.classList.remove('confirming');
+      else if (act === 'yes-up') removeUpdate(art);
+      return;
+    }
     const wrap = btn.closest('.cmx-file-wrap');
     if (!wrap) return;
-    const act = btn.dataset.act;
-    if (act === 'ask') { document.querySelectorAll('.cmx-file-wrap.confirming').forEach(w => w.classList.remove('confirming')); wrap.classList.add('confirming'); }
+    if (act === 'ask') { clearConfirms(); wrap.classList.add('confirming'); }
     else if (act === 'no') wrap.classList.remove('confirming');
     else if (act === 'yes' && btId != null) removeFile(btId, wrap);
   }
@@ -318,7 +361,7 @@
     const el = () => document.getElementById('cmxBtUpdates');
     try {
       const ups = await getJson(`/projects/${encodeURIComponent(id)}/updates`);
-      if (String(btId) === String(id) && el()) el().innerHTML = updatesHtml(ups);
+      if (String(btId) === String(id) && el()) el().innerHTML = updatesHtml(ups, true);
     } catch (e) { if (el()) el().innerHTML = '<div class="cmx-empty cmx-err">No se pudieron cargar los avances.</div>'; }
   }
 
@@ -462,7 +505,7 @@
 .cmx-file-wrap>.cmx-file{height:100%}
 .cmx-file-del{position:absolute;top:6px;right:6px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,62,104,.55);border-radius:8px;background:rgba(6,20,33,.86);color:#ff6f91;cursor:pointer;font-size:16px}
 .cmx-file-del:hover{background:#ff3e68;color:#fff}
-.cmx-file-confirm{display:none;position:absolute;inset:0;z-index:2;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:8px;border:1px solid #ff3e68;border-radius:10px;background:rgba(6,20,33,.96);text-align:center;font:600 12px/1.3 Inter,sans-serif}
+.cmx-file-confirm{display:none;position:absolute;inset:0;z-index:2;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:8px;border:1px solid #ff3e68;border-radius:10px;background:#061421;text-align:center;font:600 12px/1.3 Inter,sans-serif}
 .cmx-file-wrap.confirming .cmx-file-confirm{display:flex}
 .cmx-file-confirm>div{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
 .cmx-file-confirm .cmx-btn{min-height:34px;padding:6px 12px;font-size:12px}
@@ -470,8 +513,16 @@
 .cmx-file-wrap.removing{opacity:.45;pointer-events:none}
 @media(hover:none){.cmx-file-del{width:38px;height:38px}}
 .cmx-updates{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:12px}
-.cmx-update{min-width:0;padding:13px;border:1px solid rgba(34,211,238,.14);border-radius:10px;background:rgba(4,25,39,.68)}
-.cmx-update-date{color:#78aabd;font:600 12px/1 Inter,sans-serif;margin-bottom:8px}
+.cmx-update{position:relative;min-width:0;padding:13px;border:1px solid rgba(34,211,238,.14);border-radius:10px;background:rgba(4,25,39,.68)}
+.cmx-update-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.cmx-update-date{color:#78aabd;font:600 12px/1 Inter,sans-serif}
+.cmx-up-del{flex:0 0 auto;width:34px;height:34px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,62,104,.55);border-radius:8px;background:rgba(6,20,33,.86);color:#ff6f91;cursor:pointer;font-size:16px}
+.cmx-up-del:hover{background:#ff3e68;color:#fff}
+.cmx-up-confirm{display:none;position:absolute;inset:0;z-index:3;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:12px;border:1px solid #ff3e68;border-radius:10px;background:#061421;text-align:center;font:600 13px/1.35 Inter,sans-serif}
+.cmx-update.confirming>.cmx-up-confirm{display:flex}
+.cmx-up-confirm>div{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.cmx-update.removing{opacity:.45;pointer-events:none}
+@media(hover:none){.cmx-up-del{width:40px;height:40px}}
 .cmx-update-note{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}
 .cmx-empty{padding:14px;border:1px dashed #1f4d63;border-radius:10px;color:#6f9caf;font:500 13px/1.4 Inter,sans-serif;text-align:center}
 .cmx-err{color:#ff8fa5;border-color:#7a2b3d}

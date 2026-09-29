@@ -154,6 +154,14 @@ class FetchManager {
         });
     }
 
+    /** Quita solo un archivo de un avance (devuelve { success, file }). */
+    async deleteUpdateFile(updateId, fileId) {
+        return await this._request(`updates/${updateId}/files/${fileId}`, {
+            method: 'DELETE'
+        });
+    }
+
+
     /**
      * Elimina un avance puntual de la bitácora.
      * @param {number} updateId
