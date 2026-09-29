@@ -1,0 +1,14 @@
+# Secretos y entorno
+.env
+.env.*
+!.env.example
+
+# Dependencias y builds
+node_modules/
+.vercel/
+
+# Sistema / editor
+.DS_Store
+*.log
+.idea/
+.vscode/
