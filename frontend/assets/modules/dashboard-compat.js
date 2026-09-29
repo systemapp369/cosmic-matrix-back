@@ -1,250 +1,209 @@
-/* Cosmic Matrix - stable dashboard compatibility + clean editor layout */
+/* Cosmic Matrix - final dashboard + project editor */
 (function () {
   'use strict';
 
-  /* Keep the dashboard compatibility hooks lightweight. */
-  if (typeof HexTower3D !== 'undefined') {
-    HexTower3D.prototype.renderHexTowerPanel = function () {
-      if (typeof this.renderDashboardShell === 'function') this.renderDashboardShell();
-    };
-    HexTower3D.prototype.hexNextPage = function () {};
-    HexTower3D.prototype.hexPrevPage = function () {};
+  const DASH_STYLE = 'cm-dashboard-final-v4';
+  const EDITOR_STYLE = 'cm-project-editor-final-v4';
 
-    HexTower3D.prototype.waitForLiveData = function () {
-      if (this.dashboardDataTimer) clearInterval(this.dashboardDataTimer);
-      this.dashboardDataTimer = null;
-      let previous = '';
-      let attempts = 0;
-      const read = () => {
-        attempts++;
-        let signature = '';
-        try {
-          signature = JSON.stringify((this.getProjects?.() || []).map(p => [p.id,p.name,p.level,p.progress,p.lead,p.description]));
-        } catch (_) {}
-        if (signature !== previous) {
-          previous = signature;
-          this.renderDashboardShell?.();
-        }
-        if ((this.getProjects?.() || []).length || attempts >= 20) {
-          clearInterval(this.dashboardDataTimer);
-          this.dashboardDataTimer = null;
-        }
-      };
-      read();
-      if (!(this.getProjects?.() || []).length) this.dashboardDataTimer = setInterval(read, 500);
-    };
+  const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 
-    HexTower3D.prototype.renderEvolution = function () {
-      const el = document.getElementById('cm-evolution');
-      if (!el || typeof echarts === 'undefined') return;
-      const ps = this.getProjects?.() || [];
-      const avg = ps.length ? Math.round(ps.reduce((s,p) => s + Number(p.progress || 0), 0) / ps.length) : 0;
-      let chart = echarts.getInstanceByDom(el);
-      if (!chart) chart = echarts.init(el);
-      chart.setOption({
-        animation: false,
-        grid: { left: 35, right: 10, top: 12, bottom: 28 },
-        xAxis: { type:'category', data:['-30d','-25d','-20d','-15d','-10d','-5d','Hoy'], axisLabel:{color:'#6f91ad',fontSize:9} },
-        yAxis: { type:'value', min:0, max:100, axisLabel:{color:'#6f91ad',fontSize:9,formatter:'{value}%'} },
-        series: [{ type:'line', smooth:.35, symbol:'circle', symbolSize:5,
-          data: ps.length ? [avg-18,avg-15,avg-12,avg-9,avg-6,avg-3,avg].map(v=>Math.max(0,v)) : [0,0,0,0,0,0,0],
-          lineStyle:{color:'#16d9ff',width:2}, itemStyle:{color:'#16d9ff'}, areaStyle:{color:'rgba(22,217,255,.10)'}
-        }]
-      }, { lazyUpdate:true });
-      if (!chart.__cmResize) {
-        const resize = () => { if (!document.hidden && document.body.contains(el)) chart.resize(); };
-        window.addEventListener('resize', resize, {passive:true});
-        chart.__cmResize = resize;
-      }
-    };
+  function getProjects(instance) {
+    try {
+      const raw = instance?.getProjects ? instance.getProjects() : window.monitor?.projects;
+      if (Array.isArray(raw)) return raw;
+      if (Array.isArray(raw?.data)) return raw.data;
+      if (Array.isArray(raw?.projects)) return raw.projects;
+    } catch (_) {}
+    return [];
   }
 
-  const STYLE_ID = 'cm-editor-clean-v6';
+  function indexOfProject(project) {
+    const ps = getProjects(window.hexTower3D);
+    let i = ps.findIndex(p => String(p.id) === String(project?.id));
+    if (i < 0) i = ps.findIndex(p => String(p.name) === String(project?.name));
+    return i;
+  }
 
-  function installStyle() {
-    if (document.getElementById(STYLE_ID)) return;
-    const style = document.createElement('style');
-    style.id = STYLE_ID;
-    style.textContent = `
-      /* ===== MODAL / HUD ===== */
-      #crudModal .cm-editor-dialog{width:min(1440px,calc(100vw - 48px))!important;max-width:min(1440px,calc(100vw - 48px))!important;margin:24px auto!important}
-      #crudModal .cm-editor-hud{color:#eafcff!important;border:1px solid rgba(32,210,232,.55)!important;border-radius:12px!important;overflow:hidden!important;background:linear-gradient(rgba(24,208,230,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(24,208,230,.025) 1px,transparent 1px),#041522!important;background-size:32px 32px,32px 32px,100% 100%!important;box-shadow:0 20px 70px rgba(0,0,0,.42),inset 0 0 70px rgba(0,200,230,.05)!important}
-      #crudModal .cm-editor-hud .modal-header{min-height:96px!important;padding:24px 36px!important;border-bottom:1px solid rgba(40,200,220,.25)!important;background:linear-gradient(90deg,rgba(21,215,235,.08),transparent 65%)!important}
-      #crudModal .cm-editor-hud .modal-title{margin:0!important;font:700 28px/1.15 Arial,sans-serif!important;letter-spacing:.02em!important;color:#f4fbff!important}
-      #crudModal .cm-editor-hud #modalSub{margin-top:7px!important;color:#58c6d5!important;font:14px/1.2 Arial,sans-serif!important;letter-spacing:.14em!important;text-transform:uppercase!important}
-      #crudModal .cm-editor-hud .modal-body{padding:24px!important}
-      #crudModal .cm-editor-tripanel{display:grid!important;grid-template-columns:minmax(310px,.9fr) minmax(580px,1.7fr) minmax(300px,.9fr)!important;gap:20px!important;align-items:stretch!important;min-height:620px!important}
-      #crudModal .cm-panel{min-width:0!important;position:relative!important;border:1px solid rgba(48,194,216,.34)!important;border-radius:10px!important;background:linear-gradient(180deg,#071f2e,#03131f)!important;padding:24px!important;box-shadow:inset 0 0 34px rgba(0,205,235,.035)!important}
-      #crudModal .cm-panel:before{content:'';position:absolute;top:-1px;left:24px;width:110px;height:3px;background:#17dce9;box-shadow:0 0 14px rgba(23,220,233,.5)}
-      #crudModal .cm-panel-title{display:flex!important;align-items:baseline!important;gap:10px!important;margin:0 0 26px!important;color:#f0fbff!important;font:700 18px/1.2 Arial,sans-serif!important;letter-spacing:.02em!important;text-transform:uppercase!important}
-      #crudModal .cm-panel-title span{color:#38d9e7!important;font:11px/1 Arial,sans-serif!important;letter-spacing:.16em!important}
+  function openBitacora(project) {
+    const i = indexOfProject(project);
+    if (i >= 0 && typeof window.monitor?.openBitacora === 'function') window.monitor.openBitacora(i);
+  }
 
-      /* ===== FORM ===== */
-      #crudModal .cm-form-panel #nodeForm{display:grid!important;grid-template-columns:minmax(0,1.45fr) minmax(220px,.55fr)!important;gap:22px 20px!important;width:100%!important;margin:0!important;padding:0!important;align-items:start!important}
-      #crudModal .cm-form-panel #nodeForm>.cm-field{display:block!important;min-width:0!important;width:auto!important;margin:0!important;padding:0!important;float:none!important}
-      #crudModal .cm-form-panel #nodeForm>.cm-field-name,#crudModal .cm-form-panel #nodeForm>.cm-field-lead,#crudModal .cm-form-panel #nodeForm>.cm-field-description,#crudModal .cm-form-panel #nodeForm>.cm-form-actions{grid-column:1/-1!important}
-      #crudModal .cm-form-panel #nodeForm>.cm-hidden{display:none!important}
-      #crudModal .cm-form-panel .form-label{display:block!important;margin:0 0 9px!important;color:#6bc5d0!important;font:600 12px/1.25 Arial,sans-serif!important;letter-spacing:.08em!important;text-transform:uppercase!important}
-      #crudModal .cm-form-panel .form-control,#crudModal .cm-form-panel .form-select{display:block!important;width:100%!important;box-sizing:border-box!important;height:54px!important;min-width:0!important;padding:0 16px!important;border:1px solid rgba(58,190,210,.42)!important;border-radius:6px!important;background:#061a28!important;color:#f2fbff!important;font:16px/1.2 Arial,sans-serif!important;letter-spacing:0!important;outline:none!important;box-shadow:inset 0 0 20px rgba(0,190,220,.025)!important}
-      #crudModal .cm-form-panel .form-control:focus,#crudModal .cm-form-panel .form-select:focus{border-color:#26e1ef!important;box-shadow:0 0 0 2px rgba(38,225,239,.12)!important}
-      #crudModal .cm-form-panel #nodeProgress{text-align:left!important;font-size:17px!important;font-weight:700!important}
-      #crudModal .cm-form-panel #nodeDescription{height:92px!important;min-height:92px!important;padding:15px 16px!important;resize:vertical!important}
-      #crudModal .cm-form-panel .cm-form-actions{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:12px!important;margin-top:4px!important;padding-top:22px!important;border-top:1px solid rgba(42,190,215,.22)!important}
-      #crudModal .cm-form-panel .cm-form-actions:before{content:'SYSTEM CONTROL'!important;margin-right:auto!important;color:#4f8792!important;font:11px/1 Arial,sans-serif!important;letter-spacing:.15em!important}
-      #crudModal .cm-panel .btn{min-height:48px!important;padding:12px 20px!important;border-radius:6px!important;font:600 13px/1 Arial,sans-serif!important;letter-spacing:.04em!important;text-transform:uppercase!important}
-      #crudModal .cm-panel #submitBtn{background:#12bfd4!important;border:1px solid #5af3ff!important;color:#00151c!important}
-      #crudModal .cm-panel .id-delete-btn{background:transparent!important;border:1px solid #ff3e68!important;color:#ff6485!important}
-      #crudModal .cm-panel .btn-light{background:#102b3c!important;border:1px solid #31586c!important;color:#e7f8fc!important}
+  function projectColor(project, index) {
+    const level = String(project?.level || '').toUpperCase();
+    if (level === 'CRÍTICA' || level === 'CRITICA') return '#ff3d63';
+    if (level === 'ALTA') return '#ffbd3f';
+    if (level === 'BAJA') return '#a45cff';
+    return ['#20d7f0','#a7e63a','#ff4f8b','#ffbd3f','#23d2c4'][index % 5];
+  }
 
-      /* ===== BITÁCORA ===== */
-      #crudModal .cm-advances-panel #updatesSection{display:flex!important;flex-direction:column!important;gap:14px!important;min-height:100%!important;margin:0!important;padding:0!important;border:0!important}
-      #crudModal .cm-advances-panel #updatesSection>h6{margin:0!important;color:#effcff!important;font:700 18px/1.2 Arial,sans-serif!important;letter-spacing:.02em!important;text-transform:uppercase!important}
-      #crudModal .cm-advances-panel #updatesSection>h6:before{content:'// '!important;color:#18ddea!important}
-      #crudModal .cm-advances-panel #updateNote{width:100%!important;height:130px!important;min-height:130px!important;box-sizing:border-box!important;resize:vertical!important;margin:0!important;padding:14px!important;border:1px solid rgba(58,190,210,.40)!important;border-radius:6px!important;background:#061a28!important;color:#effcff!important;font:15px/1.45 Arial,sans-serif!important}
-      #crudModal .cm-advances-panel #addUpdateBtn{width:100%!important;min-height:48px!important;background:#10b9ce!important;border:1px solid #46eaf3!important;color:#00151c!important;border-radius:6px!important;font:700 13px/1 Arial,sans-serif!important;letter-spacing:.03em!important}
-      #crudModal .cm-advances-panel #updatesList{display:flex!important;flex-direction:column!important;gap:10px!important;max-height:360px!important;overflow:auto!important;margin:2px 0 0!important;padding-right:4px!important}
-      #crudModal .cm-advances-panel #updatesList>*{border:1px solid rgba(48,190,215,.24)!important;border-radius:7px!important;background:#061b2a!important}
-      #crudModal .cm-advances-panel .cm-file-input-wrap{display:none!important}
+  function projectIcon(project, index) {
+    const text = `${project?.name || ''} ${project?.description || ''}`.toLowerCase();
+    if (/seguridad|firewall|protecci|acceso/.test(text)) return 'ti-shield-lock';
+    if (/red|network|internet|wifi|conect/.test(text)) return 'ti-wifi';
+    if (/usuario|personal|equipo/.test(text)) return 'ti-user';
+    if (/finanz|dinero|costo|pago/.test(text)) return 'ti-currency-dollar';
+    if (/energ|electri|planta|generador/.test(text)) return 'ti-bolt';
+    if (/datos|database|sql/.test(text)) return 'ti-database';
+    return ['ti-file-text','ti-settings','ti-user','ti-bulb','ti-search'][index % 5];
+  }
 
-      /* ===== FILES ===== */
-      #crudModal .cm-files-panel .cm-files-caption{margin:0 0 14px!important;color:#70adb8!important;font:11px/1.4 Arial,sans-serif!important;letter-spacing:.08em!important;text-transform:uppercase!important}
-      #crudModal .cm-files-panel #updateFiles{display:block!important;width:100%!important;box-sizing:border-box!important;min-height:50px!important;height:auto!important;margin:0 0 18px!important;padding:8px!important;border:1px solid rgba(58,190,210,.40)!important;border-radius:6px!important;background:#061a28!important;color:#dffaff!important;font:13px Arial,sans-serif!important}
-      #crudModal .cm-files-list{display:flex!important;flex-direction:column!important;gap:9px!important;max-height:480px!important;overflow:auto!important}
-      #crudModal .cm-file-item{display:flex!important;align-items:center!important;gap:10px!important;min-width:0!important;padding:12px!important;border:1px solid rgba(48,190,215,.22)!important;border-radius:6px!important;background:#061b2a!important;color:#c8eef3!important;font:13px/1.3 Arial,sans-serif!important}
-      #crudModal .cm-file-mark{flex:0 0 auto;color:#22dfea!important}.cm-file-name{min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+  function arcPath(cx, cy, r, start, end) {
+    const point = a => { const t=(a-90)*Math.PI/180; return [cx+r*Math.cos(t),cy+r*Math.sin(t)]; };
+    const s=point(start), e=point(end);
+    return `M ${s[0].toFixed(2)} ${s[1].toFixed(2)} A ${r} ${r} 0 0 1 ${e[0].toFixed(2)} ${e[1].toFixed(2)}`;
+  }
 
-      /* ===== RESPONSIVE ===== */
-      @media(max-width:1200px){#crudModal .cm-editor-dialog{width:calc(100vw - 28px)!important;max-width:calc(100vw - 28px)!important}#crudModal .cm-editor-tripanel{grid-template-columns:minmax(270px,.8fr) minmax(500px,1.6fr)!important}#crudModal .cm-files-panel{grid-column:1/-1;min-height:260px!important}}
-      @media(max-width:820px){#crudModal .cm-editor-dialog{width:calc(100vw - 14px)!important;max-width:calc(100vw - 14px)!important;margin:7px auto!important}#crudModal .cm-editor-hud .modal-header{padding:20px!important}#crudModal .cm-editor-hud .modal-body{padding:14px!important}#crudModal .cm-editor-tripanel{grid-template-columns:1fr!important;gap:14px!important}.cm-form-panel #nodeForm{grid-template-columns:1fr!important}.cm-form-panel #nodeForm>.cm-field{grid-column:1/-1!important}#crudModal .cm-files-panel{grid-column:auto}}
+  function installDashboardStyle() {
+    if (document.getElementById(DASH_STYLE)) return;
+    const style=document.createElement('style'); style.id=DASH_STYLE;
+    style.textContent=`
+      body.cm-professional-dashboard{overflow-x:hidden!important;background:#020a13!important}
+      body.cm-professional-dashboard>.cm-shell{display:block!important;min-height:100vh!important;background:radial-gradient(circle at 50% 0%,rgba(0,185,230,.12),transparent 42%),#020a13!important}
+      body.cm-professional-dashboard .cm-sidebar,body.cm-professional-dashboard .cm-topbar{display:none!important}
+      body.cm-professional-dashboard .cm-main{width:100%!important;max-width:none!important;margin:0!important;padding:26px 30px 34px!important}
+      body.cm-professional-dashboard .cm-kpis{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:14px!important;margin:0 0 16px!important}
+      body.cm-professional-dashboard .cm-panel{border:1px solid rgba(28,151,190,.42)!important;background:linear-gradient(180deg,rgba(5,29,45,.96),rgba(2,14,25,.99))!important;box-shadow:inset 0 0 30px rgba(0,196,255,.035),0 10px 34px rgba(0,0,0,.18)!important}
+      body.cm-professional-dashboard #cm-projects-panel{min-height:620px!important;border-radius:18px!important}
+      body.cm-professional-dashboard #cm-projects-panel .cm-panel-head{padding:20px 24px 10px!important}
+      body.cm-professional-dashboard #cm-projects-panel .cm-cylinders{padding:8px 24px 22px!important;display:block!important;height:auto!important;min-height:0!important;background:transparent!important}
+      body.cm-professional-dashboard .cm-project-analytics{display:grid!important;grid-template-columns:minmax(350px,430px) minmax(520px,1fr)!important;grid-template-rows:auto auto auto!important;gap:20px 44px!important;min-height:530px!important;align-items:center!important}
+      body.cm-professional-dashboard .cm-project-ring-area{position:relative!important;display:grid!important;place-items:center!important;min-height:370px!important}
+      body.cm-professional-dashboard .cm-project-ring{width:min(370px,100%)!important;aspect-ratio:1!important;display:block!important;filter:drop-shadow(0 0 26px rgba(0,218,255,.15))!important}
+      body.cm-professional-dashboard .cm-ring-track{fill:none!important;stroke:#0c2335!important;stroke-width:38!important}
+      body.cm-professional-dashboard .cm-ring-segment{fill:none!important;stroke-width:38!important;cursor:pointer!important;transition:filter .2s,opacity .2s!important}
+      body.cm-professional-dashboard .cm-ring-segment:hover{filter:drop-shadow(0 0 10px currentColor)!important;opacity:1!important}
+      body.cm-professional-dashboard .cm-ring-center{position:absolute!important;inset:0!important;display:grid!important;place-items:center!important;pointer-events:none!important;text-align:center!important}
+      body.cm-professional-dashboard .cm-ring-center-inner{width:142px!important;height:142px!important;border-radius:50%!important;display:grid!important;place-items:center!important;align-content:center!important;background:radial-gradient(circle,#0c2d44,#061522 72%)!important;border:1px solid rgba(50,208,239,.32)!important;box-shadow:inset 0 0 28px rgba(0,198,255,.12),0 0 28px rgba(0,198,255,.08)!important}
+      body.cm-professional-dashboard .cm-ring-center-value{font-size:40px!important;font-weight:800!important;line-height:1!important;color:#edf9ff!important}
+      body.cm-professional-dashboard .cm-ring-center-label{margin-top:6px!important;font-size:10px!important;line-height:1.4!important;letter-spacing:.13em!important;text-transform:uppercase!important;color:#78a9c0!important}
+      body.cm-professional-dashboard .cm-ring-icon{position:absolute!important;display:grid!important;place-items:center!important;width:48px!important;height:48px!important;margin:-24px 0 0 -24px!important;border-radius:50%!important;border:1px solid rgba(255,255,255,.25)!important;background:#092337!important;color:#fff!important;box-shadow:0 0 17px currentColor!important;cursor:pointer!important;z-index:3!important;transition:transform .18s!important}
+      body.cm-professional-dashboard .cm-ring-icon:hover{transform:scale(1.1)!important}
+      body.cm-professional-dashboard .cm-ring-icon i{font-size:21px!important}
+      body.cm-professional-dashboard .cm-project-bars{display:flex!important;flex-direction:column!important;gap:12px!important;min-width:0!important}
+      body.cm-professional-dashboard .cm-project-bar{display:grid!important;grid-template-columns:minmax(150px,190px) minmax(160px,1fr) 58px!important;align-items:center!important;gap:13px!important;min-height:54px!important;padding:8px 12px!important;border:1px solid rgba(39,125,160,.25)!important;border-radius:10px!important;background:rgba(4,22,36,.52)!important;cursor:pointer!important;color:inherit!important;text-align:left!important}
+      body.cm-professional-dashboard .cm-project-bar:hover{border-color:rgba(45,215,239,.58)!important;background:rgba(6,31,49,.78)!important;transform:translateX(2px)!important}
+      body.cm-professional-dashboard .cm-project-bar-name{display:flex!important;align-items:center!important;gap:9px!important;min-width:0!important;color:#dceefa!important;font-size:13px!important;font-weight:700!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+      body.cm-professional-dashboard .cm-project-bar-dot{width:9px!important;height:9px!important;flex:0 0 9px!important;border-radius:50%!important;box-shadow:0 0 9px currentColor!important}
+      body.cm-professional-dashboard .cm-progress-track{height:15px!important;overflow:hidden!important;border-radius:999px!important;background:#10283a!important;box-shadow:inset 0 1px 4px rgba(0,0,0,.45)!important}
+      body.cm-professional-dashboard .cm-progress-fill{height:100%!important;border-radius:999px!important;min-width:2px!important;box-shadow:0 0 10px currentColor!important;transition:width .45s ease!important}
+      body.cm-professional-dashboard .cm-project-bar-value{text-align:right!important;color:#eaf8ff!important;font-size:13px!important;font-weight:800!important}
+      body.cm-professional-dashboard .cm-project-mini-rings{grid-column:1/-1!important;display:grid!important;grid-template-columns:repeat(5,minmax(100px,1fr))!important;gap:0!important;border-top:1px solid rgba(43,163,192,.20)!important;padding-top:18px!important}
+      body.cm-professional-dashboard .cm-mini-ring-card{display:flex!important;align-items:center!important;justify-content:center!important;gap:9px!important;min-width:0!important;padding:3px 10px!important;border:0!important;border-right:1px solid rgba(43,163,192,.16)!important;background:transparent!important;color:inherit!important;cursor:pointer!important}
+      body.cm-professional-dashboard .cm-mini-ring-card:last-child{border-right:0!important}
+      body.cm-professional-dashboard .cm-mini-ring{--p:0%;--c:#12c9ff;width:62px!important;height:62px!important;flex:0 0 62px!important;border-radius:50%!important;display:grid!important;place-items:center!important;background:conic-gradient(var(--c) var(--p),#173144 0)!important;box-shadow:0 0 16px color-mix(in srgb,var(--c) 35%,transparent)!important}
+      body.cm-professional-dashboard .cm-mini-ring:after{content:"";width:46px!important;height:46px!important;border-radius:50%!important;background:#071827!important;border:1px solid rgba(255,255,255,.08)!important;grid-area:1/1!important}
+      body.cm-professional-dashboard .cm-mini-ring-value{grid-area:1/1!important;z-index:1!important;font-size:10px!important;font-weight:800!important;color:#f1fbff!important}
+      body.cm-professional-dashboard .cm-mini-ring-name{max-width:110px!important;min-width:0!important;color:#9fc0d2!important;font-size:12px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+      body.cm-professional-dashboard .cm-project-pager{grid-column:1/-1!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:12px!important;padding-top:0!important}
+      body.cm-professional-dashboard .cm-project-pager button{border:1px solid #1b607b!important;border-radius:7px!important;background:#092236!important;color:#ccecf5!important;padding:8px 13px!important;font-size:12px!important;cursor:pointer!important}
+      body.cm-professional-dashboard .cm-project-pager button:hover:not(:disabled){border-color:#20d8ef!important;background:#0b2e45!important}
+      body.cm-professional-dashboard .cm-project-pager button:disabled{opacity:.35!important;cursor:not-allowed!important}
+      body.cm-professional-dashboard .cm-project-pager span{color:#6f98ad!important;font-size:11px!important}
+      body.cm-professional-dashboard .cm-ring-empty{grid-column:1/-1!important;min-height:420px!important;display:grid!important;place-items:center!important;color:#7898aa!important;font-size:14px!important}
+      body.cm-professional-dashboard .cm-lower{margin-top:16px!important}
+      @media(max-width:1100px){body.cm-professional-dashboard .cm-main{padding:18px!important}body.cm-professional-dashboard .cm-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}body.cm-professional-dashboard .cm-project-analytics{grid-template-columns:1fr!important;gap:18px!important}body.cm-professional-dashboard .cm-project-ring-area{min-height:330px!important}body.cm-professional-dashboard .cm-project-mini-rings{grid-template-columns:repeat(5,120px)!important;overflow-x:auto!important;justify-content:start!important}}
+      @media(max-width:650px){body.cm-professional-dashboard .cm-kpis{grid-template-columns:1fr!important}body.cm-professional-dashboard .cm-main{padding:12px!important}body.cm-professional-dashboard .cm-project-ring{width:290px!important}body.cm-professional-dashboard .cm-project-bar{grid-template-columns:1fr 56px!important}body.cm-professional-dashboard .cm-project-bar .cm-progress-track{grid-column:1/-1!important;grid-row:2!important}body.cm-professional-dashboard .cm-project-bar-value{grid-column:2!important;grid-row:1!important}}
     `;
     document.head.appendChild(style);
   }
 
-  function control(id) { return document.getElementById(id); }
-
-  function labelFor(id) {
-    const c = control(id);
-    if (!c) return null;
-    return document.querySelector('label[for="' + id + '"]') || c.parentElement?.querySelector('label');
-  }
-
-  function field(id, className) {
-    const c = control(id);
-    if (!c) return null;
-    const box = document.createElement('div');
-    box.className = 'cm-field ' + (className || '');
-    const label = labelFor(id);
-    if (label) box.appendChild(label);
-    box.appendChild(c);
-    return box;
-  }
-
-  function normalizeForm(form) {
-    if (!form || form.dataset.cmNormalized === '1') return;
-    const ids = ['nodeName','nodeLevel','nodeProgress','nodeLead','nodeDescription'];
-    if (!ids.every(id => control(id))) return;
-
-    const fields = [
-      field('nodeName','cm-field-name'),
-      field('nodeLevel','cm-field-level'),
-      field('nodeProgress','cm-field-progress'),
-      field('nodeLead','cm-field-lead'),
-      field('nodeDescription','cm-field-description')
-    ].filter(Boolean);
-
-    const index = control('nodeIndex');
-    const deleteBtn = control('deleteBtn') || form.querySelector('.id-delete-btn');
-    const submitBtn = control('submitBtn');
-    const cancelBtn = control('cancelBtn') || Array.from(form.querySelectorAll('button')).find(b => /cancelar/i.test(b.textContent || ''));
-
-    const actions = document.createElement('div');
-    actions.className = 'cm-form-actions';
-    if (deleteBtn) actions.appendChild(deleteBtn);
-    if (cancelBtn) actions.appendChild(cancelBtn);
-    if (submitBtn) actions.appendChild(submitBtn);
-
-    form.innerHTML = '';
-    if (index) { index.classList.add('cm-hidden'); form.appendChild(index); }
-    fields.forEach(x => form.appendChild(x));
-    form.appendChild(actions);
-    form.dataset.cmNormalized = '1';
-  }
-
-  function refreshAttachedFiles() {
-    const target = document.getElementById('cmAttachedFiles');
-    const list = document.getElementById('updatesList');
-    if (!target || !list) return;
-    const names = [];
-    list.querySelectorAll('a[href],[data-file-name]').forEach(el => {
-      const name = el.getAttribute('data-file-name') || el.textContent.trim();
-      if (name && !names.includes(name)) names.push(name);
-    });
-    target.innerHTML = names.length
-      ? names.map(name => '<div class="cm-file-item"><span class="cm-file-mark">▣</span><span class="cm-file-name" title="' + String(name).replace(/"/g,'&quot;') + '">' + String(name).replace(/</g,'&lt;') + '</span></div>').join('')
-      : '<div class="cm-file-item"><span class="cm-file-mark">▣</span><span class="cm-file-name">Sin archivos registrados</span></div>';
-  }
-
-  function buildTripanel() {
-    const modal = document.getElementById('crudModal');
-    const body = modal?.querySelector('.modal-body');
-    const form = document.getElementById('nodeForm');
-    const updates = document.getElementById('updatesSection');
-    if (!modal || !body || !form || !updates) return false;
-
-    installStyle();
-    normalizeForm(form);
-    if (body.dataset.cmTripanel === '1') {
-      refreshAttachedFiles();
-      return true;
-    }
-
-    updates.classList.remove('d-none');
-    const layout = document.createElement('div');
-    layout.className = 'cm-editor-tripanel';
-    const left = document.createElement('section'); left.className = 'cm-panel cm-advances-panel';
-    const center = document.createElement('section'); center.className = 'cm-panel cm-form-panel';
-    const right = document.createElement('section'); right.className = 'cm-panel cm-files-panel';
-
-    center.innerHTML = '<div class="cm-panel-title">Datos del proyecto <span>PROJECT DATA</span></div>';
-    right.innerHTML = '<div class="cm-panel-title">Archivos <span>ATTACHED FILES</span></div><div class="cm-files-caption">Documentos asociados a la bitácora</div><div id="cmAttachedFiles" class="cm-files-list"><div class="cm-file-item"><span class="cm-file-mark">▣</span><span class="cm-file-name">Sin archivos registrados</span></div></div>';
-
-    body.innerHTML = '';
-    body.appendChild(layout);
-    layout.append(left, center, right);
-    center.appendChild(form);
-    left.appendChild(updates);
-
-    const files = control('updateFiles');
-    if (files) right.insertBefore(files, right.querySelector('#cmAttachedFiles'));
-
-    refreshAttachedFiles();
-    body.dataset.cmTripanel = '1';
+  function patchDashboard() {
+    if (typeof HexTower3D === 'undefined') return false;
+    installDashboardStyle();
+    HexTower3D.prototype.getProjects=function(){return getProjects(this)};
+    HexTower3D.prototype.renderHexTowerPanel=function(){this.renderDashboardShell?.()};
+    HexTower3D.prototype.hexNextPage=function(){};
+    HexTower3D.prototype.hexPrevPage=function(){};
+    HexTower3D.prototype.waitForLiveData=function(){
+      if(this.dashboardDataTimer)clearInterval(this.dashboardDataTimer);
+      this.dashboardDataTimer=null;let previous='';let attempts=0;
+      const read=()=>{attempts++;const ps=getProjects(this);let signature='';try{signature=JSON.stringify(ps.map(p=>[p.id,p.name,p.progress,p.level,p.status]))}catch(_){}
+        if(signature!==previous){previous=signature;this.renderDashboardShell?.()}
+        if(ps.length||attempts>=120){clearInterval(this.dashboardDataTimer);this.dashboardDataTimer=null}
+      };
+      read();if(!getProjects(this).length)this.dashboardDataTimer=setInterval(read,500);
+    };
+    HexTower3D.prototype.renderCylinders=function(){
+      const box=document.getElementById('cm-cylinders');if(!box)return;
+      const source=Array.isArray(this.filteredProjects)?this.filteredProjects:getProjects(this);const total=source.length;const pages=Math.max(1,Math.ceil(total/5));this.page=Math.max(0,Math.min(Number(this.page)||0,pages-1));const start=this.page*5;const visible=source.slice(start,start+5);
+      if(!visible.length){box.innerHTML='<div class="cm-ring-empty"><div><strong style="font-size:17px;color:#c7dce6">Sin proyectos registrados</strong><div style="margin-top:7px;font-size:12px;color:#6e91a5">Esperando sincronización con el servidor.</div></div></div>';return}
+      const colors=visible.map((p,i)=>projectColor(p,i));const values=visible.map(p=>Math.max(0,Math.min(100,Number(p.progress)||0)));const seg=360/visible.length;const gap=3.5;
+      const paths=visible.map((p,i)=>`<path class="cm-ring-segment" data-project-index="${i}" d="${arcPath(180,180,125, i*seg+gap/2,(i+1)*seg-gap/2)}" stroke="${colors[i]}" style="color:${colors[i]}" tabindex="0" aria-label="${esc(p.name)} ${values[i]}%"></path>`).join('');
+      const icons=visible.map((p,i)=>{const a=(i+.5)*seg,t=(a-90)*Math.PI/180,x=50+43*Math.cos(t),y=50+43*Math.sin(t);return `<button type="button" class="cm-ring-icon" data-project-index="${i}" style="left:${x}%;top:${y}%;color:${colors[i]}" title="Abrir bitácora de ${esc(p.name)}"><i class="ti ${projectIcon(p,i)}"></i></button>`}).join('');
+      const bars=visible.map((p,i)=>`<button type="button" class="cm-project-bar" data-project-index="${i}" title="Abrir bitácora de ${esc(p.name)}"><span class="cm-project-bar-name"><span class="cm-project-bar-dot" style="color:${colors[i]};background:${colors[i]}"></span>${esc(p.name)}</span><span class="cm-progress-track"><span class="cm-progress-fill" style="width:${values[i]}%;background:${colors[i]};color:${colors[i]}"></span></span><span class="cm-project-bar-value">${values[i]}%</span></button>`).join('');
+      const minis=visible.map((p,i)=>`<button type="button" class="cm-mini-ring-card" data-project-index="${i}" title="Abrir bitácora de ${esc(p.name)}"><span class="cm-mini-ring" style="--p:${values[i]}%;--c:${colors[i]}"><span class="cm-mini-ring-value">${values[i]}%</span></span><span class="cm-mini-ring-name">${esc(p.name)}</span></button>`).join('');
+      const pager=total>5?`<div class="cm-project-pager"><button type="button" id="cm-project-prev" ${this.page===0?'disabled':''}>‹ Anterior</button><span>${start+1}–${Math.min(start+5,total)} de ${total} proyectos</span><button type="button" id="cm-project-next" ${this.page>=pages-1?'disabled':''}>Siguiente ›</button></div>`:`<div class="cm-project-pager"><span>${total} ${total===1?'proyecto activo':'proyectos activos'}</span></div>`;
+      box.innerHTML=`<div class="cm-project-analytics"><div class="cm-project-ring-area"><svg class="cm-project-ring" viewBox="0 0 360 360" role="img" aria-label="Proyectos activos"><circle class="cm-ring-track" cx="180" cy="180" r="125"></circle>${paths}</svg>${icons}<div class="cm-ring-center"><div class="cm-ring-center-inner"><div class="cm-ring-center-value">${visible.length}</div><div class="cm-ring-center-label">PROYECTOS<br>ACTIVOS</div></div></div></div><div class="cm-project-bars">${bars}</div><div class="cm-project-mini-rings">${minis}</div>${pager}</div>`;
+      box.querySelectorAll('[data-project-index]').forEach(el=>el.addEventListener('click',()=>openBitacora(visible[Number(el.dataset.projectIndex)])));
+      box.querySelectorAll('.cm-ring-segment').forEach(el=>el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openBitacora(visible[Number(el.dataset.projectIndex)])}}));
+      box.querySelector('#cm-project-prev')?.addEventListener('click',()=>{this.page=Math.max(0,this.page-1);this.renderCylinders()});
+      box.querySelector('#cm-project-next')?.addEventListener('click',()=>{this.page=Math.min(pages-1,this.page+1);this.renderCylinders()});
+    };
+    HexTower3D.prototype.filterProjects=function(term){const q=String(term||'').trim().toLowerCase();this.filteredProjects=q?getProjects(this).filter(p=>`${p.name||''} ${p.lead||''} ${p.description||''} ${p.status||''} ${p.level||''}`.toLowerCase().includes(q)):null;this.page=0;this.renderCylinders()};
     return true;
   }
 
-  function bindModal() {
-    installStyle();
-    const modal = document.getElementById('crudModal');
-    if (!modal || modal.dataset.cmCleanBound === '1') return;
-    modal.dataset.cmCleanBound = '1';
-    modal.addEventListener('shown.bs.modal', () => setTimeout(() => { buildTripanel(); refreshAttachedFiles(); }, 0));
-    modal.addEventListener('hidden.bs.modal', () => {
-      const body = modal.querySelector('.modal-body');
-      if (body) body.dataset.cmTripanel = '0';
-      const form = document.getElementById('nodeForm');
-      if (form) form.dataset.cmNormalized = '0';
-    });
-    document.addEventListener('click', e => {
-      if (e.target.closest('#addUpdateBtn')) setTimeout(refreshAttachedFiles, 500);
-    });
+  function installEditorStyle(){
+    if(document.getElementById(EDITOR_STYLE))return;
+    const style=document.createElement('style');style.id=EDITOR_STYLE;
+    style.textContent=`
+      #crudModal .cm-editor-dialog{width:min(980px,calc(100vw - 34px))!important;max-width:min(980px,calc(100vw - 34px))!important;margin:20px auto!important}
+      #crudModal .cm-project-form{border:1px solid rgba(24,185,231,.42)!important;border-radius:18px!important;background:linear-gradient(180deg,#071c2d,#061421)!important;box-shadow:0 24px 80px rgba(0,0,0,.62),0 0 36px rgba(0,193,255,.10)!important;overflow:hidden!important;color:#eaf7ff!important;font-family:Arial,system-ui,sans-serif!important}
+      #crudModal .cm-project-form .modal-header{min-height:112px!important;padding:25px 32px 20px!important;border-bottom:1px solid rgba(46,183,224,.18)!important;background:linear-gradient(90deg,rgba(12,146,196,.12),transparent 68%)!important}
+      #crudModal .cm-project-form .modal-title{margin:0!important;color:#f3fbff!important;font:800 28px/1.15 Arial,sans-serif!important;letter-spacing:.01em!important;text-transform:none!important}
+      #crudModal .cm-project-form .modal-body{padding:30px!important;overflow:visible!important}
+      #crudModal .cm-project-form #nodeForm{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:22px 20px!important;margin:0!important}
+      #crudModal .cm-project-form #nodeForm>.cm-field{min-width:0!important;width:auto!important;padding:0!important;margin:0!important}
+      #crudModal .cm-project-form #nodeForm>.cm-field-name,#crudModal .cm-project-form #nodeForm>.cm-field-description,#crudModal .cm-project-form #nodeForm>.cm-field-files,#crudModal .cm-project-form #nodeForm>.cm-form-actions{grid-column:1/-1!important}
+      #crudModal .cm-project-form .form-label{display:block!important;margin:0 0 8px!important;color:#82b6c8!important;font:700 11px/1.25 Arial,sans-serif!important;letter-spacing:.09em!important;text-transform:uppercase!important}
+      #crudModal .cm-project-form .form-control,#crudModal .cm-project-form .form-select{width:100%!important;height:50px!important;box-sizing:border-box!important;padding:0 15px!important;border:1px solid #1b526a!important;border-radius:10px!important;background:#061a2a!important;color:#eefaff!important;font:500 15px/1.2 Arial,sans-serif!important}
+      #crudModal .cm-project-form #nodeDescription{height:105px!important;resize:vertical!important;padding:13px 15px!important}
+      #crudModal .cm-project-form #nodeFiles{height:auto!important;padding:10px 12px!important}
+      #crudModal .cm-project-form .cm-form-actions{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:12px!important;padding-top:22px!important;border-top:1px solid rgba(42,190,215,.22)!important}
+      #crudModal .cm-project-form .cm-form-actions:before{content:'PROJECT CONTROL';margin-right:auto;color:#4f8792;font:11px/1 Arial,sans-serif;letter-spacing:.15em}
+      #crudModal .cm-project-form .btn{min-height:48px!important;padding:12px 22px!important;border-radius:8px!important;font:700 13px/1 Arial,sans-serif!important}
+      #crudModal .cm-project-form #submitBtn{background:#12bfd4!important;border:1px solid #5af3ff!important;color:#00151c!important}
+      #crudModal .cm-project-form .btn-light{background:#102b3c!important;border:1px solid #31586c!important;color:#e7f8fc!important}
+      #crudModal .cm-project-form .id-delete-btn{background:transparent!important;border:1px solid #ff3e68!important;color:#ff6485!important}
+      @media(max-width:720px){#crudModal .cm-editor-dialog{width:calc(100vw - 14px)!important;max-width:calc(100vw - 14px)!important;margin:7px auto!important}#crudModal .cm-project-form .modal-body{padding:18px!important}#crudModal .cm-project-form #nodeForm{grid-template-columns:1fr!important}#crudModal .cm-project-form #nodeForm>.cm-field{grid-column:1/-1!important}}
+    `;document.head.appendChild(style);
   }
 
-  function boot() {
-    installStyle();
-    bindModal();
-    setTimeout(buildTripanel, 0);
+  function labelFor(id){const el=document.getElementById(id);return document.querySelector(`label[for="${id}"]`)||el?.parentElement?.querySelector('label')}
+  function makeField(id,cls){const el=document.getElementById(id);if(!el)return null;const box=document.createElement('div');box.className='cm-field '+cls;const label=labelFor(id);if(label)box.appendChild(label);box.appendChild(el);return box}
+
+  function normalizeProjectForm(){
+    const form=document.getElementById('nodeForm');if(!form)return;
+    const idx=document.getElementById('nodeIndex');if(!idx)return;
+    installEditorStyle();
+    if(form.dataset.cmFinalNormalized==='1')return;
+    const ids=['nodeName','nodeLevel','nodeProgress','nodeStatus','nodeLead','nodeDescription','nodeFiles'];
+    const classes=['cm-field-name','cm-field-level','cm-field-progress','cm-field-status','cm-field-lead','cm-field-description','cm-field-files'];
+    const fields=ids.map((id,i)=>makeField(id,classes[i])).filter(Boolean);
+    if(!fields.length)return;
+    const submit=document.getElementById('submitBtn');const cancel=document.getElementById('cancelBtn')||Array.from(form.querySelectorAll('button')).find(b=>/cancelar/i.test(b.textContent||''));const del=document.getElementById('deleteBtn')||form.querySelector('.id-delete-btn');
+    const actions=document.createElement('div');actions.className='cm-form-actions';if(del && idx.value!=='NEW')actions.appendChild(del);if(cancel)actions.appendChild(cancel);if(submit)actions.appendChild(submit);
+    form.innerHTML='';idx.classList.add('d-none');form.appendChild(idx);fields.forEach(f=>form.appendChild(f));form.appendChild(actions);form.dataset.cmFinalNormalized='1';
+    const content=form.closest('.modal-content');if(content){content.classList.add('cm-project-form');const title=content.querySelector('.modal-title');if(title)title.textContent=idx.value==='NEW'?'Nuevo Proyecto':'Editar Proyecto';const sub=content.querySelector('#modalSub');if(sub)sub.textContent='Gestión de proyectos · Project management'}
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
-  else boot();
+  function bindEditor(){
+    installEditorStyle();
+    const modal=document.getElementById('crudModal');if(!modal||modal.dataset.cmFinalEditor==='1')return;
+    modal.dataset.cmFinalEditor='1';
+    modal.addEventListener('shown.bs.modal',()=>setTimeout(normalizeProjectForm,0));
+    modal.addEventListener('hidden.bs.modal',()=>{const f=document.getElementById('nodeForm');if(f)f.dataset.cmFinalNormalized='0'});
+  }
+
+  function patch(){
+    const dashboardReady=patchDashboard();
+    bindEditor();
+    return dashboardReady;
+  }
+
+  if(!patch()){
+    const timer=setInterval(()=>{if(patch())clearInterval(timer)},100);
+    setTimeout(()=>clearInterval(timer),15000);
+  }
 })();
