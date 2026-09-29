@@ -22,207 +22,81 @@
     <script src="./assets/modules/GlassRing3D.js"></script>
     <script src="./assets/modules/HexTower3D.js"></script>
     <script src="./assets/modules/dashboard-compat.js"></script>
-    <style id="cm-editor-hud-horizontal-v1">
-      /* =========================================================
-         EDITOR HUD — inspirado en la referencia suministrada.
-         Estructura horizontal, rectangular y sin círculos.
-         ========================================================= */
-      #crudModal .cm-editor-dialog{
-        max-width:min(1180px,calc(100vw - 36px));
-      }
-      #crudModal .cm-editor-hud{
-        --cm-cyan:#20e7f4;
-        --cm-cyan-soft:rgba(32,231,244,.18);
-        --cm-panel:#061522;
-        --cm-panel-2:#0a2030;
-        position:relative;
-        overflow:hidden;
-        color:#e8fbff;
-        border:1px solid rgba(32,231,244,.7)!important;
-        border-radius:0!important;
-        background:
-          linear-gradient(rgba(32,231,244,.035) 1px,transparent 1px),
-          linear-gradient(90deg,rgba(32,231,244,.035) 1px,transparent 1px),
-          linear-gradient(180deg,rgba(8,37,54,.98),rgba(3,16,27,.99));
-        background-size:28px 28px,28px 28px,100% 100%;
-        box-shadow:0 0 0 1px rgba(32,231,244,.08),0 0 32px rgba(0,210,255,.12),inset 0 0 50px rgba(0,210,255,.08);
-      }
-      #crudModal .cm-editor-hud:before,
-      #crudModal .cm-editor-hud:after{
-        content:"";position:absolute;pointer-events:none;z-index:0;
-        width:150px;height:22px;border-top:3px solid var(--cm-cyan);
-        opacity:.9;
-      }
-      #crudModal .cm-editor-hud:before{top:0;left:0;border-left:3px solid var(--cm-cyan);clip-path:polygon(0 0,82% 0,100% 100%,0 100%)}
-      #crudModal .cm-editor-hud:after{right:0;bottom:0;border-right:3px solid var(--cm-cyan);clip-path:polygon(0 0,100% 0,100% 100%,18% 100%)}
-      #crudModal .cm-editor-hud .modal-header,
-      #crudModal .cm-editor-hud .modal-body{position:relative;z-index:1}
-      #crudModal .cm-editor-hud .modal-header{
-        min-height:86px;padding:22px 30px 16px!important;
-        border-bottom:1px solid rgba(32,231,244,.28)!important;
-        background:linear-gradient(90deg,rgba(20,229,244,.09),transparent 55%);
-      }
-      #crudModal .cm-editor-hud .modal-header:after{
-        content:"SYSTEM / PROJECT EDITOR";position:absolute;right:28px;bottom:12px;
-        font:11px 'Share Tech Mono',monospace;letter-spacing:.22em;color:rgba(112,226,238,.62);
-      }
-      #crudModal .cm-editor-hud .modal-title{
-        margin:0;color:#f3fdff;font:700 22px 'Orbitron',sans-serif;letter-spacing:.06em;text-transform:uppercase;
-        text-shadow:0 0 12px rgba(32,231,244,.25);
-      }
-      #crudModal .cm-editor-hud #modalSub{
-        margin-top:6px!important;color:#61bdcb!important;font:13px 'Share Tech Mono',monospace;letter-spacing:.14em;text-transform:uppercase;
-      }
-      #crudModal .cm-editor-hud .btn-close{filter:invert(1) sepia(1) saturate(3) hue-rotate(145deg);opacity:.8}
-      #crudModal .cm-editor-hud .modal-body{padding:22px 30px 26px!important}
-      #crudModal #nodeForm{
-        display:grid!important;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px 18px!important;margin:0!important;
-      }
-      #crudModal #nodeForm>.col-12,
-      #crudModal #nodeForm>.col-md-6{width:auto!important;padding:0!important;margin:0!important}
-      #crudModal #nodeForm>input[type="hidden"]{display:none!important}
-      #crudModal #nodeForm>div:nth-of-type(1){grid-column:span 7}
-      #crudModal #nodeForm>div:nth-of-type(2){grid-column:span 2}
-      #crudModal #nodeForm>div:nth-of-type(3){grid-column:span 3}
-      #crudModal #nodeForm>div:nth-of-type(4){grid-column:span 6}
-      #crudModal #nodeForm>div:nth-of-type(5){grid-column:span 6}
-      #crudModal #nodeForm>div:nth-of-type(6){grid-column:1/-1}
-      #crudModal .cm-editor-hud .form-label{
-        display:block;margin:0 0 7px!important;color:#69b9c5!important;font:11px 'Share Tech Mono',monospace!important;letter-spacing:.18em;text-transform:uppercase;
-      }
-      #crudModal .cm-editor-hud .form-control,
-      #crudModal .cm-editor-hud .form-select{
-        height:46px!important;border-radius:0!important;border:1px solid rgba(53,174,194,.48)!important;
-        background:rgba(3,18,30,.92)!important;color:#ecfcff!important;padding:0 14px!important;
-        box-shadow:inset 0 0 18px rgba(0,216,255,.045)!important;font:14px 'Share Tech Mono',monospace!important;
-      }
-      #crudModal .cm-editor-hud .form-control:focus,
-      #crudModal .cm-editor-hud .form-select:focus{
-        border-color:var(--cm-cyan)!important;box-shadow:0 0 0 1px rgba(32,231,244,.35),0 0 16px rgba(32,231,244,.12)!important;outline:0!important;
-      }
-      #crudModal .cm-editor-hud #nodeDescription{height:46px!important}
-      #crudModal .cm-editor-hud #nodeProgress{font-size:18px!important;color:#fff!important}
-      #crudModal .cm-editor-hud #nodeProgress::-webkit-inner-spin-button{filter:invert(1)}
-      #crudModal #nodeForm>div:nth-of-type(6){
-        border-top:1px solid rgba(32,231,244,.22);padding-top:18px!important;margin-top:2px!important;
-        display:flex;align-items:center;gap:12px;
-      }
-      #crudModal #nodeForm>div:nth-of-type(6):before{
-        content:"CONTROL";margin-right:auto;color:#3e8792;font:10px 'Share Tech Mono',monospace;letter-spacing:.2em;
-      }
-      #crudModal .cm-editor-hud .btn{
-        border-radius:0!important;min-height:40px;padding:8px 18px!important;text-transform:uppercase;letter-spacing:.08em;font:12px 'Share Tech Mono',monospace!important;
-      }
-      #crudModal .cm-editor-hud #submitBtn{background:#08bcd4!important;border:1px solid #55f5ff!important;color:#00151d!important;box-shadow:0 0 14px rgba(32,231,244,.18)}
-      #crudModal .cm-editor-hud .id-delete-btn{border-color:#ff426b!important;color:#ff6d8a!important}
-      #crudModal .cm-editor-hud .btn-light{background:#102a3b!important;border-color:#356276!important;color:#d5edf2!important}
+<style id="cm-modals-responsive">
+/* =====================================================================
+   MODALES (Proyecto / Bitácora) — una sola fuente de estilos, 100% fluida.
+   Sin nth-of-type: cada campo se ubica por su clase. Se adapta a móvil,
+   tablet, laptop y pantallas grandes (incluye teléfonos en horizontal).
+   ===================================================================== */
+#crudModal,#bitacoraModal{--cm-gap:clamp(8px,2.5vw,24px);--cm-pad:clamp(16px,3.4vw,30px);--bs-modal-margin:var(--cm-gap);}
+#crudModal .modal-dialog,#bitacoraModal .modal-dialog{width:calc(100% - (var(--cm-gap) * 2));max-width:920px;margin:var(--cm-gap) auto;}
+#bitacoraModal .modal-dialog{max-width:860px;}
+#crudModal .modal-content,#bitacoraModal .modal-content{display:flex;flex-direction:column;width:100%;max-height:calc(100vh - (var(--cm-gap) * 2));max-height:calc(100dvh - (var(--cm-gap) * 2));overflow:hidden;border:1px solid rgba(24,185,231,.42);border-radius:clamp(12px,2vw,18px);background:linear-gradient(180deg,#071c2d 0%,#061421 100%);color:#eaf7ff;box-shadow:0 24px 80px rgba(0,0,0,.6),0 0 36px rgba(0,193,255,.10);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;}
+#crudModal .modal-body,#bitacoraModal .modal-body{flex:1 1 auto;min-height:0;padding:var(--cm-pad);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
+#crudModal .modal-header,#bitacoraModal .modal-header{position:relative;flex:0 0 auto;align-items:flex-start;gap:12px;padding:clamp(16px,2.6vw,24px) var(--cm-pad) clamp(14px,2vw,20px);border-bottom:1px solid rgba(46,183,224,.18);background:linear-gradient(90deg,rgba(12,146,196,.12),transparent 68%);}
+#crudModal .modal-header>div:first-child,#bitacoraModal .modal-header>div:first-child{min-width:0;flex:1 1 auto;}
+#crudModal .modal-header:before,#bitacoraModal .modal-header:before{content:"";position:absolute;left:0;top:0;width:clamp(90px,20%,165px);height:3px;background:#18d8ee;box-shadow:0 0 16px rgba(24,216,238,.55);}
+#crudModal .modal-header:after{content:"SYSTEM / PROJECT EDITOR";position:absolute;right:var(--cm-pad);bottom:14px;color:#4d98b0;font:600 10px/1 Inter,sans-serif;letter-spacing:.18em;pointer-events:none;}
+#crudModal .btn-close,#bitacoraModal .btn-close{flex:0 0 auto;margin:0;opacity:.75;}
+.cm-editor-kicker{color:#27d5ed;font:700 10px/1.2 Inter,sans-serif;letter-spacing:.18em;margin-bottom:8px;}
+#crudModal .modal-title,#bitacoraModal .modal-title{margin:0;color:#f3fbff;font:800 clamp(20px,4.6vw,27px)/1.15 Inter,system-ui,sans-serif;letter-spacing:.01em;text-transform:none;text-shadow:none;overflow-wrap:anywhere;}
+#crudModal .modal-subtitle{margin:7px 0 0;color:#78aabd;font:500 13px/1.25 Inter,system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase;}
 
-      /* Bitácora: módulo horizontal independiente */
-      #crudModal #updatesSection{
-        display:grid!important;grid-template-columns:2fr 1fr;gap:14px 18px!important;margin:24px 0 0!important;padding:20px 0 0!important;
-        border-top:1px solid rgba(32,231,244,.35)!important;position:relative;
-      }
-      #crudModal #updatesSection.d-none{display:none!important}
-      #crudModal #updatesSection>h6{grid-column:1/-1;margin:0!important;color:#f0fcff!important;font:700 14px 'Orbitron',sans-serif!important;letter-spacing:.12em;text-transform:uppercase}
-      #crudModal #updatesSection>h6:before{content:"▰";color:var(--cm-cyan);margin-right:9px}
-      #crudModal #updatesSection #updateNote{grid-column:1;height:74px!important;resize:vertical;border-radius:0!important;margin:0!important;padding:12px!important}
-      #crudModal #updatesSection #updateFiles{grid-column:2;height:46px!important;border-radius:0!important;margin:0!important;padding:10px!important;font:12px 'Share Tech Mono',monospace!important}
-      #crudModal #updatesSection>.d-flex.justify-content-end{grid-column:1/-1;margin:0!important;justify-content:flex-end!important}
-      #crudModal #updatesSection #addUpdateBtn{background:transparent!important;border:1px solid var(--cm-cyan)!important;color:#7ef6ff!important}
-      #crudModal #updatesSection #updatesList{
-        grid-column:1/-1;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px!important;
-        max-height:240px!important;overflow-y:auto;padding-right:4px;
-      }
-      #crudModal #updatesSection #updatesList>*{
-        border-radius:0!important;border:1px solid rgba(32,231,244,.2)!important;background:rgba(4,25,39,.72)!important;
-      }
-      @media(max-width:800px){
-        #crudModal .cm-editor-dialog{max-width:calc(100vw - 18px)}
-        #crudModal .cm-editor-hud .modal-header,#crudModal .cm-editor-hud .modal-body{padding-left:18px!important;padding-right:18px!important}
-        #crudModal #nodeForm{grid-template-columns:1fr!important}
-        #crudModal #nodeForm>div:nth-of-type(n){grid-column:1/-1!important}
-        #crudModal #updatesSection{grid-template-columns:1fr!important}
-        #crudModal #updatesSection>*{grid-column:1/-1!important}
-        #crudModal #updatesSection #updatesList{grid-template-columns:1fr!important}
-      }
-    </style>
-<style id="cm-project-form-v2">
-/* ===== Alta/edición de proyecto: limpio, espacioso y coherente con el dashboard ===== */
-#crudModal .cm-editor-dialog{width:min(920px,calc(100vw - 32px));max-width:min(920px,calc(100vw - 32px));}
-#crudModal .cm-project-form{border:1px solid rgba(24,185,231,.42)!important;border-radius:18px!important;background:linear-gradient(180deg,#071c2d 0%,#061421 100%)!important;box-shadow:0 24px 80px rgba(0,0,0,.6),0 0 36px rgba(0,193,255,.10)!important;overflow:hidden;color:#eaf7ff!important;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif!important;}
-#crudModal .cm-project-form .modal-header{position:relative;min-height:112px;padding:24px 30px 20px!important;border-bottom:1px solid rgba(46,183,224,.18)!important;background:linear-gradient(90deg,rgba(12,146,196,.12),transparent 68%)!important;}
-#crudModal .cm-project-form .modal-header:before{content:"";position:absolute;left:0;top:0;width:165px;height:3px;background:#18d8ee;box-shadow:0 0 16px rgba(24,216,238,.55);}
-#crudModal .cm-project-form .modal-header:after{content:"SYSTEM / PROJECT EDITOR";position:absolute;right:30px;bottom:18px;color:#4d98b0;font:600 10px/1 Inter,sans-serif;letter-spacing:.18em;}
-#crudModal .cm-project-form .cm-editor-kicker{color:#27d5ed;font:700 10px/1 Inter,sans-serif;letter-spacing:.18em;margin-bottom:8px;}
-#crudModal .cm-project-form .modal-title{margin:0!important;color:#f3fbff!important;font:800 27px/1.15 Inter,system-ui,sans-serif!important;letter-spacing:.01em!important;text-transform:none!important;text-shadow:none!important;}
-#crudModal .cm-project-form .modal-subtitle{margin:7px 0 0;color:#78aabd;font:500 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.05em;}
-#crudModal .cm-project-form .btn-close{opacity:.72;margin-top:0;}
-#crudModal .cm-project-form .modal-body{padding:30px!important;overflow:visible!important;}
-#crudModal #nodeForm{display:grid!important;grid-template-columns:minmax(0,1.35fr) minmax(0,.65fr)!important;gap:22px 20px!important;margin:0!important;}
-#crudModal #nodeForm>div{width:auto!important;min-width:0!important;padding:0!important;margin:0!important;float:none!important;flex:none!important;}
-#crudModal #nodeForm .cm-field{display:block!important;grid-column:auto!important;border:0!important;min-height:0!important;}
-#crudModal #nodeForm .field-name{grid-column:1/-1!important;}
-#crudModal #nodeForm .field-level{grid-column:1!important;}
-#crudModal #nodeForm .field-progress{grid-column:2!important;}
-#crudModal #nodeForm .field-status{grid-column:1!important;}
-#crudModal #nodeForm .field-lead{grid-column:2!important;}
-#crudModal #nodeForm .field-description{grid-column:1/-1!important;}
-#crudModal #nodeForm .field-files{grid-column:1/-1!important;}
-#crudModal .cm-project-form .form-label{display:block!important;margin:0 0 8px!important;color:#82b6c8!important;font:700 11px/1.25 Inter,system-ui,sans-serif!important;letter-spacing:.09em!important;text-transform:uppercase!important;}
-#crudModal .cm-project-form .form-control,#crudModal .cm-project-form .form-select{width:100%!important;height:50px!important;box-sizing:border-box!important;padding:0 15px!important;border:1px solid #1b526a!important;border-radius:10px!important;background:#061a2a!important;color:#eefaff!important;font:500 15px/1.2 Inter,system-ui,sans-serif!important;letter-spacing:0!important;box-shadow:inset 0 0 0 1px rgba(34,211,238,.025)!important;}
-#crudModal .cm-project-form .form-control::placeholder{color:#66899b!important;opacity:1!important;}
-#crudModal .cm-project-form .form-select{appearance:auto!important;}
-#crudModal .cm-project-form .form-control:focus,#crudModal .cm-project-form .form-select:focus{border-color:#24d7ed!important;outline:0!important;box-shadow:0 0 0 3px rgba(36,215,237,.10),0 0 18px rgba(36,215,237,.08)!important;}
-#crudModal .cm-project-form #nodeProgress{font-size:17px!important;font-weight:800!important;}
-#crudModal .cm-project-form .cm-textarea{height:112px!important;min-height:112px!important;padding:14px 15px!important;resize:vertical!important;line-height:1.45!important;}
-#crudModal .cm-project-form .field-files .cm-filebox{padding:15px;border:1px dashed #235d74;border-radius:11px;background:rgba(4,22,36,.72);}
-#crudModal .cm-project-form .field-files input[type=file]{height:auto!important;padding:10px!important;background:#071d2d!important;cursor:pointer;}
-#crudModal .cm-project-form .cm-filehint{display:flex;align-items:center;gap:8px;margin-top:9px;color:#6f9caf;font:500 12px/1.35 Inter,sans-serif;}
-#crudModal .cm-project-form .cm-filehint i{color:#22d3ee;font-size:16px;}
-#crudModal .cm-project-form .cm-form-actions{grid-column:1/-1!important;display:flex!important;align-items:center!important;gap:12px!important;min-height:70px!important;margin-top:4px!important;padding-top:22px!important;border-top:1px solid rgba(34,211,238,.16)!important;}
-#crudModal .cm-project-form .cm-control-label{margin-right:0;color:#56899a;font:700 10px/1 Inter,sans-serif;letter-spacing:.14em;white-space:nowrap;}
-#crudModal .cm-project-form .cm-actions-spacer{flex:1;}
-#crudModal .cm-project-form .btn{min-height:46px!important;padding:11px 20px!important;border-radius:9px!important;font:700 13px/1 Inter,system-ui,sans-serif!important;letter-spacing:.01em!important;text-transform:none!important;}
-#crudModal .cm-project-form #submitBtn{background:#159be7!important;border:1px solid #2db7ff!important;color:#fff!important;box-shadow:0 8px 22px rgba(21,155,231,.18)!important;}
-#crudModal .cm-project-form #submitBtn:hover{background:#20a8f2!important;transform:translateY(-1px);}
-#crudModal .cm-project-form .btn-light{background:#102c40!important;border:1px solid #24536a!important;color:#d8edf4!important;}
-#crudModal .cm-project-form .id-delete-btn{border:1px solid #ef476f!important;background:rgba(239,71,111,.05)!important;color:#ff6f91!important;}
-#crudModal .cm-project-form .id-delete-btn.d-none{display:none!important;}
-#bitacoraModal .cm-bitacora-modal{border:1px solid rgba(24,185,231,.38);border-radius:18px;background:linear-gradient(180deg,#071c2d,#061421);color:#eaf7ff;box-shadow:0 24px 80px rgba(0,0,0,.62),0 0 35px rgba(0,193,255,.08);overflow:hidden;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;}
-#bitacoraModal .modal-header{padding:22px 26px;border-bottom:1px solid rgba(46,183,224,.18);background:linear-gradient(90deg,rgba(12,146,196,.10),transparent 70%);}
-#bitacoraModal .modal-body{padding:24px 26px;}
-#bitacoraModal .form-control{border:1px solid #1b526a;background:#061a2a;color:#eefaff;border-radius:10px;}
-#bitacoraModal .form-control:focus{border-color:#24d7ed;box-shadow:0 0 0 3px rgba(36,215,237,.10);outline:0;}
+/* ---------- Formulario de proyecto ---------- */
+#crudModal #nodeForm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(16px,2.4vw,22px) clamp(14px,2.2vw,20px);margin:0;}
+#crudModal #nodeForm>.cm-field{display:block;grid-column:auto;min-width:0;margin:0;padding:0;border:0;float:none;width:auto;}
+#crudModal #nodeForm>.field-name,#crudModal #nodeForm>.field-description,#crudModal #nodeForm>.field-files,#crudModal #nodeForm>.cm-form-actions{grid-column:1 / -1;}
+#crudModal .form-label,#bitacoraModal .form-label{display:flex;align-items:center;gap:6px;margin:0 0 8px;color:#82b6c8;font:700 11px/1.25 Inter,system-ui,sans-serif;letter-spacing:.09em;text-transform:uppercase;}
+#crudModal .form-control,#crudModal .form-select,#bitacoraModal .form-control{display:block;width:100%;min-width:0;max-width:100%;height:50px;box-sizing:border-box;padding:0 15px;border:1px solid #1b526a;border-radius:10px;background-color:#061a2a;color:#eefaff;font:500 max(16px,1rem)/1.2 Inter,system-ui,sans-serif;box-shadow:inset 0 0 0 1px rgba(34,211,238,.025);}
+#crudModal .form-control::placeholder,#bitacoraModal .form-control::placeholder{color:#66899b;opacity:1;}
+#crudModal .form-control:focus,#crudModal .form-select:focus,#bitacoraModal .form-control:focus{border-color:#24d7ed;outline:0;box-shadow:0 0 0 3px rgba(36,215,237,.10),0 0 18px rgba(36,215,237,.08);}
+#crudModal #nodeProgress{font-weight:800;}
+#crudModal .cm-textarea,#bitacoraModal .cm-textarea{height:auto;min-height:112px;padding:14px 15px;resize:vertical;line-height:1.45;}
+#crudModal .cm-filebox,#bitacoraModal .cm-filebox{padding:clamp(10px,2vw,15px);border:1px dashed #235d74;border-radius:11px;background:rgba(4,22,36,.72);}
+#crudModal input[type=file],#bitacoraModal input[type=file]{height:auto;padding:10px;cursor:pointer;font-size:max(14px,.875rem);}
+#crudModal .cm-filehint,#bitacoraModal .cm-filehint{display:flex;align-items:flex-start;gap:8px;margin-top:9px;color:#6f9caf;font:500 12px/1.35 Inter,sans-serif;}
+#crudModal .cm-filehint i,#bitacoraModal .cm-filehint i{flex:0 0 auto;color:#22d3ee;font-size:16px;}
+#crudModal .cm-form-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:4px;padding-top:20px;border-top:1px solid rgba(34,211,238,.16);}
+#crudModal .cm-control-label{margin-right:0;color:#56899a;font:700 10px/1 Inter,sans-serif;letter-spacing:.14em;white-space:nowrap;}
+#crudModal .cm-actions-spacer{flex:1 1 0;min-width:0;}
+#crudModal .btn,#bitacoraModal .cm-bitacora-actions .btn{min-height:46px;padding:11px 20px;border-radius:9px;font:700 13px/1 Inter,system-ui,sans-serif;letter-spacing:.01em;text-transform:none;}
+#crudModal #submitBtn,#bitacoraModal .cm-bitacora-actions .btn{background:#159be7;border:1px solid #2db7ff;color:#fff;box-shadow:0 8px 22px rgba(21,155,231,.18);}
+#crudModal #submitBtn:hover,#bitacoraModal .cm-bitacora-actions .btn:hover{background:#20a8f2;}
+#crudModal .btn-light{background:#102c40;border:1px solid #24536a;color:#d8edf4;}
+#crudModal .id-delete-btn{border:1px solid #ef476f;background:rgba(239,71,111,.05);color:#ff6f91;}
+#crudModal .id-delete-btn.d-none{display:none;}
+
+/* ---------- Bitácora ---------- */
+#bitacoraModal .cm-bitacora-compose{display:flex;flex-direction:column;gap:18px;}
 #bitacoraModal .cm-history-title{display:flex;align-items:center;gap:10px;margin:24px 0 12px;color:#dff7ff;font-weight:800;}
 #bitacoraModal .cm-history-line{height:1px;flex:1;background:rgba(34,211,238,.18);}
-#bitacoraModal #bitacoraList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-height:360px;overflow:auto;padding-right:3px;}
-#bitacoraModal #bitacoraList>*{border:1px solid rgba(34,211,238,.14);background:rgba(4,25,39,.68);border-radius:10px;padding:12px;}
-#bitacoraModal .cm-editor-kicker{color:#27d5ed;font:700 10px/1 Inter,sans-serif;letter-spacing:.18em;margin-bottom:8px;}
-#bitacoraModal .modal-title{margin:0;color:#f3fbff;font:800 24px/1.15 Inter,system-ui,sans-serif;text-transform:none;}
-#bitacoraModal .modal-body{display:block;}
-#bitacoraModal .cm-bitacora-compose{display:flex;flex-direction:column;gap:18px;}
-#bitacoraModal .cm-bitacora-compose .form-label,#bitacoraModal .cm-bitacora-files .form-label{display:flex;align-items:center;gap:6px;margin:0 0 8px;color:#82b6c8;font:700 11px/1.25 Inter,system-ui,sans-serif;letter-spacing:.09em;text-transform:uppercase;}
-#bitacoraModal .cm-bitacora-compose .cm-textarea{display:block;width:100%;height:110px;min-height:110px;padding:14px 15px;resize:vertical;line-height:1.45;font:500 14px/1.45 Inter,system-ui,sans-serif;}
-#bitacoraModal .cm-bitacora-compose .cm-textarea::placeholder{color:#66899b;opacity:1;}
-#bitacoraModal .cm-bitacora-files .cm-filebox{padding:14px;border:1px dashed #235d74;border-radius:11px;background:rgba(4,22,36,.72);}
-#bitacoraModal .cm-bitacora-files input[type=file]{display:block;width:100%;height:auto;padding:10px;cursor:pointer;font:500 13px/1.3 Inter,system-ui,sans-serif;}
-#bitacoraModal .cm-filehint{display:flex;align-items:center;gap:8px;margin-top:9px;color:#6f9caf;font:500 12px/1.35 Inter,sans-serif;}
-#bitacoraModal .cm-filehint i{color:#22d3ee;font-size:16px;}
+#bitacoraModal #bitacoraList{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:12px;max-height:min(360px,45vh);overflow:auto;padding-right:3px;}
+#bitacoraModal #bitacoraList>*{min-width:0;overflow-wrap:anywhere;border:1px solid rgba(34,211,238,.14);background:rgba(4,25,39,.68);border-radius:10px;padding:12px;}
 #bitacoraModal .cm-bitacora-actions{display:flex;justify-content:flex-end;padding-top:4px;}
-#bitacoraModal .cm-bitacora-actions .btn{min-height:44px;padding:11px 20px;border-radius:9px;background:#159be7;border:1px solid #2db7ff;color:#fff;font:700 13px/1 Inter,system-ui,sans-serif;}
-#crudModal #nodeForm>div:nth-of-type(6){display:block!important;border:0!important;padding:0!important;margin:0!important;min-height:0!important;}
-#crudModal #nodeForm>div:nth-of-type(6):before{display:none!important;content:none!important;}
-#crudModal .cm-project-form #nodeDescription{height:112px!important;min-height:112px!important;}
-#crudModal .cm-project-form .field-files input[type=file]{height:auto!important;}
-@media(max-width:720px){
-  #crudModal .cm-editor-dialog{width:calc(100vw - 18px);max-width:calc(100vw - 18px);}
-  #crudModal .cm-project-form .modal-header,#crudModal .cm-project-form .modal-body{padding-left:20px!important;padding-right:20px!important;}
-  #crudModal #nodeForm{grid-template-columns:1fr!important;gap:18px!important;}
-  #crudModal #nodeForm .cm-field,#crudModal #nodeForm .field-name,#crudModal #nodeForm .field-level,#crudModal #nodeForm .field-progress,#crudModal #nodeForm .field-status,#crudModal #nodeForm .field-lead,#crudModal #nodeForm .field-description,#crudModal #nodeForm .field-files{grid-column:1/-1!important;}
-  #crudModal .cm-project-form .cm-form-actions{flex-wrap:wrap!important;}
-  #crudModal .cm-project-form .cm-control-label{width:100%;}
-  #bitacoraModal #bitacoraList{grid-template-columns:1fr;}
+
+/* ---------- Otros modales: nunca se salen de la pantalla ---------- */
+#reportModal .modal-dialog,#criticalityModal .modal-dialog{max-width:min(var(--bs-modal-width,800px),calc(100vw - 16px));}
+#reportModal .modal-footer,#criticalityModal .modal-footer{flex-wrap:wrap;gap:8px;}
+
+/* ---------- Tablet / móvil ---------- */
+@media (max-width:640px){
+  #crudModal .modal-header:after{display:none;}
+  #crudModal #nodeForm{grid-template-columns:minmax(0,1fr);}
+  #crudModal #nodeForm>.cm-field{grid-column:1 / -1;}
+  #crudModal .cm-form-actions{flex-direction:column-reverse;align-items:stretch;}
+  #crudModal .cm-form-actions .btn{width:100%;}
+  #crudModal .cm-control-label,#crudModal .cm-actions-spacer{display:none;}
+  #bitacoraModal .cm-bitacora-actions .btn{width:100%;}
 }
+/* Teléfonos en horizontal / ventanas bajas */
+@media (max-height:560px){
+  #crudModal .modal-header,#bitacoraModal .modal-header{padding-top:12px;padding-bottom:10px;}
+  #crudModal .modal-subtitle{display:none;}
+  #crudModal .modal-body,#bitacoraModal .modal-body{padding-top:14px;padding-bottom:14px;}
+  #crudModal .cm-textarea,#bitacoraModal .cm-textarea{min-height:84px;}
+}
+/* Pantallas grandes: un poco más de aire */
+@media (min-width:1400px){#crudModal .modal-dialog{max-width:1000px;}}
 </style>
 </head>
 <body>
@@ -230,7 +104,7 @@
     <div class="scanner-bar"></div>
     <div id="canvas-container" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:-1;overflow:hidden;pointer-events:none;"></div>
     <div class="modal fade" id="crudModal" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog cm-editor-dialog modal-dialog-centered modal-lg">
+      <div class="modal-dialog cm-editor-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content cm-editor-hud cm-project-form shadow-lg border-0">
           <div class="modal-header">
             <div>
