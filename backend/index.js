@@ -324,12 +324,36 @@ app.post('/api/projects/:id/updates', async (req, res) => {
     }
 });
 
-// 8. ELIMINAR UN AVANCE PUNTUAL (DELETE) - por si el usuario se equivoca al capturar
+// 8. ELIMINAR UN AVANCE PUNTUAL (DELETE) - por si el usuario se equivoca o duplica un registro
+// Devuelve los archivos que tenía para que el frontend pueda limpiar también el Storage.
 app.delete('/api/updates/:updateId', async (req, res) => {
     const { updateId } = req.params;
     try {
-        await pool.query('DELETE FROM project_updates WHERE id = $1', [updateId]);
-        res.json({ success: true });
+        const files = await pool.query(
+            'SELECT id, file_url AS "fileUrl", file_name AS "fileName" FROM project_update_files WHERE update_id = $1',
+            [updateId]
+        );
+        const result = await pool.query('DELETE FROM project_updates WHERE id = $1', [updateId]);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'El avance no existe.' });
+        }
+        res.json({ success: true, files: files.rows });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 9. QUITAR UN ARCHIVO DE UN AVANCE (DELETE) - deja el avance y solo desvincula ese archivo
+app.delete('/api/updates/:updateId/files/:fileId', async (req, res) => {
+    try {
+        const result = await pool.query(
+            'DELETE FROM project_update_files WHERE id = $1 AND update_id = $2 RETURNING id, file_url AS "fileUrl", file_name AS "fileName", file_type AS "fileType"',
+            [req.params.fileId, req.params.updateId]
+        );
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'El archivo no existe o no pertenece a este avance.' });
+        }
+        res.json({ success: true, file: result.rows[0] });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
