@@ -39,7 +39,7 @@
     return r.json();
   }
 
-  function fileCard(f) {
+  function fileCard(f, removable) {
     const url = safeUrl(f.fileUrl || f.url);
     if (!url) return '';
     const name = esc(f.fileName || f.name || 'Archivo');
@@ -49,10 +49,15 @@
     else if (type.startsWith('video/')) thumb = '<i class="ti ti-player-play"></i>';
     else if (type === 'application/pdf') thumb = '<i class="ti ti-file-type-pdf"></i>';
     else if (/sheet|excel|csv/.test(type)) thumb = '<i class="ti ti-file-spreadsheet"></i>';
-    return `<a class="cmx-file" href="${url}" target="_blank" rel="noopener" title="${name}"><span class="cmx-thumb">${thumb}</span><span class="cmx-fname">${name}</span></a>`;
+    const link = `<a class="cmx-file" href="${url}" target="_blank" rel="noopener" title="${name}"><span class="cmx-thumb">${thumb}</span><span class="cmx-fname">${name}</span></a>`;
+    if (!removable || f.id == null) return link;
+    return `<div class="cmx-file-wrap" data-file-id="${esc(f.id)}">${link}
+      <button type="button" class="cmx-file-del" data-act="ask" title="Quitar archivo" aria-label="Quitar ${name}"><i class="ti ti-trash"></i></button>
+      <div class="cmx-file-confirm"><span>¿Quitar este archivo?</span><div><button type="button" class="cmx-btn cmx-danger" data-act="yes">Quitar</button><button type="button" class="cmx-btn" data-act="no">Cancelar</button></div></div>
+    </div>`;
   }
-  const filesGrid = (list, empty) => list && list.length
-    ? `<div class="cmx-files">${list.map(fileCard).join('')}</div>`
+  const filesGrid = (list, empty, removable) => list && list.length
+    ? `<div class="cmx-files">${list.map(f => fileCard(f, removable)).join('')}</div>`
     : `<div class="cmx-empty">${empty}</div>`;
 
   function updatesHtml(ups) {
@@ -261,6 +266,7 @@
     ed.querySelector('#cmxBtView').addEventListener('click', () => switchTo(document.getElementById('cmxBitacoraScreen'), () => openDetail(p.id)));
     ed.querySelector('#cmxBtForm').addEventListener('submit', e => { e.preventDefault(); saveProject(p.id); });
     ed.querySelector('#cmxAddUpd').addEventListener('click', () => addUpdate(p.id));
+    ed.addEventListener('click', onFilesClick);
     loadBtFiles(p.id);
     loadBtUpdates(p.id);
   }
@@ -270,8 +276,42 @@
       const files = await getJson(`/projects/${encodeURIComponent(id)}/files`);
       if (String(btId) !== String(id)) return;
       const el = document.getElementById('cmxBtFiles');
-      if (el) el.outerHTML = `<div id="cmxBtFiles">${filesGrid(files, 'Este proyecto no tiene archivos anexados.')}</div>`;
+      if (el) el.outerHTML = `<div id="cmxBtFiles">${filesGrid(files, 'Este proyecto no tiene archivos anexados.', true)}</div>`;
     } catch (e) { const el = document.getElementById('cmxBtFiles'); if (el) { el.className = 'cmx-empty cmx-err'; el.textContent = 'No se pudieron cargar los archivos.'; } }
+  }
+
+  const EMPTY_FILES = '<div class="cmx-empty">Este proyecto no tiene archivos anexados.</div>';
+
+  async function removeFile(projectId, wrap) {
+    const m = M();
+    const fileId = wrap.dataset.fileId;
+    wrap.classList.remove('confirming');
+    wrap.classList.add('removing');
+    try {
+      const res = await m.apiClient.deleteProjectFile(projectId, fileId);
+      if (!res || !res.success) throw new Error('El servidor no confirmó la eliminación');
+      wrap.remove();
+      const grid = document.querySelector('#cmxBtFiles .cmx-files');
+      if (grid && !grid.children.length) grid.outerHTML = EMPTY_FILES;
+      toast('Archivo quitado del proyecto');
+      // Limpieza del objeto en Supabase Storage (mejor esfuerzo: depende de las políticas del bucket)
+      const freed = res.file && res.file.fileUrl ? await m.storageManager.removeByUrl(res.file.fileUrl) : false;
+      if (!freed) console.info('El archivo se desvinculó del proyecto; el objeto sigue en Storage (sin permiso de borrado o URL externa).');
+    } catch (err) {
+      wrap.classList.remove('removing');
+      toast('No se pudo quitar el archivo: ' + (err.message || err));
+    }
+  }
+
+  function onFilesClick(e) {
+    const btn = e.target.closest('[data-act]');
+    if (!btn) return;
+    const wrap = btn.closest('.cmx-file-wrap');
+    if (!wrap) return;
+    const act = btn.dataset.act;
+    if (act === 'ask') { document.querySelectorAll('.cmx-file-wrap.confirming').forEach(w => w.classList.remove('confirming')); wrap.classList.add('confirming'); }
+    else if (act === 'no') wrap.classList.remove('confirming');
+    else if (act === 'yes' && btId != null) removeFile(btId, wrap);
   }
 
   async function loadBtUpdates(id) {
@@ -418,6 +458,17 @@
 .cmx-thumb{display:flex;align-items:center;justify-content:center;height:88px;border-radius:8px;background:#061a2a;overflow:hidden;font-size:34px;color:#22d3ee}
 .cmx-thumb img{width:100%;height:100%;object-fit:cover}
 .cmx-fname{font:600 12px/1.3 Inter,sans-serif;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.cmx-file-wrap{position:relative;min-width:0}
+.cmx-file-wrap>.cmx-file{height:100%}
+.cmx-file-del{position:absolute;top:6px;right:6px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,62,104,.55);border-radius:8px;background:rgba(6,20,33,.86);color:#ff6f91;cursor:pointer;font-size:16px}
+.cmx-file-del:hover{background:#ff3e68;color:#fff}
+.cmx-file-confirm{display:none;position:absolute;inset:0;z-index:2;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:8px;border:1px solid #ff3e68;border-radius:10px;background:rgba(6,20,33,.96);text-align:center;font:600 12px/1.3 Inter,sans-serif}
+.cmx-file-wrap.confirming .cmx-file-confirm{display:flex}
+.cmx-file-confirm>div{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.cmx-file-confirm .cmx-btn{min-height:34px;padding:6px 12px;font-size:12px}
+.cmx-danger{background:#c92a4d;border-color:#ff3e68;color:#fff}
+.cmx-file-wrap.removing{opacity:.45;pointer-events:none}
+@media(hover:none){.cmx-file-del{width:38px;height:38px}}
 .cmx-updates{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:12px}
 .cmx-update{min-width:0;padding:13px;border:1px solid rgba(34,211,238,.14);border-radius:10px;background:rgba(4,25,39,.68)}
 .cmx-update-date{color:#78aabd;font:600 12px/1 Inter,sans-serif;margin-bottom:8px}

@@ -122,6 +122,13 @@ class FetchManager {
         });
     }
 
+    /** Quita un archivo anexado al proyecto (devuelve { success, file }). */
+    async deleteProjectFile(projectId, fileId) {
+        return await this._request(`projects/${projectId}/files/${fileId}`, {
+            method: 'DELETE'
+        });
+    }
+
     // --- MÉTODOS PÚBLICOS: BITÁCORA DE AVANCES ---
 
     /**

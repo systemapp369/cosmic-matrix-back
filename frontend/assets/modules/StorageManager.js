@@ -66,4 +66,23 @@ class StorageManager {
         }
         return uploaded;
     }
+    /**
+     * Borra del bucket el objeto al que apunta una URL pública (mejor esfuerzo).
+     * Devuelve true si se eliminó; false si la URL no es del bucket o la política de Storage no lo permite.
+     * @param {string} publicUrl
+     * @returns {Promise<boolean>}
+     */
+    async removeByUrl(publicUrl) {
+        try {
+            const marker = `/object/public/${this.bucket}/`;
+            const at = String(publicUrl || '').indexOf(marker);
+            if (at === -1) return false;
+            const path = decodeURIComponent(publicUrl.slice(at + marker.length).split('?')[0]);
+            const { data, error } = await this.client.storage.from(this.bucket).remove([path]);
+            return !error && Array.isArray(data) && data.length > 0;
+        } catch (e) {
+            console.warn('[StorageManager] No se pudo borrar del bucket:', e);
+            return false;
+        }
+    }
 }
