@@ -145,6 +145,7 @@
   }
 
   function installEditorStyle(){
+    return; /* estilos del editor ahora viven solo en index.html (#cm-modals-responsive) */
     if(document.getElementById(EDITOR_STYLE))return;
     const style=document.createElement('style');style.id=EDITOR_STYLE;
     style.textContent=`
@@ -177,6 +178,10 @@
     const form=document.getElementById('nodeForm');if(!form)return;
     const idx=document.getElementById('nodeIndex');if(!idx)return;
     installEditorStyle();
+    if(form.querySelector('.field-name')){ /* el HTML ya trae la estructura final: solo se actualizan los textos */
+      const c0=form.closest('.modal-content');if(c0){const t0=c0.querySelector('.modal-title');if(t0)t0.textContent=idx.value==='NEW'?'Nuevo Proyecto':'Editar Proyecto';const s0=c0.querySelector('#modalSub');if(s0)s0.textContent='Gestión de proyectos · Project management'}
+      return;
+    }
     if(form.dataset.cmFinalNormalized==='1')return;
     const ids=['nodeName','nodeLevel','nodeProgress','nodeStatus','nodeLead','nodeDescription','nodeFiles'];
     const classes=['cm-field-name','cm-field-level','cm-field-progress','cm-field-status','cm-field-lead','cm-field-description','cm-field-files'];
