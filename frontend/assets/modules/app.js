@@ -667,19 +667,21 @@ class InfrastructureMonitor {
             const filesHtml = (u.files || []).map(f => {
                 const type = f.fileType || '';
                 const name = this.escapeHtml(f.fileName || 'Archivo');
+                const url = this.safeUrl(f.fileUrl);
+                if (!url) return '';
                 if (type.startsWith('image/')) {
-                    return `<a href="${f.fileUrl}" target="_blank" rel="noopener" class="d-inline-block me-1 mb-1">
-                        <img src="${f.fileUrl}" alt="${name}" class="rounded border" style="width:56px;height:56px;object-fit:cover;">
+                    return `<a href="${url}" target="_blank" rel="noopener" class="d-inline-block me-1 mb-1">
+                        <img src="${url}" alt="${name}" class="rounded border" style="width:56px;height:56px;object-fit:cover;">
                     </a>`;
                 }
                 if (type.startsWith('video/')) {
-                    return `<a href="${f.fileUrl}" target="_blank" rel="noopener"
+                    return `<a href="${url}" target="_blank" rel="noopener"
                         class="d-inline-flex align-items-center justify-content-center border rounded me-1 mb-1"
                         style="width:56px;height:56px;" title="${name}">
                         <i class="ti ti-player-play fs-4"></i>
                     </a>`;
                 }
-                return `<a href="${f.fileUrl}" target="_blank" rel="noopener"
+                return `<a href="${url}" target="_blank" rel="noopener"
                     class="d-inline-flex align-items-center gap-1 border rounded px-2 py-1 me-1 mb-1 small text-decoration-none">
                     <i class="ti ti-file-description"></i> ${name}
                 </a>`;
@@ -690,7 +692,7 @@ class InfrastructureMonitor {
                     <div class="d-flex justify-content-between align-items-start mb-1">
                         <span class="text-muted"><i class="ti ti-clock fs-6"></i> ${dateStr}</span>
                         <button type="button" class="btn btn-link btn-sm text-danger p-0" title="Eliminar avance"
-                            onclick="monitor.deleteUpdate('${u.id}')">
+                            onclick="monitor.deleteUpdate('${String(u.id).replace(/[^A-Za-z0-9_-]/g, '')}')">
                             <i class="ti ti-trash fs-6"></i>
                         </button>
                     </div>
@@ -760,9 +762,15 @@ class InfrastructureMonitor {
      * Utilidad: escapa HTML para evitar inyección al pintar texto capturado por el usuario
      */
     escapeHtml(str) {
-        const div = document.createElement('div');
-        div.textContent = str ?? '';
-        return div.innerHTML;
+        return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[c]));
+    }
+
+    /** Devuelve la URL solo si es http(s); evita esquemas como javascript: en href/src. */
+    safeUrl(u) {
+        try {
+            const x = new URL(String(u ?? ''));
+            return /^https?:$/.test(x.protocol) ? this.escapeHtml(x.href) : '';
+        } catch (e) { return ''; }
     }
 
     /*
