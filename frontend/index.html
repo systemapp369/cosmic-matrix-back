@@ -197,6 +197,19 @@
 #bitacoraModal .cm-history-line{height:1px;flex:1;background:rgba(34,211,238,.18);}
 #bitacoraModal #bitacoraList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-height:360px;overflow:auto;padding-right:3px;}
 #bitacoraModal #bitacoraList>*{border:1px solid rgba(34,211,238,.14);background:rgba(4,25,39,.68);border-radius:10px;padding:12px;}
+#bitacoraModal .cm-editor-kicker{color:#27d5ed;font:700 10px/1 Inter,sans-serif;letter-spacing:.18em;margin-bottom:8px;}
+#bitacoraModal .modal-title{margin:0;color:#f3fbff;font:800 24px/1.15 Inter,system-ui,sans-serif;text-transform:none;}
+#bitacoraModal .modal-body{display:block;}
+#bitacoraModal .cm-bitacora-compose{display:flex;flex-direction:column;gap:18px;}
+#bitacoraModal .cm-bitacora-compose .form-label,#bitacoraModal .cm-bitacora-files .form-label{display:flex;align-items:center;gap:6px;margin:0 0 8px;color:#82b6c8;font:700 11px/1.25 Inter,system-ui,sans-serif;letter-spacing:.09em;text-transform:uppercase;}
+#bitacoraModal .cm-bitacora-compose .cm-textarea{display:block;width:100%;height:110px;min-height:110px;padding:14px 15px;resize:vertical;line-height:1.45;font:500 14px/1.45 Inter,system-ui,sans-serif;}
+#bitacoraModal .cm-bitacora-compose .cm-textarea::placeholder{color:#66899b;opacity:1;}
+#bitacoraModal .cm-bitacora-files .cm-filebox{padding:14px;border:1px dashed #235d74;border-radius:11px;background:rgba(4,22,36,.72);}
+#bitacoraModal .cm-bitacora-files input[type=file]{display:block;width:100%;height:auto;padding:10px;cursor:pointer;font:500 13px/1.3 Inter,system-ui,sans-serif;}
+#bitacoraModal .cm-filehint{display:flex;align-items:center;gap:8px;margin-top:9px;color:#6f9caf;font:500 12px/1.35 Inter,sans-serif;}
+#bitacoraModal .cm-filehint i{color:#22d3ee;font-size:16px;}
+#bitacoraModal .cm-bitacora-actions{display:flex;justify-content:flex-end;padding-top:4px;}
+#bitacoraModal .cm-bitacora-actions .btn{min-height:44px;padding:11px 20px;border-radius:9px;background:#159be7;border:1px solid #2db7ff;color:#fff;font:700 13px/1 Inter,system-ui,sans-serif;}
 #crudModal #nodeForm>div:nth-of-type(6){display:block!important;border:0!important;padding:0!important;margin:0!important;min-height:0!important;}
 #crudModal #nodeForm>div:nth-of-type(6):before{display:none!important;content:none!important;}
 #crudModal .cm-project-form #nodeDescription{height:112px!important;min-height:112px!important;}
@@ -300,7 +313,6 @@
             <div>
               <div class="cm-editor-kicker">PROJECT ACTIVITY</div>
               <h5 class="modal-title" id="bitacoraModalTitle">Bitácora de Avances</h5>
-              <p class="modal-subtitle" id="bitacoraModalSub">Proyecto</p>
             </div>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
           </div>
@@ -308,9 +320,14 @@
             <div class="cm-bitacora-compose">
               <label for="bitacoraNote" class="form-label">Nuevo avance u observación</label>
               <textarea id="bitacoraNote" class="form-control cm-textarea" rows="4" placeholder="Describe el avance, incidencia u observación..."></textarea>
-              <label for="bitacoraFiles" class="form-label mt-3">Archivos de la bitácora</label>
-              <input type="file" id="bitacoraFiles" class="form-control" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt">
-              <div class="d-flex justify-content-end mt-3">
+              <div class="cm-bitacora-files">
+                <label for="bitacoraFiles" class="form-label"><i class="ti ti-paperclip"></i> Anexar archivos</label>
+                <div class="cm-filebox">
+                  <input type="file" id="bitacoraFiles" class="form-control" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt">
+                  <div class="cm-filehint"><i class="ti ti-info-circle"></i><span>Opcional: imágenes, video, PDF, Word, Excel o TXT.</span></div>
+                </div>
+              </div>
+              <div class="cm-bitacora-actions">
                 <button type="button" id="addBitacoraBtn" onclick="monitor.submitUpdate()" class="btn btn-primary"><i class="ti ti-plus"></i> Agregar avance</button>
               </div>
             </div>
@@ -322,11 +339,11 @@
         </div>
       </div>
     </div>
- tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-sm modal-dialog-centered"><div class="modal-content text-center p-3 shadow-lg"><div class="modal-body"><i class="ti ti-alert-triangle text-danger fs-1 mb-2"></i><h6 class="fw-bold mb-1">¿Confirmar Acción?</h6><p class="small text-muted mb-4">Esta acción desmantelará por completo el nodo del sistema de forma permanente.</p><div class="d-flex gap-2"><button onclick="monitor.closeConfirmModal()" class="btn btn-sm btn-light flex-fill">Cancelar</button><button onclick="monitor.executeDeleteNode()" class="btn btn-sm btn-danger flex-fill">Desconectar</button></div></div></div>
+    <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-sm modal-dialog-centered"><div class="modal-content text-center p-3 shadow-lg"><div class="modal-body"><i class="ti ti-alert-triangle text-danger fs-1 mb-2"></i><h6 class="fw-bold mb-1">¿Confirmar Acción?</h6><p class="small text-muted mb-4">Esta acción desmantelará por completo el nodo del sistema de forma permanente.</p><div class="d-flex gap-2"><button onclick="monitor.closeConfirmModal()" class="btn btn-sm btn-light flex-fill">Cancelar</button><button onclick="monitor.executeDeleteNode()" class="btn btn-sm btn-danger flex-fill">Desconectar</button></div></div></div></div></div>
     <div class="position-fixed bottom-0 start-0 p-4" style="z-index:1100;"><div id="toastNotification" class="toast align-items-center text-bg-dark border-0 shadow"><div class="d-flex"><div class="toast-body d-flex align-items-center gap-2 small"><div class="spinner-grow spinner-grow-sm text-info"></div><span id="toastMessage">Sistema Sincronizado</span></div></div></div></div>
     <div id="pdfReportContainer" style="position:fixed;left:-9999px;top:0;width:820px;"></div><div id="reportView" class="d-none bg-white text-dark p-5 position-absolute top-0 start-0 w-100 min-vh-100 z-3"></div>
     <div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"><div class="modal-content shadow-lg border-0"><div class="modal-header border-bottom"><div><h5 class="modal-title fw-bold" id="reportModalTitle"><i class="ti ti-report-analytics text-primary me-1"></i> Reporte de Infraestructura</h5><p class="small text-muted mb-0">Ecosistema Global de los Proyectos v1.5</p></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="reportModalBody"></div><div class="modal-footer border-top d-flex flex-wrap gap-2 justify-content-between"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="includeBitacoraCheck" checked><label class="form-check-label small" for="includeBitacoraCheck">Incluir Bitácora de Avances</label></div><div class="d-flex gap-2"><button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button><button type="button" id="excelReportBtn" onclick="monitor.generateExcelReport()" class="btn btn-sm btn-success"><i class="ti ti-file-spreadsheet"></i> Excel</button><button type="button" id="pdfReportBtn" onclick="monitor.generatePdfReport()" class="btn btn-sm btn-primary"><i class="ti ti-file-type-pdf"></i> PDF</button></div></div></div></div></div>
-    <div class="modal fade" id="criticalityModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div class="modal-content shadow-lg border-0"><div class="modal-header border-bottom"><h5 class="modal-title fw-bold" id="criticalityModalTitle">Proyectos</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="criticalityModalBody"></div><div class="modal-footer border-top"><button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button></div></div></div>
+    <div class="modal fade" id="criticalityModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div class="modal-content shadow-lg border-0"><div class="modal-header border-bottom"><h5 class="modal-title fw-bold" id="criticalityModalTitle">Proyectos</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="criticalityModalBody"></div><div class="modal-footer border-top"><button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button></div></div></div></div>
     <script src="./vendor/bootstrap/bootstrap.bundle.min.js"></script>
     <script src="./assets/modules/app.js"></script>
     <script src="./assets/modules/dashboard-actions-v3.js?v=20260922-9"></script>
