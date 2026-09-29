@@ -231,6 +231,23 @@ app.post('/api/projects/:id/files', async (req, res) => {
     }
 });
 
+// 5b. QUITAR UN ARCHIVO DIRECTO DEL PROYECTO (DELETE)
+// Devuelve la fila eliminada (incluye fileUrl) para que el frontend pueda borrar también el objeto en Storage.
+app.delete('/api/projects/:id/files/:fileId', async (req, res) => {
+    try {
+        const result = await pool.query(
+            'DELETE FROM project_files WHERE id = $1 AND project_id = $2 RETURNING id, file_url AS "fileUrl", file_name AS "fileName", file_type AS "fileType"',
+            [req.params.fileId, req.params.id]
+        );
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'El archivo no existe o no pertenece a este proyecto.' });
+        }
+        res.json({ success: true, file: result.rows[0] });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // 6. LISTAR AVANCES DE UN PROYECTO (GET)
 app.get('/api/projects/:id/updates', async (req, res) => {
     const { id } = req.params;
