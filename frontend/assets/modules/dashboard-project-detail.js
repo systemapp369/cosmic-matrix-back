@@ -180,7 +180,7 @@
   /* =====================================================================
      2) BITÁCORA (pantalla completa con edición de proyectos)
      ===================================================================== */
-  let btId = null, btQuery = '';
+  let btId = null, btQuery = '', btLevel = null;
 
   function bitacoraScreen() {
     const el = ensureModal('cmxBitacoraScreen', 'modal-fullscreen', `
@@ -191,6 +191,7 @@
       <div class="modal-body cmx-bt" id="cmxBt">
         <aside class="cmx-bt-list">
           <div class="cmx-search"><i class="ti ti-search"></i><input id="cmxBtSearch" type="search" placeholder="Buscar proyecto o responsable…" autocomplete="off"></div>
+          <div id="cmxBtFilter" class="cmx-filter" hidden></div>
           <div id="cmxBtItems" class="cmx-bt-items"></div>
         </aside>
         <section class="cmx-bt-editor" id="cmxBtEditor"></section>
@@ -198,18 +199,24 @@
     if (!el.dataset.bound) {
       el.dataset.bound = '1';
       el.querySelector('#cmxBtSearch').addEventListener('input', e => { btQuery = e.target.value || ''; renderBtList(); });
+      el.querySelector('#cmxBtFilter').addEventListener('click', e => { if (e.target.closest('[data-clear]')) { btLevel = null; renderBtList(); } });
       el.querySelector('#cmxBtItems').addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (b) selectBt(b.dataset.id); });
     }
     return el;
   }
 
-  function openBitacora(id) {
+  function openBitacora(id, opts) {
     if (!projects().length) return toast('Aún no hay proyectos cargados');
     const el = bitacoraScreen();
     btQuery = '';
+    btLevel = opts && opts.level ? String(opts.level) : null;
     el.querySelector('#cmxBtSearch').value = '';
     inst(el).show();
     renderBtList();
+    if (!id && btLevel) {                       // filtro por criticidad: si solo hay un proyecto, se abre directo
+      const only = projects().filter(p => p.level === btLevel);
+      if (only.length === 1) id = only[0].id;
+    }
     if (id && byId(id)) selectBt(id);
     else { btId = null; el.querySelector('#cmxBt').classList.remove('cmx-editing'); showEditorPlaceholder(); }
   }
@@ -220,7 +227,12 @@
 
   function renderBtList() {
     const q = btQuery.trim().toLowerCase();
-    const list = projects().filter(p => !q || `${p.name} ${p.lead} ${p.id} ${p.status} ${p.level}`.toLowerCase().includes(q));
+    const list = projects().filter(p => (!btLevel || p.level === btLevel) && (!q || `${p.name} ${p.lead} ${p.id} ${p.status} ${p.level}`.toLowerCase().includes(q)));
+    const fb = document.getElementById('cmxBtFilter');
+    if (fb) {
+      fb.hidden = !btLevel;
+      fb.innerHTML = btLevel ? `<span><i class="ti ti-filter"></i> Criticidad: <b>${esc(btLevel)}</b> · ${list.length} proyecto${list.length === 1 ? '' : 's'}</span><button type="button" data-clear title="Quitar filtro"><i class="ti ti-x"></i> Ver todos</button>` : '';
+    }
     document.getElementById('cmxBtItems').innerHTML = list.length ? list.map(p => `
       <button type="button" class="cmx-bt-item${String(p.id) === String(btId) ? ' active' : ''}" data-id="${esc(p.id)}" style="--c:${lvlColor(p.level)}">
         <span class="cmx-bt-name">${esc(p.name)}</span>
@@ -531,6 +543,9 @@
 .cmx-search{display:flex;align-items:center;gap:8px;padding:0 12px;border:1px solid #1b526a;border-radius:10px;background:#061a2a;margin-bottom:12px;position:sticky;top:0;z-index:2}
 .cmx-search input{flex:1;min-width:0;height:44px;border:0;background:transparent;color:#eefaff;font:500 max(16px,1rem) Inter,sans-serif;outline:0}
 .cmx-bt-items{display:flex;flex-direction:column;gap:8px}
+.cmx-filter{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:-2px 0 10px;padding:8px 10px;border:1px solid #1b526a;border-radius:9px;background:rgba(21,155,231,.10);color:#cfeaf5;font:600 12px/1.3 Inter,sans-serif}
+.cmx-filter[hidden]{display:none}
+.cmx-filter button{flex:none;border:1px solid #24536a;border-radius:7px;background:#102c40;color:#d8edf4;font:700 11px Inter,sans-serif;padding:6px 9px;cursor:pointer}
 .cmx-bt-item{display:block;width:100%;text-align:left;padding:12px 14px;border:1px solid rgba(34,211,238,.14);border-left:4px solid var(--c);border-radius:10px;background:rgba(4,25,39,.68);color:#eaf7ff;cursor:pointer}
 .cmx-bt-item.active,.cmx-bt-item:hover{border-color:#24d7ed;background:rgba(12,60,84,.6)}
 .cmx-bt-name{display:block;font:700 14px/1.3 Inter,sans-serif;overflow-wrap:anywhere}
