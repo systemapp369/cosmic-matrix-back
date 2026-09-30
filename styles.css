@@ -1,0 +1,3 @@
+/* Preserve the production dashboard stylesheet and layer the new project-editor layout on top. */
+@import url("https://raw.githubusercontent.com/systemapp369/cosmic-matrix-back/cab60b998bd5614001cb46c192684bd8accaa52c/frontend/assets/css/styles.css");
+/* Estilos de los modales (proyecto/bitácora) unificados en index.html -> #cm-modals-responsive */
