@@ -21,6 +21,7 @@
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[c]));
   const toast = msg => { try { M()?.showToast?.(msg); } catch (e) { console.log(msg); } };
   const lvlColor = l => COLORS[String(l || '').toUpperCase()] || '#7ca5c4';
+  const isClosed = p => /^(COMPLETAD|CANCELAD)/i.test(String(p && p.status || '').trim());
   const pct = p => Math.max(0, Math.min(100, Number(p?.progress || 0)));
   const safeUrl = u => { try { const x = new URL(u); return /^https?:$/.test(x.protocol) ? esc(x.href) : ''; } catch (e) { return ''; } };
 
@@ -180,7 +181,7 @@
   /* =====================================================================
      2) BITÁCORA (pantalla completa con edición de proyectos)
      ===================================================================== */
-  let btId = null, btQuery = '', btLevel = null;
+  let btId = null, btQuery = '', btLevel = null, btActiveOnly = false;
 
   function bitacoraScreen() {
     const el = ensureModal('cmxBitacoraScreen', 'modal-fullscreen', `
@@ -199,7 +200,7 @@
     if (!el.dataset.bound) {
       el.dataset.bound = '1';
       el.querySelector('#cmxBtSearch').addEventListener('input', e => { btQuery = e.target.value || ''; renderBtList(); });
-      el.querySelector('#cmxBtFilter').addEventListener('click', e => { if (e.target.closest('[data-clear]')) { btLevel = null; renderBtList(); } });
+      el.querySelector('#cmxBtFilter').addEventListener('click', e => { if (e.target.closest('[data-clear]')) { btLevel = null; btActiveOnly = false; renderBtList(); } });
       el.querySelector('#cmxBtItems').addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (b) selectBt(b.dataset.id); });
     }
     return el;
@@ -210,11 +211,12 @@
     const el = bitacoraScreen();
     btQuery = '';
     btLevel = opts && opts.level ? String(opts.level) : null;
+    btActiveOnly = !!(opts && opts.activeOnly);
     el.querySelector('#cmxBtSearch').value = '';
     inst(el).show();
     renderBtList();
     if (!id && btLevel) {                       // filtro por criticidad: si solo hay un proyecto, se abre directo
-      const only = projects().filter(p => p.level === btLevel);
+      const only = projects().filter(p => p.level === btLevel && (!btActiveOnly || !isClosed(p)));
       if (only.length === 1) id = only[0].id;
     }
     if (id && byId(id)) selectBt(id);
@@ -227,11 +229,11 @@
 
   function renderBtList() {
     const q = btQuery.trim().toLowerCase();
-    const list = projects().filter(p => (!btLevel || p.level === btLevel) && (!q || `${p.name} ${p.lead} ${p.id} ${p.status} ${p.level}`.toLowerCase().includes(q)));
+    const list = projects().filter(p => (!btLevel || p.level === btLevel) && (!btActiveOnly || !isClosed(p)) && (!q || `${p.name} ${p.lead} ${p.id} ${p.status} ${p.level}`.toLowerCase().includes(q)));
     const fb = document.getElementById('cmxBtFilter');
     if (fb) {
       fb.hidden = !btLevel;
-      fb.innerHTML = btLevel ? `<span><i class="ti ti-filter"></i> Criticidad: <b>${esc(btLevel)}</b> · ${list.length} proyecto${list.length === 1 ? '' : 's'}</span><button type="button" data-clear title="Quitar filtro"><i class="ti ti-x"></i> Ver todos</button>` : '';
+      fb.innerHTML = btLevel ? `<span><i class="ti ti-filter"></i> Criticidad: <b>${esc(btLevel)}</b>${btActiveOnly ? ' · activos' : ''} · ${list.length} proyecto${list.length === 1 ? '' : 's'}</span><button type="button" data-clear title="Quitar filtro"><i class="ti ti-x"></i> Ver todos</button>` : '';
     }
     document.getElementById('cmxBtItems').innerHTML = list.length ? list.map(p => `
       <button type="button" class="cmx-bt-item${String(p.id) === String(btId) ? ' active' : ''}" data-id="${esc(p.id)}" style="--c:${lvlColor(p.level)}">
