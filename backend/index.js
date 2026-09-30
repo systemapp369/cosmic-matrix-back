@@ -6,14 +6,86 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Reemplaza app.use(cors()); con esta configuración completa:
+app.disable('x-powered-by');
+
+// --- CORS: solo los orígenes permitidos (antes era '*') ---
+// Se pueden añadir más con la variable de entorno ALLOWED_ORIGINS (separados por coma),
+// p. ej. dominios propios o de previsualización de Vercel.
+const ALLOWED_ORIGINS = new Set([
+    'https://cosmic-matrix-front-iqsf.vercel.app',
+    ...(process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim().replace(/\/$/, '')).filter(Boolean)
+]);
+const isAllowedOrigin = origin =>
+    !origin || // peticiones sin origen (curl, servidor a servidor)
+    ALLOWED_ORIGINS.has(origin) ||
+    /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin); // desarrollo local
+
 app.use(cors({
-    origin: '*', // Permite peticiones desde cualquier origen (tu frontend en Vercel)
+    origin: (origin, cb) => cb(null, isAllowedOrigin(origin)),
     methods: ['GET', 'POST', 'DELETE', 'PUT', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    maxAge: 600
 }));
 
-app.use(express.json());
+// --- Cabeceras de seguridad básicas ---
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Cache-Control', 'no-store');
+    next();
+});
+
+app.use(express.json({ limit: '100kb' }));
+
+// --- Validación y utilidades ---
+const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
+const LABEL_RE = /^[\p{L}\p{N} _.-]{1,30}$/u;
+// Solo se aceptan URLs https del almacenamiento del proyecto (Supabase). Ampliable con FILE_HOSTS.
+const FILE_HOSTS = new Set([
+    'owjssvxtzhwqedwigaux.supabase.co',
+    ...(process.env.FILE_HOSTS || '').split(',').map(h => h.trim().toLowerCase()).filter(Boolean)
+]);
+
+['id', 'updateId', 'fileId'].forEach(name =>
+    app.param(name, (req, res, next, value) =>
+        ID_RE.test(value) ? next() : res.status(400).json({ error: 'Identificador no válido.' })
+    )
+);
+
+// Los detalles internos (mensajes de la base de datos) se registran en el servidor, no se envían al cliente.
+function serverError(res, err) {
+    console.error('[API]', err && err.message ? err.message : err);
+    res.status(500).json({ error: 'Error interno del servidor.' });
+}
+
+function validateFiles(files) {
+    if (!Array.isArray(files) || files.length > 20) return 'Lista de archivos no válida (máximo 20).';
+    for (const f of files) {
+        if (!f || typeof f.url !== 'string' || f.url.length > 2048) return 'URL de archivo no válida.';
+        let u;
+        try { u = new URL(f.url); } catch (e) { return 'URL de archivo no válida.'; }
+        if (u.protocol !== 'https:' || !FILE_HOSTS.has(u.hostname.toLowerCase())) return 'La URL del archivo no pertenece al almacenamiento permitido.';
+        if (f.name != null && (typeof f.name !== 'string' || f.name.length > 255)) return 'Nombre de archivo no válido.';
+        if (f.type != null && (typeof f.type !== 'string' || f.type.length > 100)) return 'Tipo de archivo no válido.';
+    }
+    return null;
+}
+
+function validateProject(b) {
+    if (!b || typeof b !== 'object') return 'Datos no válidos.';
+    if (typeof b.id !== 'string' || !ID_RE.test(b.id)) return 'ID de proyecto no válido.';
+    if (typeof b.name !== 'string' || !b.name.trim() || b.name.length > 255) return 'El nombre es obligatorio (máximo 255 caracteres).';
+    if (typeof b.level !== 'string' || !LABEL_RE.test(b.level)) return 'Criticidad no válida.';
+    const prog = Number(b.progress);
+    if (!Number.isInteger(prog) || prog < 0 || prog > 100) return 'El avance debe ser un entero entre 0 y 100.';
+    if (b.lead != null && (typeof b.lead !== 'string' || b.lead.length > 100)) return 'Responsable no válido (máximo 100 caracteres).';
+    if (b.description != null && (typeof b.description !== 'string' || b.description.length > 500)) return 'Descripción no válida (máximo 500 caracteres).';
+    if (b.status != null && b.status !== '' && (typeof b.status !== 'string' || !LABEL_RE.test(b.status))) return 'Estatus no válido.';
+    if (b.selected != null && typeof b.selected !== 'boolean') return 'Valor "selected" no válido.';
+    return null;
+}
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -21,6 +93,29 @@ const pool = new Pool({
 });
 
 // Función para inicializar la base de datos automáticamente
+// --- MIGRACIÓN: la columna "status" podía existir como ENUM (p. ej. node_status con ONLINE/OFFLINE...),
+// lo que rechaza los estatus del formulario (ACTIVO, EN PROGRESO, EN ESPERA, COMPLETADO, CANCELADO).
+// Se convierte a VARCHAR conservando los valores existentes. Solo actúa si la columna es un ENUM.
+// Se ejecuta al arrancar y, como respaldo, la primera vez que un guardado falla por ese motivo.
+async function migrateStatusColumn() {
+    await pool.query(`
+      DO $$
+      DECLARE col_type text;
+      BEGIN
+        SELECT data_type INTO col_type
+        FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = 'projects' AND column_name = 'status';
+        IF col_type = 'USER-DEFINED' THEN
+          ALTER TABLE projects ALTER COLUMN status DROP DEFAULT;
+          ALTER TABLE projects ALTER COLUMN status TYPE VARCHAR(50) USING status::text;
+          UPDATE projects SET status = 'ACTIVO' WHERE status IS NULL;
+          ALTER TABLE projects ALTER COLUMN status SET DEFAULT 'ACTIVO';
+          ALTER TABLE projects ALTER COLUMN status SET NOT NULL;
+        END IF;
+      END $$;
+    `);
+}
+
 async function initDB() {
     try {
         await pool.query(`
@@ -124,6 +219,8 @@ async function initDB() {
         await pool.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS description TEXT;`);
         await pool.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS status VARCHAR(50) NOT NULL DEFAULT 'ACTIVO';`);
 
+        await migrateStatusColumn();
+
         // Archivos asociados directamente al proyecto (independientes de la bitácora).
         await pool.query(`
           CREATE TABLE IF NOT EXISTS project_files (
@@ -158,12 +255,14 @@ app.get('/api/projects', async (req, res) => {
         const result = await pool.query('SELECT id, name, level, progress, lead, description, status, last_update AS "lastUpdate", selected FROM projects ORDER BY id ASC');
         res.json(result.rows);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        serverError(res, err);
     }
 });
 
 // 2. INSERTAR / ACTUALIZAR PROYECTO (POST)
 app.post('/api/projects', async (req, res) => {
+    const invalid = validateProject(req.body);
+    if (invalid) return res.status(400).json({ error: invalid });
     const { id, name, level, progress, lead, description, status, selected } = req.body;
     try {
         const query = `
@@ -173,10 +272,22 @@ app.post('/api/projects', async (req, res) => {
       DO UPDATE SET name = $2, level = $3, progress = $4, lead = $5, description = $6, status = $7, selected = $8
       RETURNING *;
     `;
-        const result = await pool.query(query, [id, name, level, progress, lead, description ?? null, status || 'ACTIVO', selected ?? true]);
+        const params = [id, name.trim(), level, Number(progress), lead ?? 'UNASSIGNED', description ?? null, status || 'ACTIVO', selected ?? true];
+        let result;
+        try {
+            result = await pool.query(query, params);
+        } catch (e) {
+            // 22P02 = valor no válido para un tipo enum: la columna aún es ENUM -> se migra y se reintenta.
+            if (e && e.code === '22P02' && /enum/i.test(e.message || '')) {
+                await migrateStatusColumn();
+                result = await pool.query(query, params);
+            } else {
+                throw e;
+            }
+        }
         res.json({ success: true, project: result.rows[0] });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        serverError(res, err);
     }
 });
 
@@ -187,7 +298,7 @@ app.delete('/api/projects/:id', async (req, res) => {
         await pool.query('DELETE FROM projects WHERE id = $1', [id]);
         res.json({ success: true, message: `Nodo ${id} desconectado.` });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        serverError(res, err);
     }
 });
 
@@ -200,7 +311,7 @@ app.get('/api/projects/:id/files', async (req, res) => {
         );
         res.json(result.rows);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        serverError(res, err);
     }
 });
 
@@ -210,6 +321,8 @@ app.post('/api/projects/:id/files', async (req, res) => {
     if (!Array.isArray(files) || files.length === 0) {
         return res.status(400).json({ error: 'No se recibieron archivos.' });
     }
+    const badFiles = validateFiles(files);
+    if (badFiles) return res.status(400).json({ error: badFiles });
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
@@ -225,7 +338,7 @@ app.post('/api/projects/:id/files', async (req, res) => {
         res.json({ success: true, files: saved });
     } catch (err) {
         await client.query('ROLLBACK');
-        res.status(500).json({ error: err.message });
+        serverError(res, err);
     } finally {
         client.release();
     }
@@ -244,7 +357,7 @@ app.delete('/api/projects/:id/files/:fileId', async (req, res) => {
         }
         res.json({ success: true, file: result.rows[0] });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        serverError(res, err);
     }
 });
 
@@ -280,7 +393,7 @@ app.get('/api/projects/:id/updates', async (req, res) => {
 
         res.json(updates);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        serverError(res, err);
     }
 });
 
@@ -289,8 +402,15 @@ app.post('/api/projects/:id/updates', async (req, res) => {
     const { id } = req.params;
     const { note, files } = req.body; // files: [{ url, name, type }], ya subidos a Supabase Storage
 
-    if (!note || !note.trim()) {
+    if (typeof note !== 'string' || !note.trim()) {
         return res.status(400).json({ error: 'La nota de avance no puede estar vacía.' });
+    }
+    if (note.length > 5000) {
+        return res.status(400).json({ error: 'La nota es demasiado larga (máximo 5000 caracteres).' });
+    }
+    if (files != null) {
+        const badFiles = validateFiles(files);
+        if (badFiles) return res.status(400).json({ error: badFiles });
     }
 
     const client = await pool.connect();
@@ -318,7 +438,7 @@ app.post('/api/projects/:id/updates', async (req, res) => {
         res.json({ success: true, update: newUpdate });
     } catch (err) {
         await client.query('ROLLBACK');
-        res.status(500).json({ error: err.message });
+        serverError(res, err);
     } finally {
         client.release();
     }
@@ -339,7 +459,7 @@ app.delete('/api/updates/:updateId', async (req, res) => {
         }
         res.json({ success: true, files: files.rows });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        serverError(res, err);
     }
 });
 
@@ -355,8 +475,15 @@ app.delete('/api/updates/:updateId/files/:fileId', async (req, res) => {
         }
         res.json({ success: true, file: result.rows[0] });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        serverError(res, err);
     }
+});
+
+// Manejador final de errores (cuerpos inválidos o demasiado grandes, JSON mal formado, etc.)
+app.use((err, req, res, next) => {
+    const status = err && err.status >= 400 && err.status < 500 ? err.status : 500;
+    if (status === 500) console.error('[API]', err && err.message ? err.message : err);
+    res.status(status).json({ error: status === 500 ? 'Error interno del servidor.' : 'Solicitud no válida.' });
 });
 
 app.listen(PORT, () => {
