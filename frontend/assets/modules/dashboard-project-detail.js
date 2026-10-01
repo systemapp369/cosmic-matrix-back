@@ -464,10 +464,150 @@
     finally { const b = document.getElementById('cmxAddUpd'); if (b) b.disabled = false; }
   }
 
+
+  /* =====================================================================
+     NUEVO PROYECTO (mismo formato visual que "Detalle del Proyecto")
+     ===================================================================== */
+  let newFiles = [];
+
+  function nextProjectId() {
+    const nums = projects().map(p => parseInt(String(p.id).split('-')[1], 10)).filter(n => Number.isFinite(n));
+    return `NODE-${String((nums.length ? Math.max(...nums) : 0) + 1).padStart(3, '0')}`;
+  }
+
+  function fmtSize(b) { return b < 1024 ? b + ' B' : b < 1048576 ? (b / 1024).toFixed(0) + ' KB' : (b / 1048576).toFixed(1) + ' MB'; }
+
+  function newModal() {
+    const el = ensureModal('cmxNewModal', 'modal-xl modal-dialog-centered modal-dialog-scrollable', `
+      <div class="modal-header">
+        <div><div class="cmx-kicker">NEW PROJECT</div><h5 class="modal-title">Nuevo Proyecto</h5></div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <form id="cmxNewForm" novalidate>
+          <section class="cmx-hero" id="cmxNewHero">
+            <div class="cmx-hero-top">
+              <label class="cmx-sr" for="cmxNewName">Nombre del proyecto</label>
+              <input id="cmxNewName" class="cmx-hero-input" maxlength="255" placeholder="Nombre del proyecto" autocomplete="off" required>
+              <div class="cmx-badges"><span class="cmx-badge" id="cmxNewBadgeLevel"></span><span class="cmx-badge" id="cmxNewBadgeStatus"></span></div>
+            </div>
+            <div class="cmx-progress"><span id="cmxNewBar" style="width:0%"></span></div>
+            <div class="cmx-progress-label" id="cmxNewPct">0% de avance</div>
+          </section>
+          <section class="cmx-grid">
+            <div class="cmx-card"><small>ID (automático)</small><b id="cmxNewId">—</b></div>
+            <div class="cmx-card"><small><label for="cmxNewLead">Responsable</label></small><input id="cmxNewLead" class="cmx-field" maxlength="100" placeholder="Nombre o área responsable" autocomplete="off"></div>
+            <div class="cmx-card"><small><label for="cmxNewLevel">Criticidad</label></small><select id="cmxNewLevel" class="cmx-field">${LEVELS.map(v => `<option value="${v}"${v === 'NORMAL' ? ' selected' : ''}>${v.charAt(0) + v.slice(1).toLowerCase()}</option>`).join('')}</select></div>
+            <div class="cmx-card"><small><label for="cmxNewStatus">Estatus</label></small><select id="cmxNewStatus" class="cmx-field">${STATUSES.map(v => `<option value="${v}"${v === 'ACTIVO' ? ' selected' : ''}>${v.charAt(0) + v.slice(1).toLowerCase()}</option>`).join('')}</select></div>
+            <div class="cmx-card cmx-wide"><small><label for="cmxNewProgress">Avance (%)</label></small><div class="cmx-range"><input id="cmxNewRange" type="range" min="0" max="100" step="1" value="0" aria-label="Avance"><input id="cmxNewProgress" class="cmx-field cmx-num" type="number" min="0" max="100" step="1" inputmode="numeric" value="0"></div></div>
+            <div class="cmx-card cmx-wide"><small><label for="cmxNewDesc">Descripción</label></small><textarea id="cmxNewDesc" class="cmx-field cmx-ta2" maxlength="500" placeholder="Describe el objetivo, alcance o contexto del proyecto"></textarea></div>
+          </section>
+          <h6 class="cmx-h"><i class="ti ti-paperclip"></i> Archivos anexados</h6>
+          <div class="cmx-drop">
+            <input id="cmxNewFiles" class="cmx-input cmx-file-input" type="file" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv">
+            <div class="cmx-filehint"><i class="ti ti-info-circle"></i><span>Opcional: imágenes, video, PDF, Word, Excel o TXT. Se guardan asociados al proyecto.</span></div>
+            <div id="cmxNewList" class="cmx-chips"></div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="cmx-btn" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="cmx-btn primary" id="cmxNewSave"><i class="ti ti-device-floppy"></i> Guardar proyecto</button>
+      </div>`);
+    if (!el.dataset.bound) {
+      el.dataset.bound = '1';
+      const $ = id => el.querySelector('#' + id);
+      const sync = from => {
+        let v = parseInt(from === 'range' ? $('cmxNewRange').value : $('cmxNewProgress').value, 10);
+        if (isNaN(v)) v = 0;
+        v = Math.max(0, Math.min(100, v));
+        if (from === 'range') $('cmxNewProgress').value = v; else $('cmxNewRange').value = v;
+        refreshHero();
+      };
+      $('cmxNewRange').addEventListener('input', () => sync('range'));
+      $('cmxNewProgress').addEventListener('input', () => { if ($('cmxNewProgress').value !== '') sync('num'); });
+      ['cmxNewLevel', 'cmxNewStatus', 'cmxNewName'].forEach(id => $(id).addEventListener('input', refreshHero));
+      $('cmxNewName').addEventListener('input', () => $('cmxNewName').classList.remove('cmx-invalid'));
+      $('cmxNewFiles').addEventListener('change', e => { newFiles = newFiles.concat(Array.from(e.target.files)); e.target.value = ''; renderNewFiles(); });
+      $('cmxNewList').addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (b) { newFiles.splice(Number(b.dataset.rm), 1); renderNewFiles(); } });
+      $('cmxNewForm').addEventListener('submit', e => { e.preventDefault(); saveNew(); });
+      $('cmxNewSave').addEventListener('click', saveNew);
+    }
+    return el;
+  }
+
+  function refreshHero() {
+    const g = id => document.getElementById(id);
+    const level = g('cmxNewLevel').value, status = g('cmxNewStatus').value, v = Math.max(0, Math.min(100, parseInt(g('cmxNewProgress').value, 10) || 0)), c = lvlColor(level);
+    const hero = g('cmxNewHero');
+    hero.style.setProperty('--c', c);
+    g('cmxNewBadgeLevel').textContent = level; g('cmxNewBadgeLevel').style.setProperty('--c', c);
+    g('cmxNewBadgeStatus').textContent = status;
+    g('cmxNewBar').style.width = v + '%';
+    g('cmxNewPct').textContent = v + '% de avance';
+  }
+
+  function renderNewFiles() {
+    const box = document.getElementById('cmxNewList');
+    box.innerHTML = newFiles.map((f, i) => `<span class="cmx-chip"><i class="ti ${f.type.startsWith('image/') ? 'ti-photo' : f.type.startsWith('video/') ? 'ti-video' : 'ti-file-description'}"></i><span class="cmx-chip-name" title="${esc(f.name)}">${esc(f.name)}</span><small>${fmtSize(f.size)}</small><button type="button" data-rm="${i}" aria-label="Quitar ${esc(f.name)}"><i class="ti ti-x"></i></button></span>`).join('');
+  }
+
+  function openNew() {
+    const el = newModal();
+    newFiles = [];
+    const g = id => el.querySelector('#' + id);
+    g('cmxNewName').value = ''; g('cmxNewLead').value = ''; g('cmxNewDesc').value = '';
+    g('cmxNewLevel').value = 'NORMAL'; g('cmxNewStatus').value = 'ACTIVO';
+    g('cmxNewProgress').value = 0; g('cmxNewRange').value = 0;
+    g('cmxNewId').textContent = nextProjectId();
+    g('cmxNewName').classList.remove('cmx-invalid');
+    renderNewFiles(); refreshHero();
+    inst(el).show();
+    el.addEventListener('shown.bs.modal', () => g('cmxNewName').focus(), { once: true });
+  }
+
+  async function saveNew() {
+    const m = M();
+    if (!m) return;
+    const g = id => document.getElementById(id);
+    const name = g('cmxNewName').value.trim();
+    const progress = parseInt(g('cmxNewProgress').value, 10);
+    g('cmxNewName').classList.toggle('cmx-invalid', !name);
+    if (!name) { toast('El nombre del proyecto es obligatorio'); g('cmxNewName').focus(); return; }
+    if (isNaN(progress) || progress < 0 || progress > 100) { toast('El avance debe estar entre 0 y 100'); g('cmxNewProgress').focus(); return; }
+    const data = { id: nextProjectId(), name, level: g('cmxNewLevel').value, progress, lead: g('cmxNewLead').value.trim() || 'UNASSIGNED', description: g('cmxNewDesc').value.trim(), status: g('cmxNewStatus').value || 'ACTIVO', selected: true };
+    const btn = g('cmxNewSave');
+    btn.disabled = true;
+    try {
+      toast('Guardando proyecto…');
+      const res = await m.apiClient.upsertProject(data);
+      if (!res || !res.success) throw new Error('El servidor no confirmó el guardado');
+      if (newFiles.length) {
+        toast('Subiendo archivos…');
+        const up = await m.storageManager.uploadFiles(newFiles, data.id);
+        await m.apiClient.addProjectFiles(data.id, up);
+      }
+      await m.loadProjectsFromRemote();
+      window.dispatchEvent(new CustomEvent('cm:projects-updated'));
+      newFiles = [];
+      inst(document.getElementById('cmxNewModal')).hide();
+      toast(`Proyecto «${name}» creado`);
+    } catch (err) {
+      toast('Error al guardar: ' + (err.message || err));
+    } finally { const b = document.getElementById('cmxNewSave'); if (b) b.disabled = false; }
+  }
+
+  /* El botón "Nuevo Proyecto" del dashboard usa monitor.openCreateModal(): se redirige a esta ventana. */
+  function patchCreate() {
+    const m = M();
+    if (m && !m.__cmxCreatePatched) { m.openCreateModal = () => openNew(); m.__cmxCreatePatched = true; }
+  }
+
   /* =====================================================================
      3) BOTONES EN EL DASHBOARD
      ===================================================================== */
   function mountButtons() {
+    patchCreate();
     const radical = document.querySelector('#cm-radical-dashboard .cm-header-actions');
     const inline = document.getElementById('cm-inline-actions');
     let mounted = false;
@@ -604,6 +744,22 @@
 .cmx-del-text{flex:1 1 240px;min-width:0;display:flex;flex-direction:column;gap:4px;font:500 13px/1.4 Inter,sans-serif;color:#f1d5db}
 .cmx-del-text b{font-size:14px;color:#fff;overflow-wrap:anywhere}
 .cmx-del-btns{display:flex;gap:8px;flex-wrap:wrap}
+.cmx-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.cmx-hero-input{flex:1 1 220px;min-width:0;width:100%;padding:6px 0;border:0;border-bottom:1px dashed #2a6f8a;background:transparent;color:#f3fbff;font:800 clamp(18px,3.6vw,24px)/1.2 Inter,sans-serif;outline:0}
+.cmx-hero-input::placeholder{color:#5f8ba0;font-weight:700}
+.cmx-hero-input:focus{border-bottom:1px solid #24d7ed}
+.cmx-hero-input.cmx-invalid{border-bottom:2px solid #ff3e68}
+.cmx-field{display:block;width:100%;min-width:0;height:42px;box-sizing:border-box;padding:0 12px;border:1px solid #1b526a;border-radius:8px;background:#061a2a;color:#eefaff;font:600 max(16px,1rem)/1.2 Inter,system-ui,sans-serif}
+.cmx-field:focus{outline:0;border-color:#24d7ed;box-shadow:0 0 0 3px rgba(36,215,237,.12)}
+.cmx-card small label{margin:0;font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit}
+.cmx-card small+.cmx-field,.cmx-card small+.cmx-range{margin-top:2px}
+.cmx-ta2{height:auto;min-height:96px;padding:11px 12px;resize:vertical;line-height:1.45;font-weight:500}
+.cmx-range{display:flex;align-items:center;gap:12px}.cmx-range input[type=range]{flex:1;max-width:none;min-width:0;accent-color:#22d3ee;height:28px}.cmx-num{width:84px;flex:none;text-align:center}
+.cmx-filehint{display:flex;align-items:flex-start;gap:8px;margin-top:9px;color:#6f9caf;font:500 12px/1.35 Inter,sans-serif}.cmx-filehint i{flex:none;color:#22d3ee;font-size:16px}
+.cmx-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.cmx-chips:empty{display:none}
+.cmx-chip{display:inline-flex;align-items:center;gap:7px;max-width:100%;padding:6px 6px 6px 10px;border:1px solid rgba(34,211,238,.22);border-radius:99px;background:#061a2a;color:#cfeaf5;font:600 12px/1 Inter,sans-serif}
+.cmx-chip-name{min-width:0;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cmx-chip small{color:#6f9caf;font-weight:600}
+.cmx-chip button{display:flex;align-items:center;justify-content:center;width:22px;height:22px;border:0;border-radius:50%;background:#12384e;color:#bfe6f4;cursor:pointer;padding:0}.cmx-chip button:hover{background:#ff3e68;color:#fff}
 .cmx-addupd{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
 .cmx-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:40vh;color:#6f9caf;text-align:center}
 .cmx-placeholder i{font-size:40px;color:#22d3ee}
@@ -629,6 +785,7 @@
   /* API pública (por si se quiere abrir desde otros módulos) */
   window.cmOpenProjectDetail = openDetail;
   window.cmOpenBitacora = openBitacora;
+  window.cmOpenNewProject = openNew;
 
   installStyle();
   let tries = 0;
