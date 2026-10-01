@@ -295,8 +295,20 @@ app.post('/api/projects', async (req, res) => {
 app.delete('/api/projects/:id', async (req, res) => {
     const { id } = req.params;
     try {
-        await pool.query('DELETE FROM projects WHERE id = $1', [id]);
-        res.json({ success: true, message: `Nodo ${id} desconectado.` });
+        // URLs de todos los archivos del proyecto y de sus avances, para que el frontend limpie también el Storage.
+        const files = await pool.query(
+            `SELECT file_url AS "fileUrl" FROM project_files WHERE project_id = $1
+             UNION ALL
+             SELECT f.file_url FROM project_update_files f
+             JOIN project_updates u ON u.id = f.update_id WHERE u.project_id = $1`,
+            [id]
+        );
+        // Los avances y archivos asociados se eliminan en cascada (ON DELETE CASCADE).
+        const result = await pool.query('DELETE FROM projects WHERE id = $1', [id]);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'El proyecto no existe.' });
+        }
+        res.json({ success: true, message: `Nodo ${id} desconectado.`, files: files.rows });
     } catch (err) {
         serverError(res, err);
     }
