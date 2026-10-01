@@ -271,7 +271,15 @@
         <div class="cmx-f cmx-full"><label class="cmx-label" for="cmxDesc">Descripción breve</label><textarea id="cmxDesc" class="cmx-input cmx-ta" maxlength="500" placeholder="Objetivo, alcance o contexto del proyecto">${esc(p.description || '')}</textarea></div>
         <div class="cmx-f cmx-full"><label class="cmx-label" for="cmxFiles"><i class="ti ti-paperclip"></i> Anexar archivos</label>
           <div class="cmx-drop"><input id="cmxFiles" class="cmx-input cmx-file-input" type="file" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv"></div></div>
-        <div class="cmx-actions cmx-full"><button type="submit" class="cmx-btn primary" id="cmxSave"><i class="ti ti-device-floppy"></i> Guardar cambios</button></div>
+        <div class="cmx-actions cmx-full cmx-actions-split">
+          <button type="button" class="cmx-btn cmx-danger-outline" id="cmxDelAsk"><i class="ti ti-trash"></i> Eliminar proyecto</button>
+          <button type="submit" class="cmx-btn primary" id="cmxSave"><i class="ti ti-device-floppy"></i> Guardar cambios</button>
+        </div>
+        <div class="cmx-del-confirm cmx-full" id="cmxDelConfirm" hidden role="alertdialog" aria-labelledby="cmxDelTitle">
+          <i class="ti ti-alert-triangle"></i>
+          <div class="cmx-del-text"><b id="cmxDelTitle">¿Eliminar el proyecto «${esc(p.name)}»?</b><span>Se borrarán también sus avances y archivos anexados. Esta acción no se puede deshacer.</span></div>
+          <div class="cmx-del-btns"><button type="button" class="cmx-btn" id="cmxDelNo">Cancelar</button><button type="button" class="cmx-btn cmx-danger" id="cmxDelYes"><i class="ti ti-trash"></i> Sí, eliminar</button></div>
+        </div>
       </form>
       <h6 class="cmx-h"><i class="ti ti-paperclip"></i> Archivos anexados</h6>
       <div id="cmxBtFiles" class="cmx-empty">Cargando archivos…</div>
@@ -287,6 +295,10 @@
     ed.querySelector('#cmxBtView').addEventListener('click', () => switchTo(document.getElementById('cmxBitacoraScreen'), () => openDetail(p.id)));
     ed.querySelector('#cmxBtForm').addEventListener('submit', e => { e.preventDefault(); saveProject(p.id); });
     ed.querySelector('#cmxAddUpd').addEventListener('click', () => addUpdate(p.id));
+    const delBox = ed.querySelector('#cmxDelConfirm');
+    ed.querySelector('#cmxDelAsk').addEventListener('click', () => { delBox.hidden = false; delBox.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); ed.querySelector('#cmxDelNo').focus(); });
+    ed.querySelector('#cmxDelNo').addEventListener('click', () => { delBox.hidden = true; });
+    ed.querySelector('#cmxDelYes').addEventListener('click', () => deleteProject(p.id));
     ed.addEventListener('click', onFilesClick);
     loadBtFiles(p.id);
     loadBtUpdates(p.id);
@@ -407,6 +419,30 @@
     } catch (err) {
       toast('Error al guardar: ' + (err.message || err));
     } finally { const b = document.getElementById('cmxSave'); if (b) b.disabled = false; }
+  }
+
+  async function deleteProject(id) {
+    const m = M(), p = byId(id);
+    if (!m || !p) return;
+    const yes = document.getElementById('cmxDelYes'), no = document.getElementById('cmxDelNo'), ask = document.getElementById('cmxDelAsk');
+    [yes, no, ask].forEach(b => b && (b.disabled = true));
+    try {
+      const res = await m.apiClient.deleteProject(p.id);
+      if (!res || !res.success) throw new Error('El servidor no confirmó la eliminación');
+      const urls = (res.files || []).map(f => f && f.fileUrl).filter(Boolean);
+      await m.loadProjectsFromRemote();
+      window.dispatchEvent(new CustomEvent('cm:projects-updated'));
+      if (String(detailId) === String(p.id)) detailId = null;
+      btId = null;
+      document.getElementById('cmxBt').classList.remove('cmx-editing');
+      showEditorPlaceholder();
+      renderBtList();
+      toast(`Proyecto «${p.name}» eliminado`);
+      for (const u of urls) { await m.storageManager.removeByUrl(u); }   // limpieza del Storage (si hay permiso)
+    } catch (err) {
+      [yes, no, ask].forEach(b => b && (b.disabled = false));
+      toast('No se pudo eliminar el proyecto: ' + (err.message || err));
+    }
   }
 
   async function addUpdate(id) {
@@ -558,6 +594,16 @@
 .cmx-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 .cmx-f{min-width:0}.cmx-full{grid-column:1/-1}
 .cmx-actions{display:flex;justify-content:flex-end;gap:10px}
+.cmx-actions-split{justify-content:space-between;flex-wrap:wrap}
+.cmx-danger-outline{border-color:rgba(255,62,104,.6);background:rgba(255,62,104,.06);color:#ff7a96}
+.cmx-danger-outline:hover:not(:disabled){background:#ff3e68;color:#fff}
+.cmx-danger{background:#e0314f;border-color:#ff5b78;color:#fff}
+.cmx-del-confirm{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 16px;border:1px solid #ff3e68;border-radius:11px;background:rgba(255,62,104,.08)}
+.cmx-del-confirm[hidden]{display:none}
+.cmx-del-confirm>i{flex:none;font-size:26px;color:#ff5b78}
+.cmx-del-text{flex:1 1 240px;min-width:0;display:flex;flex-direction:column;gap:4px;font:500 13px/1.4 Inter,sans-serif;color:#f1d5db}
+.cmx-del-text b{font-size:14px;color:#fff;overflow-wrap:anywhere}
+.cmx-del-btns{display:flex;gap:8px;flex-wrap:wrap}
 .cmx-addupd{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
 .cmx-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:40vh;color:#6f9caf;text-align:center}
 .cmx-placeholder i{font-size:40px;color:#22d3ee}
@@ -571,7 +617,7 @@
 @media(max-width:640px){
   .cmx-form{grid-template-columns:minmax(0,1fr)}
   .cmx-f{grid-column:1/-1}
-  .cmx-actions .cmx-btn,.cmx-modal .modal-footer .cmx-btn{width:100%}
+  .cmx-actions .cmx-btn,.cmx-modal .modal-footer .cmx-btn,.cmx-del-btns,.cmx-del-btns .cmx-btn{width:100%}
 }
 #cm-radical-dashboard .cm-radical-header,#cm-radical-dashboard .cm-header-actions{flex-wrap:wrap}
 #cmx-fallback{position:fixed;right:14px;bottom:14px;z-index:1090;display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;max-width:calc(100vw - 28px)}
