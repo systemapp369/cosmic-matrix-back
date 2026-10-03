@@ -25,9 +25,17 @@
   const pct = p => Math.max(0, Math.min(100, Number(p?.progress || 0)));
   const safeUrl = u => { try { const x = new URL(u); return /^https?:$/.test(x.protocol) ? esc(x.href) : ''; } catch (e) { return ''; } };
 
+  /* "Hoy" según el calendario del usuario (no UTC): evita que de noche se guarde el día siguiente. */
+  function localDate() {
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+  }
+
   function fmtDate(v, withTime) {
     if (!v) return '—';
-    const d = new Date(v);
+    // Fechas de calendario ('2026-10-02' o '2026-10-02T00:00:00.000Z' de un DATE): se muestran tal cual, sin convertir de zona horaria.
+    const cal = !withTime && typeof v === 'string' && v.match(/^(\d{4})-(\d{2})-(\d{2})(?:T00:00:00(?:\.0+)?Z)?$/);
+    const d = cal ? new Date(Number(cal[1]), Number(cal[2]) - 1, Number(cal[3])) : new Date(v);
     if (isNaN(d)) return esc(v);
     const o = { day: '2-digit', month: 'short', year: 'numeric' };
     if (withTime) { o.hour = '2-digit'; o.minute = '2-digit'; }
@@ -399,7 +407,7 @@
     const progress = parseInt(v('cmxProgress'), 10);
     if (!name) { toast('El nombre del proyecto es obligatorio'); document.getElementById('cmxName').focus(); return; }
     if (isNaN(progress) || progress < 0 || progress > 100) { toast('El avance debe estar entre 0 y 100'); document.getElementById('cmxProgress').focus(); return; }
-    const data = { id: p.id, name, level: v('cmxLevel'), progress, lead: v('cmxLead').trim() || 'UNASSIGNED', description: v('cmxDesc').trim(), status: v('cmxStatus') || 'ACTIVO', selected: p.selected ?? true };
+    const data = { id: p.id, name, level: v('cmxLevel'), progress, lead: v('cmxLead').trim() || 'UNASSIGNED', description: v('cmxDesc').trim(), status: v('cmxStatus') || 'ACTIVO', selected: p.selected ?? true, lastUpdate: localDate() };
     const btn = document.getElementById('cmxSave');
     btn.disabled = true;
     try {
@@ -575,7 +583,7 @@
     g('cmxNewName').classList.toggle('cmx-invalid', !name);
     if (!name) { toast('El nombre del proyecto es obligatorio'); g('cmxNewName').focus(); return; }
     if (isNaN(progress) || progress < 0 || progress > 100) { toast('El avance debe estar entre 0 y 100'); g('cmxNewProgress').focus(); return; }
-    const data = { id: nextProjectId(), name, level: g('cmxNewLevel').value, progress, lead: g('cmxNewLead').value.trim() || 'UNASSIGNED', description: g('cmxNewDesc').value.trim(), status: g('cmxNewStatus').value || 'ACTIVO', selected: true };
+    const data = { id: nextProjectId(), name, level: g('cmxNewLevel').value, progress, lead: g('cmxNewLead').value.trim() || 'UNASSIGNED', description: g('cmxNewDesc').value.trim(), status: g('cmxNewStatus').value || 'ACTIVO', selected: true, lastUpdate: localDate() };
     const btn = g('cmxNewSave');
     btn.disabled = true;
     try {

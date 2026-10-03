@@ -783,7 +783,7 @@ class InfrastructureMonitor {
             level: document.getElementById('nodeLevel').value,
             progress: parseInt(document.getElementById('nodeProgress').value),
             lead: document.getElementById('nodeLead').value || 'UNASSIGNED',
-            lastUpdate: new Date().toISOString().split('T')[0],
+            lastUpdate: (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`; })(),
             selected: true
         };
 
