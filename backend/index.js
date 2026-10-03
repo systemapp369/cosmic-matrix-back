@@ -1,6 +1,10 @@
 require('dotenv').config();
 const express = require('express');
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
+
+// Las columnas DATE (OID 1082) se devuelven como texto 'AAAA-MM-DD'. Por defecto node-pg las convierte a un Date
+// en la zona horaria del servidor (UTC), y al mostrarlas en México (UTC-6) retrocedían un día.
+types.setTypeParser(1082, value => value);
 const cors = require('cors');
 
 const app = express();
@@ -71,6 +75,14 @@ function validateFiles(files) {
         if (f.type != null && (typeof f.type !== 'string' || f.type.length > 100)) return 'Tipo de archivo no válido.';
     }
     return null;
+}
+
+// Fecha de calendario enviada por el navegador (su "hoy" local). Se acepta solo si es una fecha real y cercana a la actual.
+function validDateStr(v) {
+    if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+    const d = new Date(v + 'T00:00:00Z');
+    if (isNaN(d) || d.toISOString().slice(0, 10) !== v) return false;
+    return Math.abs(d.getTime() - Date.now()) <= 3 * 86400000;
 }
 
 function validateProject(b) {
@@ -266,13 +278,13 @@ app.post('/api/projects', async (req, res) => {
     const { id, name, level, progress, lead, description, status, selected } = req.body;
     try {
         const query = `
-      INSERT INTO projects (id, name, level, progress, lead, description, status, selected) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      INSERT INTO projects (id, name, level, progress, lead, description, status, selected, last_update) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9::date, CURRENT_DATE))
       ON CONFLICT (id) 
-      DO UPDATE SET name = $2, level = $3, progress = $4, lead = $5, description = $6, status = $7, selected = $8
+      DO UPDATE SET name = $2, level = $3, progress = $4, lead = $5, description = $6, status = $7, selected = $8, last_update = COALESCE($9::date, CURRENT_DATE)
       RETURNING *;
     `;
-        const params = [id, name.trim(), level, Number(progress), lead ?? 'UNASSIGNED', description ?? null, status || 'ACTIVO', selected ?? true];
+        const params = [id, name.trim(), level, Number(progress), lead ?? 'UNASSIGNED', description ?? null, status || 'ACTIVO', selected ?? true, validDateStr(req.body.lastUpdate) ? req.body.lastUpdate : null];
         let result;
         try {
             result = await pool.query(query, params);
