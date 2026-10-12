@@ -15,6 +15,8 @@
   const STATUSES = ['ACTIVO', 'EN PROGRESO', 'EN ESPERA', 'COMPLETADO', 'CANCELADO'];
   const COLORS = { 'CRÍTICA': '#ff3155', ALTA: '#ffb51b', NORMAL: '#00d7a7', BAJA: '#a259ff' };
 
+  /* Atributos del usuario (la seguridad real la aplica el servidor; esto solo adapta la interfaz). */
+  const can = perm => (window.cmAuth ? window.cmAuth.can(perm) : true);
   const M = () => window.monitor || (typeof monitor !== 'undefined' ? monitor : null);
   const projects = () => { const m = M(); return m && Array.isArray(m.projects) ? m.projects : []; };
   const byId = id => projects().find(p => String(p.id) === String(id));
@@ -142,6 +144,7 @@
     sel.innerHTML = list.map(p => `<option value="${esc(p.id)}">${esc(p.name)} · ${esc(p.id)}</option>`).join('');
     const target = id && byId(id) ? id : (detailId && byId(detailId) ? detailId : list[0].id);
     sel.value = target;
+    el.querySelector('#cmxDetailEdit').hidden = !can('editar');
     inst(el).show();
     renderDetail(target);
   }
@@ -299,6 +302,16 @@
       </div>
       <div id="cmxBtUpdates" class="cmx-updates"><div class="cmx-empty">Cargando avances…</div></div>`;
 
+    // Atributos del usuario: sin "editar" la ficha es de solo consulta; sin "eliminar" no hay botón de borrado.
+    if (!can('editar')) {
+      ed.querySelectorAll('#cmxBtForm input, #cmxBtForm select, #cmxBtForm textarea').forEach(el => { el.disabled = true; });
+      const fieldFiles = ed.querySelector('#cmxFiles'); if (fieldFiles) fieldFiles.closest('.cmx-f').hidden = true;
+      const save = ed.querySelector('#cmxSave'); if (save) save.hidden = true;
+      const composer = ed.querySelector('.cmx-addupd'); if (composer) composer.hidden = true;
+      const note = document.createElement('div'); note.className = 'cmx-readonly'; note.innerHTML = '<i class="ti ti-eye"></i> Modo consulta: tu usuario no tiene permiso para modificar este proyecto.';
+      ed.querySelector('.cmx-ed-top').insertAdjacentElement('afterend', note);
+    }
+    if (!can('eliminar')) { const da = ed.querySelector('#cmxDelAsk'); if (da) da.hidden = true; const dc = ed.querySelector('#cmxDelConfirm'); if (dc) dc.hidden = true; }
     ed.querySelector('#cmxBtBack').addEventListener('click', () => document.getElementById('cmxBt').classList.remove('cmx-editing'));
     ed.querySelector('#cmxBtView').addEventListener('click', () => switchTo(document.getElementById('cmxBitacoraScreen'), () => openDetail(p.id)));
     ed.querySelector('#cmxBtForm').addEventListener('submit', e => { e.preventDefault(); saveProject(p.id); });
@@ -317,7 +330,7 @@
       const files = await getJson(`/projects/${encodeURIComponent(id)}/files`);
       if (String(btId) !== String(id)) return;
       const el = document.getElementById('cmxBtFiles');
-      if (el) el.outerHTML = `<div id="cmxBtFiles">${filesGrid(files, 'Este proyecto no tiene archivos anexados.', true)}</div>`;
+      if (el) el.outerHTML = `<div id="cmxBtFiles">${filesGrid(files, 'Este proyecto no tiene archivos anexados.', can('eliminar'))}</div>`;
     } catch (e) { const el = document.getElementById('cmxBtFiles'); if (el) { el.className = 'cmx-empty cmx-err'; el.textContent = 'No se pudieron cargar los archivos.'; } }
   }
 
@@ -395,7 +408,7 @@
     const el = () => document.getElementById('cmxBtUpdates');
     try {
       const ups = await getJson(`/projects/${encodeURIComponent(id)}/updates`);
-      if (String(btId) === String(id) && el()) el().innerHTML = updatesHtml(ups, true);
+      if (String(btId) === String(id) && el()) el().innerHTML = updatesHtml(ups, can('eliminar'));
     } catch (e) { if (el()) el().innerHTML = '<div class="cmx-empty cmx-err">No se pudieron cargar los avances.</div>'; }
   }
 
@@ -561,6 +574,7 @@
   }
 
   function openNew() {
+    if (!can('crear')) return toast('No tienes permiso para crear proyectos');
     const el = newModal();
     newFiles = [];
     const g = id => el.querySelector('#' + id);
@@ -614,6 +628,34 @@
   /* =====================================================================
      3) BOTONES EN EL DASHBOARD
      ===================================================================== */
+  /* ---------- Usuario en sesión (chip, administración de usuarios, salir) ---------- */
+  const ROLE_LABEL = { admin: 'Administrador', editor: 'Edición', viewer: 'Consulta' };
+  const ROLE_COLOR = { admin: '#a45cff', editor: '#159be7', viewer: '#22d3a7' };
+  function mountUser(radical) {
+    if (!radical || !window.cmAuth || !cmAuth.getUser()) return;
+    const u = cmAuth.getUser();
+    let chip = document.getElementById('cmx-user-chip');
+    const html = `<span class="cmx-av" style="background:${ROLE_COLOR[u.role] || '#22d3ee'}">${esc(String(u.name || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase())}</span><span class="cmx-un"><b>${esc(u.name)}</b><small>${esc(ROLE_LABEL[u.role] || u.role)}</small></span>`;
+    if (!chip) {
+      chip = document.createElement('div'); chip.id = 'cmx-user-chip'; chip.className = 'cmx-userchip'; chip.title = 'Sesión iniciada';
+      radical.appendChild(chip);
+      if (can('usuarios')) {
+        const b = document.createElement('button'); b.className = 'cm-head-btn'; b.id = 'cmx-btn-users'; b.type = 'button'; b.innerHTML = '<i class="ti ti-users-group"></i> Usuarios';
+        b.addEventListener('click', () => { location.href = 'usuarios.html'; }); radical.appendChild(b);
+      }
+      const o = document.createElement('button'); o.className = 'cm-head-btn'; o.id = 'cmx-btn-logout'; o.type = 'button'; o.title = 'Cerrar sesión'; o.innerHTML = '<i class="ti ti-logout"></i> Salir';
+      o.addEventListener('click', () => cmAuth.logout('out')); radical.appendChild(o);
+    }
+    if (chip.dataset.sig !== html) { chip.innerHTML = html; chip.dataset.sig = html; }
+  }
+
+  /* Oculta del dashboard lo que el usuario no puede usar. */
+  function applyPermsToDashboard() {
+    if (!window.cmAuth || !cmAuth.getUser()) return;
+    const rules = [['cm-radical-new', 'crear'], ['cm-inline-new', 'crear'], ['cm-radical-excel', 'exportar'], ['cm-inline-excel', 'exportar'], ['cm-radical-report', 'exportar'], ['cm-inline-report', 'exportar']];
+    rules.forEach(([id, perm]) => { const el = document.getElementById(id); if (el) el.hidden = !can(perm); });
+  }
+
   function mountButtons() {
     patchCreate();
     const radical = document.querySelector('#cm-radical-dashboard .cm-header-actions');
@@ -633,6 +675,8 @@
       inline.insertBefore(mk('cmx-inline-bitacora', 'ti-notebook', 'Bitácora', () => openBitacora()), inline.firstChild);
       inline.insertBefore(mk('cmx-inline-detail', 'ti-file-info', 'Detalle del Proyecto', () => openDetail()), inline.firstChild);
     }
+    mountUser(radical);
+    applyPermsToDashboard();
     mounted = !!document.getElementById('cmx-btn-detail') || !!document.getElementById('cmx-inline-detail');
     return mounted;
   }
@@ -768,6 +812,11 @@
 .cmx-chip{display:inline-flex;align-items:center;gap:7px;max-width:100%;padding:6px 6px 6px 10px;border:1px solid rgba(34,211,238,.22);border-radius:99px;background:#061a2a;color:#cfeaf5;font:600 12px/1 Inter,sans-serif}
 .cmx-chip-name{min-width:0;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cmx-chip small{color:#6f9caf;font-weight:600}
 .cmx-chip button{display:flex;align-items:center;justify-content:center;width:22px;height:22px;border:0;border-radius:50%;background:#12384e;color:#bfe6f4;cursor:pointer;padding:0}.cmx-chip button:hover{background:#ff3e68;color:#fff}
+.cmx-userchip{display:inline-flex;align-items:center;gap:9px;height:40px;padding:0 12px 0 6px;border:1px solid #124c69;border-radius:99px;background:#061a2a;color:#eaf7ff;white-space:nowrap}
+.cmx-av{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;color:#04121d;flex:none}
+.cmx-un{display:flex;flex-direction:column;line-height:1.1}.cmx-un b{font-size:12px;max-width:140px;overflow:hidden;text-overflow:ellipsis}.cmx-un small{font-size:9.5px;color:#78aabd;letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
+.cmx-readonly{display:flex;align-items:center;gap:8px;margin:-6px 0 14px;padding:9px 12px;border:1px solid rgba(21,155,231,.45);border-radius:9px;background:rgba(21,155,231,.10);color:#b9e2f7;font:600 12.5px/1.35 Inter,sans-serif}
+@media(max-width:640px){.cmx-un{display:none}.cmx-userchip{padding:0 6px}}
 .cmx-addupd{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
 .cmx-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:40vh;color:#6f9caf;text-align:center}
 .cmx-placeholder i{font-size:40px;color:#22d3ee}
