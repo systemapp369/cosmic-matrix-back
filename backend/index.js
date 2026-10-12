@@ -6,11 +6,13 @@ const { Pool, types } = require('pg');
 // en la zona horaria del servidor (UTC), y al mostrarlas en México (UTC-6) retrocedían un día.
 types.setTypeParser(1082, value => value);
 const cors = require('cors');
+const { setupAuth } = require('./auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.disable('x-powered-by');
+app.set('trust proxy', 1); // detrás del proxy de Vercel: req.ip refleja la IP real del cliente
 
 // --- CORS: solo los orígenes permitidos (antes era '*') ---
 // Se pueden añadir más con la variable de entorno ALLOWED_ORIGINS (separados por coma),
@@ -259,10 +261,12 @@ async function initDB() {
         console.error("Error al inicializar la base de datos:", err.message);
     }
 }
-initDB();
+// Autenticación y usuarios: registra /api/auth/login y, a partir de aquí, exige sesión en TODAS las rutas /api.
+const auth = setupAuth(app, pool, serverError);
+initDB().then(() => auth.initAuthDB());
 
 // 1. LISTAR PROYECTOS (GET)
-app.get('/api/projects', async (req, res) => {
+app.get('/api/projects', auth.requirePerm('ver'), async (req, res) => {
     try {
         const result = await pool.query('SELECT id, name, level, progress, lead, description, status, last_update AS "lastUpdate", selected FROM projects ORDER BY id ASC');
         res.json(result.rows);
@@ -277,6 +281,11 @@ app.post('/api/projects', async (req, res) => {
     if (invalid) return res.status(400).json({ error: invalid });
     const { id, name, level, progress, lead, description, status, selected } = req.body;
     try {
+        // Un proyecto nuevo requiere el atributo "crear"; modificar uno existente requiere "editar".
+        const exists = (await pool.query('SELECT 1 FROM projects WHERE id = $1', [id])).rowCount > 0;
+        if (!auth.has(req.user, exists ? 'editar' : 'crear')) {
+            return res.status(403).json({ error: 'No tienes permiso para realizar esta acción.', code: 'FORBIDDEN' });
+        }
         const query = `
       INSERT INTO projects (id, name, level, progress, lead, description, status, selected, last_update) 
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9::date, CURRENT_DATE))
@@ -304,7 +313,7 @@ app.post('/api/projects', async (req, res) => {
 });
 
 // 3. ELIMINAR PROYECTO (DELETE)
-app.delete('/api/projects/:id', async (req, res) => {
+app.delete('/api/projects/:id', auth.requirePerm('eliminar'), async (req, res) => {
     const { id } = req.params;
     try {
         // URLs de todos los archivos del proyecto y de sus avances, para que el frontend limpie también el Storage.
@@ -327,7 +336,7 @@ app.delete('/api/projects/:id', async (req, res) => {
 });
 
 // 4. ARCHIVOS DIRECTOS DEL PROYECTO (GET)
-app.get('/api/projects/:id/files', async (req, res) => {
+app.get('/api/projects/:id/files', auth.requirePerm('ver'), async (req, res) => {
     try {
         const result = await pool.query(
             'SELECT id, file_url AS "fileUrl", file_name AS "fileName", file_type AS "fileType", created_at AS "createdAt" FROM project_files WHERE project_id = $1 ORDER BY created_at DESC',
@@ -340,7 +349,7 @@ app.get('/api/projects/:id/files', async (req, res) => {
 });
 
 // 5. REGISTRAR ARCHIVOS DIRECTOS DEL PROYECTO (POST)
-app.post('/api/projects/:id/files', async (req, res) => {
+app.post('/api/projects/:id/files', auth.requirePerm('editar'), async (req, res) => {
     const { files } = req.body;
     if (!Array.isArray(files) || files.length === 0) {
         return res.status(400).json({ error: 'No se recibieron archivos.' });
@@ -370,7 +379,7 @@ app.post('/api/projects/:id/files', async (req, res) => {
 
 // 5b. QUITAR UN ARCHIVO DIRECTO DEL PROYECTO (DELETE)
 // Devuelve la fila eliminada (incluye fileUrl) para que el frontend pueda borrar también el objeto en Storage.
-app.delete('/api/projects/:id/files/:fileId', async (req, res) => {
+app.delete('/api/projects/:id/files/:fileId', auth.requirePerm('eliminar'), async (req, res) => {
     try {
         const result = await pool.query(
             'DELETE FROM project_files WHERE id = $1 AND project_id = $2 RETURNING id, file_url AS "fileUrl", file_name AS "fileName", file_type AS "fileType"',
@@ -386,7 +395,7 @@ app.delete('/api/projects/:id/files/:fileId', async (req, res) => {
 });
 
 // 6. LISTAR AVANCES DE UN PROYECTO (GET)
-app.get('/api/projects/:id/updates', async (req, res) => {
+app.get('/api/projects/:id/updates', auth.requirePerm('ver'), async (req, res) => {
     const { id } = req.params;
     try {
         const updatesResult = await pool.query(
@@ -422,7 +431,7 @@ app.get('/api/projects/:id/updates', async (req, res) => {
 });
 
 // 7. REGISTRAR UN AVANCE (POST) - la fecha/hora la pone el servidor automáticamente (created_at = NOW())
-app.post('/api/projects/:id/updates', async (req, res) => {
+app.post('/api/projects/:id/updates', auth.requirePerm('editar'), async (req, res) => {
     const { id } = req.params;
     const { note, files } = req.body; // files: [{ url, name, type }], ya subidos a Supabase Storage
 
@@ -470,7 +479,7 @@ app.post('/api/projects/:id/updates', async (req, res) => {
 
 // 8. ELIMINAR UN AVANCE PUNTUAL (DELETE) - por si el usuario se equivoca o duplica un registro
 // Devuelve los archivos que tenía para que el frontend pueda limpiar también el Storage.
-app.delete('/api/updates/:updateId', async (req, res) => {
+app.delete('/api/updates/:updateId', auth.requirePerm('eliminar'), async (req, res) => {
     const { updateId } = req.params;
     try {
         const files = await pool.query(
@@ -488,7 +497,7 @@ app.delete('/api/updates/:updateId', async (req, res) => {
 });
 
 // 9. QUITAR UN ARCHIVO DE UN AVANCE (DELETE) - deja el avance y solo desvincula ese archivo
-app.delete('/api/updates/:updateId/files/:fileId', async (req, res) => {
+app.delete('/api/updates/:updateId/files/:fileId', auth.requirePerm('eliminar'), async (req, res) => {
     try {
         const result = await pool.query(
             'DELETE FROM project_update_files WHERE id = $1 AND update_id = $2 RETURNING id, file_url AS "fileUrl", file_name AS "fileName", file_type AS "fileType"',
