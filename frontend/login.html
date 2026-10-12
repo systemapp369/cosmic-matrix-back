@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Iniciar sesión · Cosmic Matrix</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="./vendor/tabler-icons/tabler-icons.min.css">
+  <link rel="stylesheet" href="./assets/css/auth.css">
+  <link rel="icon" href="Images/favicon.ico" type="image/x-icon">
+  <style>
+    .lg-wrap{min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:max(20px,env(safe-area-inset-top)) 16px max(20px,env(safe-area-inset-bottom));position:relative}
+    .lg-card{width:100%;max-width:430px;padding:clamp(22px,5vw,34px)}
+    .lg-brand{justify-content:center;margin-bottom:22px}
+    .lg-title{margin:0 0 4px;font-size:clamp(20px,5vw,24px);font-weight:800;text-align:center}
+    .lg-sub{margin:0 0 22px;color:var(--muted);font-size:13px;text-align:center;line-height:1.45}
+    .lg-form{display:flex;flex-direction:column;gap:16px}
+    .lg-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+    .lg-check{display:inline-flex;align-items:center;gap:8px;color:#a9cddb;font-size:13px;cursor:pointer;user-select:none}
+    .lg-check input{width:18px;height:18px;accent-color:var(--cyan)}
+    .lg-submit{width:100%;min-height:50px;font-size:14.5px}
+    .lg-rules{margin:2px 0 0;padding:0;list-style:none;color:#7fa6bd;font-size:12px;display:grid;gap:4px}
+    .lg-rules li i{margin-right:6px;color:#4f93ad}.lg-rules li.ok i{color:var(--green)}.lg-rules li.ok{color:#b9eedd}
+    .lg-foot{margin-top:22px;padding-top:18px;border-top:1px solid var(--line2);display:flex;justify-content:center}
+    .lg-link{display:inline-flex;align-items:center;gap:8px;color:#8cc5dc;font-size:13px;text-decoration:none;padding:8px 12px;border-radius:9px}
+    .lg-link:hover{background:#0b2d44;color:#fff}
+    .lg-copy{margin-top:14px;text-align:center;color:#4d7285;font-size:11px;letter-spacing:.06em}
+    [hidden]{display:none!important}
+  </style>
+</head>
+<body class="cm-auth">
+  <main class="lg-wrap">
+    <section class="cm-card lg-card" aria-labelledby="lgTitle">
+      <a class="cm-brand lg-brand" href="login.html" aria-label="Cosmic Matrix">
+        <span class="cm-logo"><i class="ti ti-radar-2"></i></span>
+        <span><b>COSMIC MATRIX</b><small>PROJECT CONTROL / ANALYTICS</small></span>
+      </a>
+
+      <!-- Paso 1: inicio de sesión -->
+      <div id="stepLogin">
+        <h1 class="lg-title" id="lgTitle">Iniciar sesión</h1>
+        <p class="lg-sub">Ingresa con tu usuario para acceder al dashboard de proyectos.</p>
+        <div id="lgMsg" class="cm-alert info" hidden></div>
+        <form id="loginForm" class="lg-form" novalidate autocomplete="on">
+          <div>
+            <label class="cm-label" for="lgUser">Usuario</label>
+            <div class="cm-field"><i class="ti ti-user lead"></i><input id="lgUser" class="cm-input" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="tu.usuario" maxlength="64" required></div>
+          </div>
+          <div>
+            <label class="cm-label" for="lgPass">Contraseña</label>
+            <div class="cm-field"><i class="ti ti-lock lead"></i><input id="lgPass" class="cm-input" name="password" type="password" autocomplete="current-password" placeholder="••••••••••" maxlength="200" required style="padding-right:48px"><button type="button" class="cm-eye" id="lgEye" aria-label="Mostrar contraseña"><i class="ti ti-eye"></i></button></div>
+          </div>
+          <div class="lg-row">
+            <label class="lg-check"><input type="checkbox" id="lgRemember"> Mantener sesión iniciada</label>
+          </div>
+          <div id="lgErr" class="cm-alert err" role="alert" hidden></div>
+          <button class="cm-btn primary lg-submit" id="lgSubmit" type="submit"><i class="ti ti-login-2"></i> Ingresar</button>
+        </form>
+        <div class="lg-foot"><a class="lg-link" href="usuarios.html"><i class="ti ti-users-group"></i> Administración de usuarios</a></div>
+      </div>
+
+      <!-- Paso 2: cambio obligatorio de contraseña -->
+      <div id="stepChange" hidden>
+        <h1 class="lg-title">Crea tu contraseña</h1>
+        <p class="lg-sub">Por seguridad debes reemplazar la contraseña temporal antes de continuar.</p>
+        <form id="changeForm" class="lg-form" novalidate>
+          <input type="text" name="username" autocomplete="username" hidden>
+          <div id="cgCurrentBox" hidden>
+            <label class="cm-label" for="cgCurrent">Contraseña actual (temporal)</label>
+            <div class="cm-field"><i class="ti ti-key lead"></i><input id="cgCurrent" class="cm-input" type="password" autocomplete="current-password" maxlength="200"></div>
+          </div>
+          <div>
+            <label class="cm-label" for="cgNew">Nueva contraseña</label>
+            <div class="cm-field"><i class="ti ti-lock lead"></i><input id="cgNew" class="cm-input" type="password" autocomplete="new-password" maxlength="200" placeholder="Mínimo 10 caracteres" style="padding-right:48px"><button type="button" class="cm-eye" id="cgEye" aria-label="Mostrar contraseña"><i class="ti ti-eye"></i></button></div>
+          </div>
+          <div>
+            <label class="cm-label" for="cgNew2">Confirmar contraseña</label>
+            <div class="cm-field"><i class="ti ti-lock-check lead"></i><input id="cgNew2" class="cm-input" type="password" autocomplete="new-password" maxlength="200"></div>
+          </div>
+          <ul class="lg-rules" id="cgRules">
+            <li data-r="len"><i class="ti ti-circle"></i> Al menos 10 caracteres</li>
+            <li data-r="diff"><i class="ti ti-circle"></i> Distinta a la temporal y al usuario</li>
+            <li data-r="match"><i class="ti ti-circle"></i> Las dos contraseñas coinciden</li>
+          </ul>
+          <div id="cgErr" class="cm-alert err" role="alert" hidden></div>
+          <button class="cm-btn primary lg-submit" id="cgSubmit" type="submit"><i class="ti ti-shield-check"></i> Guardar y continuar</button>
+          <button class="cm-btn lg-submit" id="cgCancel" type="button">Cancelar</button>
+        </form>
+      </div>
+    </section>
+    <div class="lg-copy" style="position:absolute;bottom:14px;left:0;right:0">ACCESO RESTRINGIDO · SOLO PERSONAL AUTORIZADO</div>
+  </main>
+
+  <script src="./assets/modules/auth.js"></script>
+  <script>
+  (function () {
+    const $ = id => document.getElementById(id);
+    const A = window.cmAuth, API = A.API_BASE;
+    const params = new URLSearchParams(location.search);
+    const next = A.safeNext(params.get('next'));
+    let tempPassword = '', remember = false;
+
+    // Mensajes por motivo de regreso al login
+    const MSG = { expired: 'Tu sesión expiró o fue cerrada. Vuelve a iniciar sesión.', out: 'Cerraste sesión correctamente.' };
+    if (MSG[params.get('m')]) { const m = $('lgMsg'); m.innerHTML = '<i class="ti ti-info-circle"></i><span>' + MSG[params.get('m')] + '</span>'; m.hidden = false; }
+    if (params.get('next') === 'usuarios.html') { const m = $('lgMsg'); m.innerHTML = '<i class="ti ti-shield-lock"></i><span>Inicia sesión con una cuenta de administrador para gestionar usuarios.</span>'; m.hidden = false; }
+
+    const show = (el, text) => { el.innerHTML = '<i class="ti ti-alert-circle"></i><span></span>'; el.lastChild.textContent = text; el.hidden = false; };
+    const busy = (btn, on, label, icon) => { btn.disabled = on; btn.innerHTML = on ? '<span class="cm-spin"></span> Procesando…' : '<i class="ti ' + icon + '"></i> ' + label; };
+    const eye = (btnId, inputId) => $(btnId).addEventListener('click', () => { const i = $(inputId), t = i.type === 'password'; i.type = t ? 'text' : 'password'; $(btnId).innerHTML = '<i class="ti ' + (t ? 'ti-eye-off' : 'ti-eye') + '"></i>'; });
+    eye('lgEye', 'lgPass'); eye('cgEye', 'cgNew');
+
+    function goChange() {
+      $('stepLogin').hidden = true; $('stepChange').hidden = false;
+      $('cgCurrentBox').hidden = !!tempPassword;          // si venimos de un login reciente ya conocemos la temporal
+      $('cgNew').focus(); checkRules();
+    }
+
+    // Sesión ya iniciada: ir directo al destino (salvo cambio de contraseña pendiente o ?switch=1)
+    if (A.session && !params.has('switch')) {
+      if (params.get('change')) { remember = true; goChange(); }
+      else fetch(API + '/auth/me', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => { if (j) location.replace(next); }).catch(() => {});
+    }
+
+    $('loginForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const err = $('lgErr'); err.hidden = true;
+      const username = $('lgUser').value.trim(), password = $('lgPass').value;
+      if (!username || !password) return show(err, 'Escribe tu usuario y contraseña.');
+      const btn = $('lgSubmit'); busy(btn, true);
+      try {
+        const res = await fetch(API + '/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password, remember: $('lgRemember').checked }) });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { show(err, data.error || 'No se pudo iniciar sesión.'); busy(btn, false, 'Ingresar', 'ti-login-2'); $('lgPass').select(); return; }
+        remember = $('lgRemember').checked; tempPassword = password;
+        A.setSession(data, remember);
+        if (data.mustChangePassword) { busy(btn, false, 'Ingresar', 'ti-login-2'); goChange(); }
+        else location.replace(next);
+      } catch (ex) {
+        show(err, 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.');
+        busy(btn, false, 'Ingresar', 'ti-login-2');
+      }
+    });
+
+    // Reglas de la nueva contraseña (retroalimentación en vivo)
+    function checkRules() {
+      const n = $('cgNew').value, n2 = $('cgNew2').value, cur = tempPassword || $('cgCurrent').value;
+      const user = (A.getUser() && A.getUser().username) || '';
+      const r = { len: n.length >= 10, diff: n.length > 0 && n !== cur && n.toLowerCase() !== user, match: n.length > 0 && n === n2 };
+      document.querySelectorAll('#cgRules li').forEach(li => { const ok = r[li.dataset.r]; li.classList.toggle('ok', ok); li.firstChild.className = 'ti ' + (ok ? 'ti-circle-check' : 'ti-circle'); });
+      return r.len && r.diff && r.match;
+    }
+    ['cgNew', 'cgNew2', 'cgCurrent'].forEach(id => $(id).addEventListener('input', checkRules));
+
+    $('changeForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const err = $('cgErr'); err.hidden = true;
+      if (!checkRules()) return show(err, 'Revisa que la contraseña cumpla todas las reglas.');
+      const current = tempPassword || $('cgCurrent').value;
+      if (!current) return show(err, 'Escribe tu contraseña actual.');
+      const btn = $('cgSubmit'); busy(btn, true);
+      try {
+        const res = await fetch(API + '/auth/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ currentPassword: current, newPassword: $('cgNew').value }) });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { show(err, data.error || 'No se pudo cambiar la contraseña.'); busy(btn, false, 'Guardar y continuar', 'ti-shield-check'); return; }
+        A.setSession(data, remember);
+        location.replace(next);
+      } catch (ex) { show(err, 'No se pudo conectar con el servidor.'); busy(btn, false, 'Guardar y continuar', 'ti-shield-check'); }
+    });
+
+    $('cgCancel').addEventListener('click', () => A.logout());
+  })();
+  </script>
+</body>
+</html>

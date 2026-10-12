@@ -10,6 +10,10 @@
     <link rel="stylesheet" href="./assets/css/styles.css">
     <!--  <link rel="stylesheet" href="./assets/css/dashboard-towers-v4.css?v=20260925-2">  -->
     <link rel="icon" href="Images/favicon.ico" type="image/x-icon">
+    <style>html.cm-auth-pending{visibility:hidden}</style>
+    <script>document.documentElement.classList.add('cm-auth-pending')</script>
+    <script src="./assets/modules/auth.js"></script>
+    <script>cmAuth.requireLogin()</script>
     <script src="./vendor/echarts/echarts.js"></script>
     <script src="./vendor/xlsx/js/xlsx.full.min.js"></script>
     <script src="./vendor/supabase/supabase.js"></script>
