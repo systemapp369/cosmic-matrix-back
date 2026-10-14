@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Iniciar sesión · Cosmic Matrix</title>
+  <title>Iniciar sesión · Project Manager</title>
   <meta name="robots" content="noindex">
   <link rel="stylesheet" href="./vendor/tabler-icons/tabler-icons.min.css">
   <link rel="stylesheet" href="./assets/css/auth.css">
@@ -25,15 +25,38 @@
     .lg-link{display:inline-flex;align-items:center;gap:8px;color:#8cc5dc;font-size:13px;text-decoration:none;padding:8px 12px;border-radius:9px}
     .lg-link:hover{background:#0b2d44;color:#fff}
     .lg-copy{margin-top:14px;text-align:center;color:#4d7285;font-size:11px;letter-spacing:.06em}
+    /* ---- escena 3D de fondo ---- */
+    body.cm-scene:before{display:none}
+    #cmScene{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0;background:linear-gradient(180deg,#0a1d3b 0%,#5b4a78 45%,#f4a763 78%,#c68c59 100%)}
+    .sc-vignette{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse at center,rgba(2,11,20,.22) 0%,rgba(2,11,20,.06) 40%,rgba(2,11,20,.55) 100%),linear-gradient(180deg,rgba(2,11,20,.32) 0%,transparent 22%,transparent 72%,rgba(2,11,20,.5) 100%)}
+    .sc-frame{position:fixed;inset:14px;z-index:1;pointer-events:none;--c:rgba(34,211,238,.75)}
+    .sc-frame i{position:absolute;width:26px;height:26px;border:2px solid var(--c)}
+    .sc-frame i:nth-child(1){left:0;top:0;border-right:0;border-bottom:0}.sc-frame i:nth-child(2){right:0;top:0;border-left:0;border-bottom:0}
+    .sc-frame i:nth-child(3){left:0;bottom:0;border-right:0;border-top:0}.sc-frame i:nth-child(4){right:0;bottom:0;border-left:0;border-top:0}
+    .sc-hud{position:fixed;z-index:1;pointer-events:none;font:600 11px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.12em;color:#bfefff;text-shadow:0 0 8px rgba(0,0,0,.8)}
+    .sc-hud.tl{left:34px;top:30px}.sc-hud.br{right:34px;bottom:34px;text-align:right}
+    .sc-hud .rec{color:#ff5b78;animation:scblink 1.2s steps(2) infinite}.sc-hud b{color:#22d3ee}
+    @keyframes scblink{50%{opacity:.15}}
+    .lg-wrap{z-index:2}
+    .lg-card{background:linear-gradient(145deg,rgba(7,31,50,.80),rgba(4,21,34,.86));-webkit-backdrop-filter:blur(12px) saturate(1.25);backdrop-filter:blur(12px) saturate(1.25);box-shadow:0 30px 90px rgba(0,0,0,.6),0 0 0 1px rgba(34,211,238,.12),inset 0 0 40px rgba(10,216,255,.04)}
+    .lg-copy{text-shadow:0 1px 8px rgba(0,0,0,.9);color:#9fc6d6!important}
+    #lgMsg{margin-bottom:16px}
+    @media(max-width:760px){.sc-hud,.sc-frame{display:none}}
+    @media(prefers-reduced-motion:reduce){.sc-hud .rec{animation:none}}
     [hidden]{display:none!important}
   </style>
 </head>
-<body class="cm-auth">
+<body class="cm-auth cm-scene">
+  <canvas id="cmScene" aria-hidden="true"></canvas>
+  <div class="sc-vignette" aria-hidden="true"></div>
+  <div class="sc-frame" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  <div class="sc-hud tl" aria-hidden="true"><span class="rec">● REC</span> &nbsp;UAV-01 // <b>TRACKING</b> UNIT-01<br>SECTOR DESIERTO · FEED 04</div>
+  <div class="sc-hud br" aria-hidden="true">SPD <b id="scSpd">052</b> km/h &nbsp;·&nbsp; ALT <b id="scAlt">038</b> m<br>CAM <b id="scCam">WIDE</b></div>
   <main class="lg-wrap">
     <section class="cm-card lg-card" aria-labelledby="lgTitle">
-      <a class="cm-brand lg-brand" href="login.html" aria-label="Cosmic Matrix">
+      <a class="cm-brand lg-brand" href="login.html" aria-label="Project Manager">
         <span class="cm-logo"><i class="ti ti-radar-2"></i></span>
-        <span><b>COSMIC MATRIX</b><small>PROJECT CONTROL / ANALYTICS</small></span>
+        <span><b>PROJECT MANAGER</b><small>PROJECT CONTROL / ANALYTICS</small></span>
       </a>
 
       <!-- Paso 1: inicio de sesión -->
@@ -91,6 +114,24 @@
     <div class="lg-copy" style="position:absolute;bottom:14px;left:0;right:0">ACCESO RESTRINGIDO · SOLO PERSONAL AUTORIZADO</div>
   </main>
 
+  <script src="./vendor/three/three.min.js"></script>
+  <script src="./assets/modules/desert-scene.js"></script>
+  <script>
+  // Fondo 3D: si WebGL no está disponible se conserva el degradado de atardecer del lienzo.
+  (function () {
+    try {
+      const scene = window.CMDesertScene.start(document.getElementById('cmScene'));
+      window.cmSceneApi = scene;
+      const CAMS = ['WIDE', 'SIDE-TRK', 'FRONT-LOW', 'AERIAL'], pad = (n, l) => String(n).padStart(l, '0');
+      setInterval(() => {
+        const h = scene.hud();
+        document.getElementById('scSpd').textContent = pad(h.speed, 3);
+        document.getElementById('scAlt').textContent = pad(h.alt, 3);
+        document.getElementById('scCam').textContent = CAMS[h.shot % 4];
+      }, 500);
+    } catch (e) { console.warn('Fondo 3D no disponible:', e && e.message); document.body.classList.add('no-webgl'); }
+  })();
+  </script>
   <script src="./assets/modules/auth.js"></script>
   <script>
   (function () {
