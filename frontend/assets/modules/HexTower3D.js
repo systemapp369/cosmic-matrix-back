@@ -99,7 +99,7 @@ class HexTower3D {
     el.className = 'cm-shell';
     el.innerHTML = `
       <aside class="cm-sidebar">
-        <div class="cm-brand"><div class="cm-brand-mark"><i class="ti ti-hexagon-3d"></i></div><div><strong>PROJECT ADMIN</strong><small>COSMIC MATRIX</small></div></div>
+        <div class="cm-brand"><div class="cm-brand-mark"><i class="ti ti-hexagon-3d"></i></div><div><strong>PROJECT ADMIN</strong><small>PROJECT MANAGER</small></div></div>
         <nav class="cm-nav">
           <a class="active" href="#cm-dashboard"><i class="ti ti-layout-dashboard"></i><span>Dashboard</span></a>
           <a href="#cm-projects-panel"><i class="ti ti-briefcase"></i><span>Proyectos</span></a>
@@ -108,7 +108,7 @@ class HexTower3D {
           <a href="#cm-files"><i class="ti ti-files"></i><span>Archivos</span></a>
           <a href="#cm-settings"><i class="ti ti-settings"></i><span>Configuración</span></a>
         </nav>
-        <div class="cm-sidebar-footer"><strong>COSMIC MATRIX</strong><br>Gestión de proyectos con visión de futuro<br><br>v3.5.0</div>
+        <div class="cm-sidebar-footer"><strong>PROJECT MANAGER</strong><br>Gestión de proyectos con visión de futuro<br><br>v3.5.0</div>
       </aside>
       <main class="cm-main">
         <header class="cm-topbar"><div class="cm-search"><i class="ti ti-search"></i><input id="cm-search-input" placeholder="Buscar proyecto, responsable, etiqueta..." autocomplete="off"></div><div class="cm-top-actions"><button class="cm-icon-btn" onclick="monitor.toggleTheme()" title="Tema"><i class="ti ti-sun"></i></button><button class="cm-icon-btn position-relative" title="Notificaciones"><i class="ti ti-bell"></i><span class="position-absolute top-0 end-0 badge rounded-pill bg-danger" style="font-size:8px">3</span></button><div class="cm-avatar">CA</div><div class="cm-profile"><div>Carlos Alberto<small>Administrador</small></div><i class="ti ti-chevron-down"></i></div></div></header>

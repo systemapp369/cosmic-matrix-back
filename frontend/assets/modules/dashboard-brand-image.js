@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 const BRAND_IMAGE='./Images/dashboard4.webp?v=20260924-1';
-function brand(){const f=document.querySelector('#cm-dashboard-v2 .cm-sidebar-footer');if(!f)return;f.innerHTML=`<div class="cm-sidebar-brand-image-wrap"><img class="cm-sidebar-brand-image" src="${BRAND_IMAGE}" alt="Cosmic Matrix"></div><div class="cm-sidebar-version">v3.5.0</div>`;}
+function brand(){const f=document.querySelector('#cm-dashboard-v2 .cm-sidebar-footer');if(!f)return;f.innerHTML=`<div class="cm-sidebar-brand-image-wrap"><img class="cm-sidebar-brand-image" src="${BRAND_IMAGE}" alt="Project Manager"></div><div class="cm-sidebar-version">v3.5.0</div>`;}
 function repairModals(){['crudModal','confirmModal','reportModal','criticalityModal'].forEach(id=>{const el=document.getElementById(id);if(el&&el.parentElement!==document.body)document.body.appendChild(el);});}
 function styles(){if(document.getElementById('cm-editor-final-fix'))return;const s=document.createElement('style');s.id='cm-editor-final-fix';s.textContent=`
 #cm-dashboard-v2 .cm-sidebar-footer{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;padding:12px 18px 18px;overflow:hidden;color:#6f9ab7}

@@ -76,7 +76,7 @@ class InfrastructureMonitor {
             // --- USO DEL MANAGER ---
             this.projects = await this.apiClient.getAllProjects();
             this.renderDashboard();
-            this.showToast("Sistema sincronizado con Cosmic_Matrix");
+            this.showToast("Sistema sincronizado con Project Manager");
         } catch (err) {
             console.error("Fallo al sincronizar datos:", err);
             this.showToast(`Error de conexión: ${err.message || 'Servidor remoto inalcanzable'}`);
