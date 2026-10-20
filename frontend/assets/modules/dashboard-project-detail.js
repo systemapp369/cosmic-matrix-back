@@ -643,6 +643,12 @@
         const b = document.createElement('button'); b.className = 'cm-head-btn'; b.id = 'cmx-btn-users'; b.type = 'button'; b.innerHTML = '<i class="ti ti-users-group"></i> Usuarios';
         b.addEventListener('click', () => { location.href = 'usuarios.html'; }); radical.appendChild(b);
       }
+      if (window.CMJourneyScene) {
+        const sb = document.createElement('button'); sb.className = 'cm-head-btn'; sb.id = 'cmx-btn-scene'; sb.type = 'button';
+        const paint = () => { const on = CMJourneyScene.isOn(); sb.title = on ? 'Apagar el fondo 3D' : 'Encender el fondo 3D'; sb.setAttribute('aria-pressed', on ? 'true' : 'false'); sb.innerHTML = `<i class="ti ${on ? 'ti-movie' : 'ti-movie-off'}"></i> Fondo 3D`; };
+        sb.addEventListener('click', () => { CMJourneyScene.toggle(); paint(); });
+        document.addEventListener('cm:scene-changed', paint); paint(); radical.appendChild(sb);
+      }
       const o = document.createElement('button'); o.className = 'cm-head-btn'; o.id = 'cmx-btn-logout'; o.type = 'button'; o.title = 'Cerrar sesión'; o.innerHTML = '<i class="ti ti-logout"></i> Salir';
       o.addEventListener('click', () => cmAuth.logout('out')); radical.appendChild(o);
     }
