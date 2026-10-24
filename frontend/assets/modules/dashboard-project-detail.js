@@ -643,11 +643,24 @@
         const b = document.createElement('button'); b.className = 'cm-head-btn'; b.id = 'cmx-btn-users'; b.type = 'button'; b.innerHTML = '<i class="ti ti-users-group"></i> Usuarios';
         b.addEventListener('click', () => { location.href = 'usuarios.html'; }); radical.appendChild(b);
       }
-      if (window.CMJourneyScene) {
-        const sb = document.createElement('button'); sb.className = 'cm-head-btn'; sb.id = 'cmx-btn-scene'; sb.type = 'button';
-        const paint = () => { const on = CMJourneyScene.isOn(); sb.title = on ? 'Apagar el fondo 3D' : 'Encender el fondo 3D'; sb.setAttribute('aria-pressed', on ? 'true' : 'false'); sb.innerHTML = `<i class="ti ${on ? 'ti-movie' : 'ti-movie-off'}"></i> Fondo 3D`; };
-        sb.addEventListener('click', () => { CMJourneyScene.toggle(); paint(); });
-        document.addEventListener('cm:scene-changed', paint); paint(); radical.appendChild(sb);
+      if (window.CMScenes) {
+        const wrap = document.createElement('div'); wrap.className = 'cmx-scenewrap'; wrap.id = 'cmx-scene-wrap';
+        const sb = document.createElement('button'); sb.className = 'cm-head-btn'; sb.id = 'cmx-btn-scene'; sb.type = 'button'; sb.setAttribute('aria-haspopup', 'menu'); sb.setAttribute('aria-expanded', 'false');
+        const menu = document.createElement('div'); menu.className = 'cmx-scenemenu'; menu.id = 'cmx-scene-menu'; menu.setAttribute('role', 'menu'); menu.hidden = true;
+        const close = () => { menu.hidden = true; sb.setAttribute('aria-expanded', 'false'); };
+        const paint = () => {
+          const cur = CMScenes.current(), list = CMScenes.list(), now = list.find(s => s.id === cur);
+          sb.innerHTML = `<i class="ti ${now ? now.icon : 'ti-movie-off'}"></i> Fondo 3D <i class="ti ti-chevron-down" style="font-size:12px;opacity:.7"></i>`;
+          sb.title = now ? `Fondo 3D: ${now.label}` : 'Fondo 3D apagado';
+          menu.innerHTML = '<div class="cmx-sm-title">Fondo 3D</div>' + list.map(s => `<button type="button" role="menuitemradio" aria-checked="${s.id === cur}" class="cmx-sm-item${s.id === cur ? ' on' : ''}" data-id="${esc(s.id)}"><i class="ti ${esc(s.icon)}"></i><span><b>${esc(s.label)}</b><small>${esc(s.desc)}</small></span><i class="ti ti-check cmx-sm-ck"></i></button>`).join('')
+            + `<button type="button" role="menuitemradio" aria-checked="${!now}" class="cmx-sm-item${!now ? ' on' : ''}" data-id="off"><i class="ti ti-movie-off"></i><span><b>Sin fondo</b><small>Dashboard clásico, más ligero</small></span><i class="ti ti-check cmx-sm-ck"></i></button>`;
+        };
+        sb.addEventListener('click', e => { e.stopPropagation(); const open = menu.hidden; menu.hidden = !open; sb.setAttribute('aria-expanded', String(open)); if (open) { const f = menu.querySelector('.on') || menu.querySelector('.cmx-sm-item'); if (f) f.focus(); } });
+        menu.addEventListener('click', e => { const it = e.target.closest('[data-id]'); if (!it) return; CMScenes.select(it.dataset.id); close(); sb.focus(); });
+        document.addEventListener('click', e => { if (!wrap.contains(e.target)) close(); });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape' && !menu.hidden) { close(); sb.focus(); } });
+        document.addEventListener('cm:scene-changed', paint); document.addEventListener('cm:scene-registered', paint);
+        paint(); wrap.append(sb, menu); radical.appendChild(wrap);
       }
       const o = document.createElement('button'); o.className = 'cm-head-btn'; o.id = 'cmx-btn-logout'; o.type = 'button'; o.title = 'Cerrar sesión'; o.innerHTML = '<i class="ti ti-logout"></i> Salir';
       o.addEventListener('click', () => cmAuth.logout('out')); radical.appendChild(o);
@@ -818,6 +831,18 @@
 .cmx-chip{display:inline-flex;align-items:center;gap:7px;max-width:100%;padding:6px 6px 6px 10px;border:1px solid rgba(34,211,238,.22);border-radius:99px;background:#061a2a;color:#cfeaf5;font:600 12px/1 Inter,sans-serif}
 .cmx-chip-name{min-width:0;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cmx-chip small{color:#6f9caf;font-weight:600}
 .cmx-chip button{display:flex;align-items:center;justify-content:center;width:22px;height:22px;border:0;border-radius:50%;background:#12384e;color:#bfe6f4;cursor:pointer;padding:0}.cmx-chip button:hover{background:#ff3e68;color:#fff}
+.cmx-scenewrap{position:relative;display:inline-block}
+.cmx-scenemenu{position:absolute;right:0;top:calc(100% + 8px);z-index:1200;min-width:290px;max-width:min(360px,calc(100vw - 24px));padding:8px;border:1px solid #124c69;border-radius:12px;background:rgba(4,20,33,.97);box-shadow:0 18px 50px rgba(0,0,0,.6);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.cmx-scenemenu[hidden]{display:none}
+.cmx-sm-title{padding:6px 10px 8px;color:#78aabd;font:700 10px/1 Inter,sans-serif;letter-spacing:.14em;text-transform:uppercase}
+.cmx-sm-item{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border:1px solid transparent;border-radius:9px;background:transparent;color:#eaf7ff;text-align:left;cursor:pointer}
+.cmx-sm-item:hover,.cmx-sm-item:focus-visible{background:#0b2d44;border-color:#1b526a;outline:0}
+.cmx-sm-item.on{background:rgba(21,155,231,.14);border-color:#1e7fb0}
+.cmx-sm-item>i:first-child{font-size:22px;color:#22d3ee;flex:none}
+.cmx-sm-item span{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.cmx-sm-item b{font:700 13px/1.2 Inter,sans-serif}.cmx-sm-item small{color:#7fa6bd;font:500 11.5px/1.3 Inter,sans-serif}
+.cmx-sm-ck{color:#22d3a7;opacity:0;flex:none}.cmx-sm-item.on .cmx-sm-ck{opacity:1}
+@media(max-width:640px){.cmx-scenemenu{position:fixed;left:12px;right:12px;top:auto;bottom:12px;max-width:none}}
 .cmx-userchip{display:inline-flex;align-items:center;gap:9px;height:40px;padding:0 12px 0 6px;border:1px solid #124c69;border-radius:99px;background:#061a2a;color:#eaf7ff;white-space:nowrap}
 .cmx-av{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;color:#04121d;flex:none}
 .cmx-un{display:flex;flex-direction:column;line-height:1.1}.cmx-un b{font-size:12px;max-width:140px;overflow:hidden;text-overflow:ellipsis}.cmx-un small{font-size:9.5px;color:#78aabd;letter-spacing:.06em;text-transform:uppercase;margin-top:2px}

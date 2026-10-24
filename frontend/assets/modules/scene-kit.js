@@ -32,12 +32,13 @@
       s.scale.set(size, size, 1); s.position.set(x, y, z); if (parent) parent.add(s); return s;
     };
 
-    const labelSprite = (l1, l2) => {
+    const labelSprite = (l1, l2, color) => {
+      const col = color || '#22d3ee';
       const c = document.createElement('canvas'); c.width = 320; c.height = 96;
       const g = c.getContext('2d');
       g.fillStyle = 'rgba(4,22,36,.72)'; g.fillRect(0, 0, 320, 96);
-      g.strokeStyle = '#22d3ee'; g.lineWidth = 3; g.strokeRect(2, 2, 316, 92);
-      g.fillStyle = '#22d3ee'; g.font = 'bold 34px monospace'; g.fillText(l1, 16, 40);
+      g.strokeStyle = col; g.lineWidth = 3; g.strokeRect(2, 2, 316, 92);
+      g.fillStyle = col; g.font = 'bold 34px monospace'; g.fillText(l1, 16, 40);
       g.fillStyle = '#bfefff'; g.font = '24px monospace'; g.fillText(l2, 16, 78);
       const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, fog: false }));
       s.scale.set(6.4, 1.92, 1); return s;
