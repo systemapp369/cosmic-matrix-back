@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Administración de usuarios · Project Manager</title>
+  <meta name="robots" content="noindex">
+  <style>html.cm-auth-pending{visibility:hidden}</style>
+  <script>document.documentElement.classList.add('cm-auth-pending')</script>
+  <link rel="stylesheet" href="./vendor/tabler-icons/tabler-icons.min.css">
+  <link rel="stylesheet" href="./assets/css/auth.css">
+  <link rel="icon" href="Images/favicon.ico" type="image/x-icon">
+  <style>
+    .us-top{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:max(14px,env(safe-area-inset-top)) clamp(14px,3vw,28px) 14px;border-bottom:1px solid var(--line2);background:rgba(2,11,20,.72);backdrop-filter:blur(8px);position:sticky;top:0;z-index:20}
+    .us-top-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .us-chip{display:inline-flex;align-items:center;gap:9px;padding:6px 12px 6px 8px;border:1px solid var(--line2);border-radius:99px;background:#061a2a;font-size:13px}
+    .us-av{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;color:#04121d;background:var(--c,var(--cyan));flex:none}
+    .us-main{max-width:1240px;margin:0 auto;padding:clamp(16px,3vw,30px) clamp(14px,3vw,28px) 90px;position:relative}
+    .us-h{margin:0;font-size:clamp(21px,4vw,28px);font-weight:800}.us-sub{margin:5px 0 0;color:var(--muted);font-size:13.5px}
+    .us-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:22px 0 18px}
+    .us-stat{padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(145deg,#071f32,#041522)}
+    .us-stat b{display:block;font-size:26px;font-weight:900;line-height:1}.us-stat span{display:block;margin-top:6px;color:var(--muted);font-size:12px}
+    .us-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+    .us-bar .cm-field{flex:1 1 240px}.us-bar select{flex:0 0 180px;height:50px}
+    .us-list{display:flex;flex-direction:column;gap:10px}
+    .us-row{display:grid;grid-template-columns:minmax(200px,1.2fr) 150px minmax(180px,2fr) 150px 140px auto;gap:14px;align-items:center;padding:14px 16px;border:1px solid var(--line);border-left:4px solid var(--c);border-radius:12px;background:linear-gradient(145deg,#071f32,#041522)}
+    .us-row.off{opacity:.62}
+    .us-who{display:flex;align-items:center;gap:12px;min-width:0}.us-who .us-av{width:40px;height:40px;font-size:15px}
+    .us-who b{display:block;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.us-who small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+    .us-role{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border:1px solid var(--c);border-radius:99px;color:var(--c);font-size:11px;font-weight:800;letter-spacing:.07em}
+    .us-attrs{display:flex;flex-wrap:wrap;gap:5px}.us-attr{padding:3px 8px;border-radius:6px;background:#0a2c42;border:1px solid #14506c;color:#b9e2f7;font-size:11px;font-weight:600}
+    .us-st{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600}.us-st i{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+    .us-st.off i{background:#6c8795;box-shadow:none}.us-st.warn i{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+    .us-last{color:var(--muted);font-size:12px;line-height:1.35}
+    .us-acts{display:flex;gap:8px;justify-content:flex-end}
+    .us-empty{padding:34px 16px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:12px}
+    .us-mlabel{display:none;color:#6f9caf;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+    @media(max-width:1020px){
+      .us-row{grid-template-columns:1fr 1fr;gap:12px 14px}.us-who{grid-column:1/-1}.us-attrs-c{grid-column:1/-1}.us-acts{grid-column:1/-1;justify-content:stretch}.us-acts .cm-btn{flex:1}.us-mlabel{display:block}
+      .us-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+    @media(max-width:560px){.us-bar select{flex:1 1 100%}.us-bar .cm-btn{flex:1 1 100%}.us-top .cm-brand small{display:none}.us-chip .nm{display:none}}
+    /* diálogos */
+    dialog.us-dlg{width:min(680px,calc(100vw - 20px));max-height:calc(100dvh - 20px);padding:0;border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,#071c2d,#061421);color:var(--text);box-shadow:0 30px 90px rgba(0,0,0,.65)}
+    dialog.us-dlg::backdrop{background:rgba(1,6,12,.72);backdrop-filter:blur(3px)}
+    .us-dh{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 22px;border-bottom:1px solid var(--line2);position:relative}
+    .us-dh:before{content:"";position:absolute;left:0;top:0;width:120px;height:3px;background:var(--cyan);box-shadow:0 0 14px rgba(34,211,238,.55)}
+    .us-dh h2{margin:0;font-size:20px;font-weight:800}.us-dh small{display:block;color:var(--cyan);font-size:10px;letter-spacing:.18em;font-weight:700;margin-bottom:5px}
+    .us-x{width:36px;height:36px;border:0;border-radius:8px;background:transparent;color:#9cc7d8;font-size:20px;cursor:pointer}.us-x:hover{background:#0b2d44;color:#fff}
+    .us-db{padding:20px 22px;overflow-y:auto;max-height:calc(100dvh - 190px);display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .us-db .full{grid-column:1/-1}
+    .us-df{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;padding:14px 22px;border-top:1px solid var(--line2)}
+    .us-hint{margin:6px 0 0;color:#6f9caf;font-size:12px;line-height:1.4}
+    .us-pw{display:flex;gap:8px}.us-pw .cm-field{flex:1;min-width:0}
+    .us-switch{display:flex;align-items:center;gap:10px;height:50px;padding:0 14px;border:1px solid #1b526a;border-radius:10px;background:#061a2a;cursor:pointer}
+    .us-switch input{width:20px;height:20px;accent-color:var(--cyan)}
+    .us-perms{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .us-perm{display:flex;gap:10px;align-items:flex-start;padding:11px 12px;border:1px solid #14506c;border-radius:10px;background:#061a2a;cursor:pointer}
+    .us-perm input{width:18px;height:18px;margin-top:2px;accent-color:var(--cyan);flex:none}.us-perm b{display:block;font-size:13px}.us-perm span{display:block;color:#7fa6bd;font-size:11.5px;line-height:1.35;margin-top:2px}
+    .us-perm.locked{opacity:.65;cursor:not-allowed;background:#05121f}
+    @media(max-width:620px){.us-db{grid-template-columns:1fr;padding:16px}.us-perms{grid-template-columns:1fr}.us-df .cm-btn{flex:1}.us-dh{padding:16px}}
+  </style>
+</head>
+<body class="cm-auth">
+  <header class="us-top">
+    <a class="cm-brand" href="index.html"><span class="cm-logo"><i class="ti ti-radar-2"></i></span><span><b>PROJECT MANAGER</b><small>PROJECT CONTROL / ANALYTICS</small></span></a>
+    <div class="us-top-actions">
+      <span class="us-chip" id="usMe"><span class="us-av">?</span><span class="nm">…</span></span>
+      <a class="cm-btn sm" href="index.html"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
+      <button class="cm-btn sm ghost-danger" id="usLogout" type="button"><i class="ti ti-logout"></i> Salir</button>
+    </div>
+  </header>
+
+  <main class="us-main">
+    <h1 class="us-h"><i class="ti ti-users-group" style="color:var(--cyan)"></i> Administración de usuarios</h1>
+    <p class="us-sub">Da de alta, modifica o elimina usuarios y asigna o quita sus atributos de acceso.</p>
+
+    <section class="us-stats" id="usStats" aria-label="Resumen"></section>
+
+    <div class="us-bar">
+      <div class="cm-field"><i class="ti ti-search lead"></i><input id="usSearch" class="cm-input" type="search" placeholder="Buscar por nombre o usuario…" autocomplete="off"></div>
+      <select id="usRoleFilter" class="cm-input" aria-label="Filtrar por rol"><option value="">Todos los roles</option><option value="admin">Administradores</option><option value="editor">Edición</option><option value="viewer">Consulta</option></select>
+      <button class="cm-btn primary" id="usNew" type="button"><i class="ti ti-user-plus"></i> Nuevo usuario</button>
+    </div>
+    <div id="usErr" class="cm-alert err" hidden></div>
+    <section class="us-list" id="usList" aria-live="polite"><div class="us-empty">Cargando usuarios…</div></section>
+  </main>
+
+  <!-- Alta / edición -->
+  <dialog class="us-dlg" id="userDlg" aria-labelledby="udTitle">
+    <form method="dialog" id="userForm" novalidate>
+      <div class="us-dh"><div><small id="udKicker">NUEVO USUARIO</small><h2 id="udTitle">Alta de usuario</h2></div><button class="us-x" type="button" data-close aria-label="Cerrar"><i class="ti ti-x"></i></button></div>
+      <div class="us-db">
+        <div><label class="cm-label" for="uUser">Usuario</label><input id="uUser" class="cm-input" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="32" placeholder="nombre.apellido"><p class="us-hint">3-32 caracteres: letras, números, punto, guion o guion bajo.</p></div>
+        <div><label class="cm-label" for="uName">Nombre completo</label><input id="uName" class="cm-input" autocomplete="off" maxlength="100" placeholder="Nombre y apellido"></div>
+        <div><label class="cm-label" for="uRole">Rol</label><select id="uRole" class="cm-input"><option value="viewer">Consulta</option><option value="editor">Edición</option><option value="admin">Administrador</option></select><p class="us-hint" id="uRoleHint"></p></div>
+        <div><label class="cm-label">Estado</label><label class="us-switch"><input type="checkbox" id="uActive" checked> <span id="uActiveTxt">Cuenta activa</span></label><p class="us-hint">Una cuenta desactivada no puede ingresar.</p></div>
+        <div class="full">
+          <label class="cm-label" for="uPass" id="uPassLbl">Contraseña temporal</label>
+          <div class="us-pw"><div class="cm-field"><i class="ti ti-key lead"></i><input id="uPass" class="cm-input" type="text" autocomplete="new-password" spellcheck="false" maxlength="200" placeholder="Mínimo 10 caracteres"></div>
+            <button type="button" class="cm-btn icon" id="uGen" title="Generar contraseña segura"><i class="ti ti-wand"></i></button>
+            <button type="button" class="cm-btn icon" id="uCopy" title="Copiar contraseña"><i class="ti ti-copy"></i></button></div>
+          <label class="cm-label" style="margin-top:10px;text-transform:none;letter-spacing:0;font-weight:600;display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" id="uMust" checked style="width:17px;height:17px;accent-color:var(--cyan)"> Pedir que la cambie en su próximo ingreso</label>
+          <p class="us-hint" id="uPassHint"></p>
+        </div>
+        <div class="full">
+          <label class="cm-label">Atributos asignados</label>
+          <div class="us-perms" id="uPerms"></div>
+          <p class="us-hint">El rol define los atributos iniciales; puedes marcar o desmarcar cada uno. El administrador siempre tiene todos.</p>
+        </div>
+        <div id="udErr" class="cm-alert err full" role="alert" hidden></div>
+      </div>
+      <div class="us-df"><button class="cm-btn" type="button" data-close>Cancelar</button><button class="cm-btn primary" type="submit" id="udSave"><i class="ti ti-device-floppy"></i> Guardar</button></div>
+    </form>
+  </dialog>
+
+  <!-- Confirmar eliminación -->
+  <dialog class="us-dlg" id="delDlg" style="width:min(460px,calc(100vw - 20px))" aria-labelledby="dlTitle">
+    <div class="us-dh"><div><small style="color:var(--red)">ACCIÓN IRREVERSIBLE</small><h2 id="dlTitle">Eliminar usuario</h2></div><button class="us-x" type="button" data-close aria-label="Cerrar"><i class="ti ti-x"></i></button></div>
+    <div class="us-db" style="display:block"><p style="margin:0;line-height:1.5" id="dlText"></p><div id="dlErr" class="cm-alert err" style="margin-top:14px" hidden></div></div>
+    <div class="us-df"><button class="cm-btn" type="button" data-close>Cancelar</button><button class="cm-btn danger" type="button" id="dlYes"><i class="ti ti-trash"></i> Sí, eliminar</button></div>
+  </dialog>
+
+  <div class="cm-toast" id="toast" role="status"></div>
+
+  <script src="./assets/modules/auth.js"></script>
+  <script>cmAuth.requireLogin({ permission: 'usuarios' });</script>
+  <script>
+  (function () {
+    'use strict';
+    const A = window.cmAuth, API = A.API_BASE;
+    const $ = id => document.getElementById(id);
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[c]));
+    const ROLE = { admin: { label: 'ADMINISTRADOR', c: '#a45cff', hint: 'Acceso total, incluida la administración de usuarios.' }, editor: { label: 'EDICIÓN', c: '#159be7', hint: 'Crea y modifica proyectos; no elimina por defecto.' }, viewer: { label: 'CONSULTA', c: '#22d3a7', hint: 'Solo consulta: ve proyectos, detalle y reportes.' } };
+    const PERMS = [
+      ['ver', 'Ver', 'Consultar dashboard, detalle de proyectos y bitácora. Siempre activo.'],
+      ['crear', 'Crear', 'Dar de alta proyectos nuevos.'],
+      ['editar', 'Editar', 'Modificar proyectos, registrar avances y anexar archivos.'],
+      ['eliminar', 'Eliminar', 'Eliminar proyectos, avances y archivos.'],
+      ['exportar', 'Exportar', 'Descargar Excel y reporte PDF.'],
+      ['usuarios', 'Usuarios', 'Administrar usuarios y sus atributos.']
+    ];
+    const PRESETS = { admin: PERMS.map(p => p[0]), editor: ['ver', 'crear', 'editar', 'exportar'], viewer: ['ver', 'exportar'] };
+    let users = [], editing = null;
+
+    const toast = m => { const t = $('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 3200); };
+    const initials = n => String(n || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
+    const fmt = v => v ? new Date(v).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' }) : 'Nunca';
+    const me = () => A.getUser() || {};
+
+    async function api(path, opts) {
+      const res = await fetch(API + path, Object.assign({ headers: { 'Content-Type': 'application/json' }, cache: 'no-store' }, opts));
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { const e = new Error(data.error || 'Error ' + res.status); e.status = res.status; throw e; }
+      return data;
+    }
+
+    function renderMe() {
+      const u = me(); const r = ROLE[u.role] || ROLE.viewer;
+      $('usMe').innerHTML = `<span class="us-av" style="--c:${r.c}">${esc(initials(u.name))}</span><span class="nm">${esc(u.name || '')}</span>`;
+    }
+
+    function renderStats() {
+      const n = r => users.filter(u => u.role === r).length;
+      const cards = [[users.length, 'Usuarios'], [users.filter(u => u.active).length, 'Activos'], [n('admin'), 'Administradores'], [n('editor') + n('viewer'), 'Edición y consulta']];
+      $('usStats').innerHTML = cards.map(c => `<div class="us-stat"><b>${c[0]}</b><span>${c[1]}</span></div>`).join('');
+    }
+
+    function render() {
+      renderStats();
+      const q = $('usSearch').value.trim().toLowerCase(), rf = $('usRoleFilter').value;
+      const list = users.filter(u => (!rf || u.role === rf) && (!q || `${u.name} ${u.username}`.toLowerCase().includes(q)));
+      if (!list.length) { $('usList').innerHTML = '<div class="us-empty"><i class="ti ti-user-search" style="font-size:30px;display:block;margin-bottom:8px"></i>No hay usuarios que coincidan.</div>'; return; }
+      $('usList').innerHTML = list.map(u => {
+        const r = ROLE[u.role] || ROLE.viewer, self = u.id === me().id;
+        const st = !u.active ? '<span class="us-st off"><i></i>Desactivada</span>' : u.mustChangePassword ? '<span class="us-st warn"><i></i>Cambio de contraseña pendiente</span>' : '<span class="us-st"><i></i>Activa</span>';
+        return `<article class="us-row${u.active ? '' : ' off'}" style="--c:${r.c}" data-id="${esc(u.id)}">
+          <div class="us-who"><span class="us-av" style="--c:${r.c}">${esc(initials(u.name))}</span><div style="min-width:0"><b title="${esc(u.name)}">${esc(u.name)}${self ? ' <small style="display:inline;color:var(--cyan)">(tú)</small>' : ''}</b><small>@${esc(u.username)}</small></div></div>
+          <div><div class="us-mlabel">Rol</div><span class="us-role">${r.label}</span></div>
+          <div class="us-attrs-c"><div class="us-mlabel">Atributos</div><div class="us-attrs">${u.permissions.map(p => `<span class="us-attr">${esc((PERMS.find(x => x[0] === p) || [p, p])[1])}</span>`).join('')}</div></div>
+          <div><div class="us-mlabel">Estado</div>${st}</div>
+          <div class="us-last"><div class="us-mlabel">Último acceso</div>${esc(fmt(u.lastLoginAt))}</div>
+          <div class="us-acts"><button class="cm-btn sm" data-edit title="Editar"><i class="ti ti-edit"></i> Editar</button><button class="cm-btn sm ghost-danger" data-del title="${self ? 'No puedes eliminar tu propia cuenta' : 'Eliminar'}" ${self ? 'disabled' : ''}><i class="ti ti-trash"></i> Eliminar</button></div>
+        </article>`;
+      }).join('');
+    }
+
+    async function load() {
+      $('usErr').hidden = true;
+      try { users = await api('/users'); render(); }
+      catch (e) {
+        if (e.status === 403) return location.replace('index.html');
+        $('usList').innerHTML = ''; $('usErr').innerHTML = '<i class="ti ti-alert-circle"></i><span></span>'; $('usErr').lastChild.textContent = 'No se pudieron cargar los usuarios: ' + e.message; $('usErr').hidden = false;
+      }
+    }
+
+    /* ---------- diálogo alta / edición ---------- */
+    function buildPerms() {
+      $('uPerms').innerHTML = PERMS.map(p => `<label class="us-perm" data-p="${p[0]}"><input type="checkbox" value="${p[0]}"><div><b>${p[1]}</b><span>${p[2]}</span></div></label>`).join('');
+    }
+    function applyRole(resetPerms) {
+      const role = $('uRole').value; $('uRoleHint').textContent = ROLE[role].hint;
+      if (resetPerms) document.querySelectorAll('#uPerms input').forEach(i => { i.checked = PRESETS[role].includes(i.value); });
+      document.querySelectorAll('#uPerms .us-perm').forEach(l => {
+        const i = l.querySelector('input'), lock = role === 'admin' || i.value === 'ver';
+        if (role === 'admin') i.checked = true; if (i.value === 'ver') i.checked = true;
+        i.disabled = lock; l.classList.toggle('locked', lock);
+      });
+    }
+    function genPassword() {
+      const alpha = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789', buf = new Uint32Array(14); crypto.getRandomValues(buf);
+      const s = Array.from(buf, v => alpha[v % alpha.length]).join(''); return s.slice(0, 4) + '-' + s.slice(4, 8) + '-' + s.slice(8, 12) + '-' + s.slice(12);
+    }
+    function openUser(u) {
+      editing = u || null; $('udErr').hidden = true;
+      const self = u && u.id === me().id;
+      $('udKicker').textContent = u ? 'EDITAR USUARIO' : 'NUEVO USUARIO'; $('udTitle').textContent = u ? u.name : 'Alta de usuario';
+      $('uUser').value = u ? u.username : ''; $('uName').value = u ? u.name : '';
+      $('uRole').value = u ? u.role : 'viewer'; $('uRole').disabled = !!self;
+      $('uActive').checked = u ? u.active : true; $('uActive').disabled = !!self;
+      $('uPass').value = ''; $('uMust').checked = true;
+      $('uPassLbl').textContent = u ? 'Nueva contraseña (opcional)' : 'Contraseña temporal';
+      $('uPassHint').textContent = u ? 'Déjala vacía para conservar la actual. Al restablecerla, las sesiones abiertas de este usuario se cierran.' : 'Compártela con el usuario por un medio seguro; podrá cambiarla al ingresar.';
+      applyRole(true);
+      if (u) document.querySelectorAll('#uPerms input').forEach(i => { i.checked = u.role === 'admin' || u.permissions.includes(i.value) || i.value === 'ver'; });
+      $('userDlg').showModal(); (u ? $('uName') : $('uUser')).focus();
+    }
+    async function saveUser(e) {
+      e.preventDefault(); const err = $('udErr'); err.hidden = true;
+      const showErr = m => { err.innerHTML = '<i class="ti ti-alert-circle"></i><span></span>'; err.lastChild.textContent = m; err.hidden = false; };
+      const body = { username: $('uUser').value.trim(), name: $('uName').value.trim(), role: $('uRole').value, active: $('uActive').checked,
+        permissions: [...document.querySelectorAll('#uPerms input:checked')].map(i => i.value) };
+      const pw = $('uPass').value;
+      if (!body.username || !body.name) return showErr('Completa el usuario y el nombre.');
+      if (!editing && pw.length < 10) return showErr('La contraseña temporal debe tener al menos 10 caracteres.');
+      if (editing && pw && pw.length < 10) return showErr('La nueva contraseña debe tener al menos 10 caracteres.');
+      if (pw) { body.password = pw; body.mustChange = $('uMust').checked; }
+      const btn = $('udSave'); btn.disabled = true;
+      try {
+        if (editing) await api('/users/' + encodeURIComponent(editing.id), { method: 'PUT', body: JSON.stringify(body) });
+        else await api('/users', { method: 'POST', body: JSON.stringify(body) });
+        $('userDlg').close(); toast(editing ? 'Usuario actualizado' : 'Usuario creado'); await load();
+      } catch (ex) { showErr(ex.message); } finally { btn.disabled = false; }
+    }
+
+    /* ---------- eliminar ---------- */
+    let toDelete = null;
+    function askDelete(u) { toDelete = u; $('dlErr').hidden = true; $('dlText').innerHTML = `¿Eliminar al usuario <b>${esc(u.name)}</b> (@${esc(u.username)})? Perderá el acceso de inmediato y esta acción no se puede deshacer.`; $('delDlg').showModal(); }
+    async function doDelete() {
+      const btn = $('dlYes'); btn.disabled = true;
+      try { await api('/users/' + encodeURIComponent(toDelete.id), { method: 'DELETE' }); $('delDlg').close(); toast('Usuario eliminado'); await load(); }
+      catch (ex) { $('dlErr').innerHTML = '<i class="ti ti-alert-circle"></i><span></span>'; $('dlErr').lastChild.textContent = ex.message; $('dlErr').hidden = false; }
+      finally { btn.disabled = false; }
+    }
+
+    /* ---------- eventos ---------- */
+    buildPerms(); renderMe();
+    document.addEventListener('cm:auth-ready', renderMe);
+    $('usNew').addEventListener('click', () => openUser(null));
+    $('usSearch').addEventListener('input', render); $('usRoleFilter').addEventListener('change', render);
+    $('usList').addEventListener('click', e => {
+      const row = e.target.closest('.us-row'); if (!row) return; const u = users.find(x => x.id === row.dataset.id); if (!u) return;
+      if (e.target.closest('[data-edit]')) openUser(u); else if (e.target.closest('[data-del]')) askDelete(u);
+    });
+    $('uRole').addEventListener('change', () => applyRole(true));
+    $('uActive').addEventListener('change', () => { $('uActiveTxt').textContent = $('uActive').checked ? 'Cuenta activa' : 'Cuenta desactivada'; });
+    $('uGen').addEventListener('click', () => { $('uPass').value = genPassword(); });
+    $('uCopy').addEventListener('click', async () => { if (!$('uPass').value) return; try { await navigator.clipboard.writeText($('uPass').value); toast('Contraseña copiada'); } catch (e) { $('uPass').select(); toast('Selecciona y copia manualmente'); } });
+    $('userForm').addEventListener('submit', saveUser);
+    $('dlYes').addEventListener('click', doDelete);
+    document.querySelectorAll('dialog [data-close]').forEach(b => b.addEventListener('click', () => b.closest('dialog').close()));
+    document.querySelectorAll('dialog').forEach(d => d.addEventListener('click', e => { if (e.target === d) d.close(); }));
+    $('usLogout').addEventListener('click', () => A.logout('out'));
+    load();
+  })();
+  </script>
+</body>
+</html>

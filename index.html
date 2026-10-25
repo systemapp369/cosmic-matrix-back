@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Manager</title>
+    <link href="./vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="./vendor/tabler-icons/tabler-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./assets/css/styles.css">
+    <!--  <link rel="stylesheet" href="./assets/css/dashboard-towers-v4.css?v=20260925-2">  -->
+    <link rel="icon" href="Images/favicon.ico" type="image/x-icon">
+    <style>html.cm-auth-pending{visibility:hidden}</style>
+    <script>document.documentElement.classList.add('cm-auth-pending')</script>
+    <script src="./assets/modules/auth.js"></script>
+    <script>cmAuth.requireLogin()</script>
+    <script src="./vendor/echarts/echarts.js"></script>
+    <script src="./vendor/xlsx/js/xlsx.full.min.js"></script>
+    <script src="./vendor/supabase/supabase.js"></script>
+    <script src="./vendor/html2canvas/html2canvas.min.js"></script>
+    <script src="./vendor/jspdf/jspdf.umd.min.js"></script>
+    <script src="./vendor/three/three.min.js"></script>
+    <script src="./assets/modules/scene-kit.js"></script>
+    <script src="./assets/modules/scene-manager.js"></script>
+    <script src="./assets/modules/journey-scene.js"></script>
+    <script src="./assets/modules/ocean-scene.js"></script>
+    <script src="./assets/modules/FetchManager.js"></script>
+    <script src="./assets/modules/StorageManager.js"></script>
+    <script src="./assets/modules/Background3D.js"></script>
+    <script src="./assets/modules/GlassRing3D.js"></script>
+    <script src="./assets/modules/HexTower3D.js"></script>
+    <script src="./assets/modules/dashboard-compat.js"></script>
+<style id="cm-modals-responsive">
+/* =====================================================================
+   MODALES (Proyecto / Bitácora) — una sola fuente de estilos, 100% fluida.
+   Sin nth-of-type: cada campo se ubica por su clase. Se adapta a móvil,
+   tablet, laptop y pantallas grandes (incluye teléfonos en horizontal).
+   ===================================================================== */
+#crudModal,#bitacoraModal{--cm-gap:clamp(8px,2.5vw,24px);--cm-pad:clamp(16px,3.4vw,30px);--bs-modal-margin:var(--cm-gap);}
+#crudModal .modal-dialog,#bitacoraModal .modal-dialog{width:calc(100% - (var(--cm-gap) * 2));max-width:920px;margin:var(--cm-gap) auto;}
+#bitacoraModal .modal-dialog{max-width:860px;}
+#crudModal .modal-content,#bitacoraModal .modal-content{display:flex;flex-direction:column;width:100%;max-height:calc(100vh - (var(--cm-gap) * 2));max-height:calc(100dvh - (var(--cm-gap) * 2));overflow:hidden;border:1px solid rgba(24,185,231,.42);border-radius:clamp(12px,2vw,18px);background:linear-gradient(180deg,#071c2d 0%,#061421 100%);color:#eaf7ff;box-shadow:0 24px 80px rgba(0,0,0,.6),0 0 36px rgba(0,193,255,.10);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;}
+#crudModal .modal-body,#bitacoraModal .modal-body{flex:1 1 auto;min-height:0;padding:var(--cm-pad);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
+#crudModal .modal-header,#bitacoraModal .modal-header{position:relative;flex:0 0 auto;align-items:flex-start;gap:12px;padding:clamp(16px,2.6vw,24px) var(--cm-pad) clamp(14px,2vw,20px);border-bottom:1px solid rgba(46,183,224,.18);background:linear-gradient(90deg,rgba(12,146,196,.12),transparent 68%);}
+#crudModal .modal-header>div:first-child,#bitacoraModal .modal-header>div:first-child{min-width:0;flex:1 1 auto;}
+#crudModal .modal-header:before,#bitacoraModal .modal-header:before{content:"";position:absolute;left:0;top:0;width:clamp(90px,20%,165px);height:3px;background:#18d8ee;box-shadow:0 0 16px rgba(24,216,238,.55);}
+#crudModal .modal-header:after{content:"SYSTEM / PROJECT EDITOR";position:absolute;right:var(--cm-pad);bottom:14px;color:#4d98b0;font:600 10px/1 Inter,sans-serif;letter-spacing:.18em;pointer-events:none;}
+#crudModal .btn-close,#bitacoraModal .btn-close{flex:0 0 auto;margin:0;opacity:.75;}
+.cm-editor-kicker{color:#27d5ed;font:700 10px/1.2 Inter,sans-serif;letter-spacing:.18em;margin-bottom:8px;}
+#crudModal .modal-title,#bitacoraModal .modal-title{margin:0;color:#f3fbff;font:800 clamp(20px,4.6vw,27px)/1.15 Inter,system-ui,sans-serif;letter-spacing:.01em;text-transform:none;text-shadow:none;overflow-wrap:anywhere;}
+#crudModal .modal-subtitle{margin:7px 0 0;color:#78aabd;font:500 13px/1.25 Inter,system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase;}
+
+/* ---------- Formulario de proyecto ---------- */
+#crudModal #nodeForm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(16px,2.4vw,22px) clamp(14px,2.2vw,20px);margin:0;}
+#crudModal #nodeForm>.cm-field{display:block;grid-column:auto;min-width:0;margin:0;padding:0;border:0;float:none;width:auto;}
+#crudModal #nodeForm>.field-name,#crudModal #nodeForm>.field-description,#crudModal #nodeForm>.field-files,#crudModal #nodeForm>.cm-form-actions{grid-column:1 / -1;}
+#crudModal .form-label,#bitacoraModal .form-label{display:flex;align-items:center;gap:6px;margin:0 0 8px;color:#82b6c8;font:700 11px/1.25 Inter,system-ui,sans-serif;letter-spacing:.09em;text-transform:uppercase;}
+#crudModal .form-control,#crudModal .form-select,#bitacoraModal .form-control{display:block;width:100%;min-width:0;max-width:100%;height:50px;box-sizing:border-box;padding:0 15px;border:1px solid #1b526a;border-radius:10px;background-color:#061a2a;color:#eefaff;font:500 max(16px,1rem)/1.2 Inter,system-ui,sans-serif;box-shadow:inset 0 0 0 1px rgba(34,211,238,.025);}
+#crudModal .form-control::placeholder,#bitacoraModal .form-control::placeholder{color:#66899b;opacity:1;}
+#crudModal .form-control:focus,#crudModal .form-select:focus,#bitacoraModal .form-control:focus{border-color:#24d7ed;outline:0;box-shadow:0 0 0 3px rgba(36,215,237,.10),0 0 18px rgba(36,215,237,.08);}
+#crudModal #nodeProgress{font-weight:800;}
+#crudModal .cm-textarea,#bitacoraModal .cm-textarea{height:auto;min-height:112px;padding:14px 15px;resize:vertical;line-height:1.45;}
+#crudModal .cm-filebox,#bitacoraModal .cm-filebox{padding:clamp(10px,2vw,15px);border:1px dashed #235d74;border-radius:11px;background:rgba(4,22,36,.72);}
+#crudModal input[type=file],#bitacoraModal input[type=file]{height:auto;padding:10px;cursor:pointer;font-size:max(14px,.875rem);}
+#crudModal .cm-filehint,#bitacoraModal .cm-filehint{display:flex;align-items:flex-start;gap:8px;margin-top:9px;color:#6f9caf;font:500 12px/1.35 Inter,sans-serif;}
+#crudModal .cm-filehint i,#bitacoraModal .cm-filehint i{flex:0 0 auto;color:#22d3ee;font-size:16px;}
+#crudModal .cm-form-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:4px;padding-top:20px;border-top:1px solid rgba(34,211,238,.16);}
+#crudModal .cm-control-label{margin-right:0;color:#56899a;font:700 10px/1 Inter,sans-serif;letter-spacing:.14em;white-space:nowrap;}
+#crudModal .cm-actions-spacer{flex:1 1 0;min-width:0;}
+#crudModal .btn,#bitacoraModal .cm-bitacora-actions .btn{min-height:46px;padding:11px 20px;border-radius:9px;font:700 13px/1 Inter,system-ui,sans-serif;letter-spacing:.01em;text-transform:none;}
+#crudModal #submitBtn,#bitacoraModal .cm-bitacora-actions .btn{background:#159be7;border:1px solid #2db7ff;color:#fff;box-shadow:0 8px 22px rgba(21,155,231,.18);}
+#crudModal #submitBtn:hover,#bitacoraModal .cm-bitacora-actions .btn:hover{background:#20a8f2;}
+#crudModal .btn-light{background:#102c40;border:1px solid #24536a;color:#d8edf4;}
+#crudModal .id-delete-btn{border:1px solid #ef476f;background:rgba(239,71,111,.05);color:#ff6f91;}
+#crudModal .id-delete-btn.d-none{display:none;}
+
+/* ---------- Bitácora ---------- */
+#bitacoraModal .cm-bitacora-compose{display:flex;flex-direction:column;gap:18px;}
+#bitacoraModal .cm-history-title{display:flex;align-items:center;gap:10px;margin:24px 0 12px;color:#dff7ff;font-weight:800;}
+#bitacoraModal .cm-history-line{height:1px;flex:1;background:rgba(34,211,238,.18);}
+#bitacoraModal #bitacoraList{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:12px;max-height:min(360px,45vh);overflow:auto;padding-right:3px;}
+#bitacoraModal #bitacoraList>*{min-width:0;overflow-wrap:anywhere;border:1px solid rgba(34,211,238,.14);background:rgba(4,25,39,.68);border-radius:10px;padding:12px;}
+#bitacoraModal .cm-bitacora-actions{display:flex;justify-content:flex-end;padding-top:4px;}
+
+/* ---------- Otros modales: nunca se salen de la pantalla ---------- */
+#reportModal .modal-dialog,#criticalityModal .modal-dialog{max-width:min(var(--bs-modal-width,800px),calc(100vw - 16px));}
+#reportModal .modal-footer,#criticalityModal .modal-footer{flex-wrap:wrap;gap:8px;}
+
+/* ---------- Tablet / móvil ---------- */
+@media (max-width:640px){
+  #crudModal .modal-header:after{display:none;}
+  #crudModal #nodeForm{grid-template-columns:minmax(0,1fr);}
+  #crudModal #nodeForm>.cm-field{grid-column:1 / -1;}
+  #crudModal .cm-form-actions{flex-direction:column-reverse;align-items:stretch;}
+  #crudModal .cm-form-actions .btn{width:100%;}
+  #crudModal .cm-control-label,#crudModal .cm-actions-spacer{display:none;}
+  #bitacoraModal .cm-bitacora-actions .btn{width:100%;}
+}
+/* Teléfonos en horizontal / ventanas bajas */
+@media (max-height:560px){
+  #crudModal .modal-header,#bitacoraModal .modal-header{padding-top:12px;padding-bottom:10px;}
+  #crudModal .modal-subtitle{display:none;}
+  #crudModal .modal-body,#bitacoraModal .modal-body{padding-top:14px;padding-bottom:14px;}
+  #crudModal .cm-textarea,#bitacoraModal .cm-textarea{min-height:84px;}
+}
+/* Pantallas grandes: un poco más de aire */
+@media (min-width:1400px){#crudModal .modal-dialog{max-width:1000px;}}
+</style>
+</head>
+<body>
+    <div class="scanline-overlay"></div>
+    <div class="scanner-bar"></div>
+    <div id="canvas-container" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:-1;overflow:hidden;pointer-events:none;"></div>
+    <div class="modal fade" id="crudModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog cm-editor-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content cm-editor-hud cm-project-form shadow-lg border-0">
+          <div class="modal-header">
+            <div>
+              <div class="cm-editor-kicker">PROJECT MANAGEMENT</div>
+              <h5 class="modal-title" id="modalTitle">Nuevo Proyecto</h5>
+              <p id="modalSub" class="modal-subtitle">Registrar proyecto nuevo</p>
+            </div>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar" onclick="monitor.closeModal()"></button>
+          </div>
+          <div class="modal-body">
+            <form id="nodeForm" novalidate>
+              <input type="hidden" id="nodeIndex">
+
+              <div class="cm-field field-name">
+                <label for="nodeName" class="form-label">Nombre del proyecto</label>
+                <input type="text" id="nodeName" class="form-control" placeholder="Ej. Implementación de infraestructura" required maxlength="255">
+              </div>
+
+              <div class="cm-field field-level">
+                <label for="nodeLevel" class="form-label">Criticidad</label>
+                <select id="nodeLevel" class="form-select" required>
+                  <option value="BAJA">Baja</option>
+                  <option value="NORMAL" selected>Normal</option>
+                  <option value="ALTA">Alta</option>
+                  <option value="CRÍTICA">Crítica</option>
+                </select>
+              </div>
+
+              <div class="cm-field field-progress">
+                <label for="nodeProgress" class="form-label">Avance (%)</label>
+                <input type="number" id="nodeProgress" class="form-control" min="0" max="100" step="1" value="0" required>
+              </div>
+
+              <div class="cm-field field-status">
+                <label for="nodeStatus" class="form-label">Estatus</label>
+                <select id="nodeStatus" class="form-select" required>
+                  <option value="ACTIVO" selected>Activo</option>
+                  <option value="EN PROGRESO">En progreso</option>
+                  <option value="EN ESPERA">En espera</option>
+                  <option value="COMPLETADO">Completado</option>
+                  <option value="CANCELADO">Cancelado</option>
+                </select>
+              </div>
+
+              <div class="cm-field field-lead">
+                <label for="nodeLead" class="form-label">Responsable del proyecto</label>
+                <input type="text" id="nodeLead" class="form-control" placeholder="Nombre o área responsable" maxlength="100">
+              </div>
+
+              <div class="cm-field field-description">
+                <label for="nodeDescription" class="form-label">Descripción breve</label>
+                <textarea id="nodeDescription" class="form-control cm-textarea" maxlength="500" placeholder="Describe el objetivo, alcance o contexto del proyecto"></textarea>
+              </div>
+
+              <div class="cm-field field-files">
+                <label for="nodeFiles" class="form-label">Cargar archivos</label>
+                <div class="cm-filebox">
+                  <input type="file" id="nodeFiles" class="form-control" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv">
+                  <div class="cm-filehint"><i class="ti ti-cloud-upload"></i><span>Adjunta documentos, imágenes o evidencias del proyecto. Los archivos se guardan asociados al proyecto.</span></div>
+                </div>
+              </div>
+
+              <div class="cm-form-actions">
+                <div class="cm-control-label">PROJECT CONTROL</div>
+                <button type="button" id="deleteBtn" onclick="monitor.confirmDeleteNode()" class="btn id-delete-btn">Eliminar</button>
+                <div class="cm-actions-spacer"></div>
+                <button type="button" onclick="monitor.closeModal()" class="btn btn-light">Cancelar</button>
+                <button type="submit" id="submitBtn" class="btn btn-primary">Guardar proyecto</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="bitacoraModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content cm-bitacora-modal">
+          <div class="modal-header">
+            <div>
+              <div class="cm-editor-kicker">PROJECT ACTIVITY</div>
+              <h5 class="modal-title" id="bitacoraModalTitle">Bitácora de Avances</h5>
+            </div>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body">
+            <div class="cm-bitacora-compose">
+              <label for="bitacoraNote" class="form-label">Nuevo avance u observación</label>
+              <textarea id="bitacoraNote" class="form-control cm-textarea" rows="4" placeholder="Describe el avance, incidencia u observación..."></textarea>
+              <div class="cm-bitacora-files">
+                <label for="bitacoraFiles" class="form-label"><i class="ti ti-paperclip"></i> Anexar archivos</label>
+                <div class="cm-filebox">
+                  <input type="file" id="bitacoraFiles" class="form-control" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt">
+                  <div class="cm-filehint"><i class="ti ti-info-circle"></i><span>Opcional: imágenes, video, PDF, Word, Excel o TXT.</span></div>
+                </div>
+              </div>
+              <div class="cm-bitacora-actions">
+                <button type="button" id="addBitacoraBtn" onclick="monitor.submitUpdate()" class="btn btn-primary"><i class="ti ti-plus"></i> Agregar avance</button>
+              </div>
+            </div>
+            <div class="cm-bitacora-history">
+              <div class="cm-history-title"><span>Historial</span><span class="cm-history-line"></span></div>
+              <div id="bitacoraList"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-sm modal-dialog-centered"><div class="modal-content text-center p-3 shadow-lg"><div class="modal-body"><i class="ti ti-alert-triangle text-danger fs-1 mb-2"></i><h6 class="fw-bold mb-1">¿Confirmar Acción?</h6><p class="small text-muted mb-4">Esta acción desmantelará por completo el nodo del sistema de forma permanente.</p><div class="d-flex gap-2"><button onclick="monitor.closeConfirmModal()" class="btn btn-sm btn-light flex-fill">Cancelar</button><button onclick="monitor.executeDeleteNode()" class="btn btn-sm btn-danger flex-fill">Desconectar</button></div></div></div></div></div>
+    <div class="position-fixed bottom-0 start-0 p-4" style="z-index:1100;"><div id="toastNotification" class="toast align-items-center text-bg-dark border-0 shadow"><div class="d-flex"><div class="toast-body d-flex align-items-center gap-2 small"><div class="spinner-grow spinner-grow-sm text-info"></div><span id="toastMessage">Sistema Sincronizado</span></div></div></div></div>
+    <div id="pdfReportContainer" style="position:fixed;left:-9999px;top:0;width:820px;"></div><div id="reportView" class="d-none bg-white text-dark p-5 position-absolute top-0 start-0 w-100 min-vh-100 z-3"></div>
+    <div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"><div class="modal-content shadow-lg border-0"><div class="modal-header border-bottom"><div><h5 class="modal-title fw-bold" id="reportModalTitle"><i class="ti ti-report-analytics text-primary me-1"></i> Reporte de Infraestructura</h5><p class="small text-muted mb-0">Ecosistema Global de los Proyectos v1.5</p></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="reportModalBody"></div><div class="modal-footer border-top d-flex flex-wrap gap-2 justify-content-between"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="includeBitacoraCheck" checked><label class="form-check-label small" for="includeBitacoraCheck">Incluir Bitácora de Avances</label></div><div class="d-flex gap-2"><button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button><button type="button" id="excelReportBtn" onclick="monitor.generateExcelReport()" class="btn btn-sm btn-success"><i class="ti ti-file-spreadsheet"></i> Excel</button><button type="button" id="pdfReportBtn" onclick="monitor.generatePdfReport()" class="btn btn-sm btn-primary"><i class="ti ti-file-type-pdf"></i> PDF</button></div></div></div></div></div>
+    <div class="modal fade" id="criticalityModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div class="modal-content shadow-lg border-0"><div class="modal-header border-bottom"><h5 class="modal-title fw-bold" id="criticalityModalTitle">Proyectos</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="criticalityModalBody"></div><div class="modal-footer border-top"><button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button></div></div></div></div>
+    <script src="./vendor/bootstrap/bootstrap.bundle.min.js"></script>
+    <script src="./assets/modules/app.js"></script>
+    <script src="./assets/modules/dashboard-actions-v3.js?v=20260922-9"></script>
+    <script src="./assets/modules/dashboard-brand-image.js?v=20260924-1"></script>
+    <script src="./assets/modules/dashboard-crystal-bars.js?v=20260927-9"></script>
+    <script src="./assets/modules/dashboard-project-detail.js?v=20260929-1"></script>
+    <script>
+    // Fondo 3D del dashboard. Se elige (o se apaga) desde el menú "Fondo 3D" del encabezado; la preferencia se recuerda.
+    window.addEventListener('load', function () { setTimeout(function () { try { window.CMScenes && window.CMScenes.mount(); } catch (e) { console.warn(e); } }, 800); });
+    </script>
+</body>
+</html>
