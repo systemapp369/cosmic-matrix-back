@@ -192,7 +192,7 @@
   /* =====================================================================
      2) BITÁCORA (pantalla completa con edición de proyectos)
      ===================================================================== */
-  let btId = null, btQuery = '', btLevel = null, btActiveOnly = false;
+  let btId = null, btQuery = '', btLevel = null, btActiveOnly = false, btRisk = false, btLate = false;
 
   function bitacoraScreen() {
     const el = ensureModal('cmxBitacoraScreen', 'modal-fullscreen', `
@@ -211,7 +211,7 @@
     if (!el.dataset.bound) {
       el.dataset.bound = '1';
       el.querySelector('#cmxBtSearch').addEventListener('input', e => { btQuery = e.target.value || ''; renderBtList(); });
-      el.querySelector('#cmxBtFilter').addEventListener('click', e => { if (e.target.closest('[data-clear]')) { btLevel = null; btActiveOnly = false; renderBtList(); } });
+      el.querySelector('#cmxBtFilter').addEventListener('click', e => { if (e.target.closest('[data-clear]')) { btLevel = null; btActiveOnly = false; btRisk = false; btLate = false; renderBtList(); } });
       el.querySelector('#cmxBtItems').addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (b) selectBt(b.dataset.id); });
     }
     return el;
@@ -223,6 +223,8 @@
     btQuery = '';
     btLevel = opts && opts.level ? String(opts.level) : null;
     btActiveOnly = !!(opts && opts.activeOnly);
+    btRisk  = !!(opts && opts.risk);
+    btLate  = !!(opts && opts.late);
     el.querySelector('#cmxBtSearch').value = '';
     inst(el).show();
     renderBtList();
@@ -240,11 +242,15 @@
 
   function renderBtList() {
     const q = btQuery.trim().toLowerCase();
-    const list = projects().filter(p => (!btLevel || p.level === btLevel) && (!btActiveOnly || !isClosed(p)) && (!q || `${p.name} ${p.lead} ${p.id} ${p.status} ${p.level}`.toLowerCase().includes(q)));
+    const list = projects().filter(p => (!btLevel || p.level === btLevel) && (!btRisk || p.level === 'CRÍTICA' || p.level === 'ALTA') && (!btLate || pct(p) < 40) && (!btActiveOnly || !isClosed(p)) && (!q || `${p.name} ${p.lead} ${p.id} ${p.status} ${p.level}`.toLowerCase().includes(q)));
     const fb = document.getElementById('cmxBtFilter');
     if (fb) {
-      fb.hidden = !btLevel;
-      fb.innerHTML = btLevel ? `<span><i class="ti ti-filter"></i> Criticidad: <b>${esc(btLevel)}</b>${btActiveOnly ? ' · activos' : ''} · ${list.length} proyecto${list.length === 1 ? '' : 's'}</span><button type="button" data-clear title="Quitar filtro"><i class="ti ti-x"></i> Ver todos</button>` : '';
+      const anyFilter = btLevel || btRisk || btLate;
+      fb.hidden = !anyFilter;
+      if (anyFilter) {
+        const lbl = btRisk ? 'ALTA / CRÍTICA' : btLate ? 'Progreso &lt; 40 %' : `Criticidad: ${esc(btLevel)}`;
+        fb.innerHTML = `<span><i class="ti ti-filter"></i> <b>${lbl}</b>${btActiveOnly ? ' · activos' : ''} · ${list.length} proyecto${list.length === 1 ? '' : 's'}</span><button type="button" data-clear title="Quitar filtro"><i class="ti ti-x"></i> Ver todos</button>`;
+      } else { fb.innerHTML = ''; }
     }
     document.getElementById('cmxBtItems').innerHTML = list.length ? list.map(p => `
       <button type="button" class="cmx-bt-item${String(p.id) === String(btId) ? ' active' : ''}" data-id="${esc(p.id)}" style="--c:${lvlColor(p.level)}">
