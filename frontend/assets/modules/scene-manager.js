@@ -31,6 +31,8 @@
       body.cm-scene-on #cm-radical-dashboard .cm-radical-header small{color:#d3ecf7!important}
       body.cm-scene-on #cm-radical-dashboard .cm-kpi,body.cm-scene-on #cm-radical-dashboard .cm-crit-side{-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px)}
       body.cm-scene-on #cm-radical-dashboard .cm-rings-grid{background:rgba(3,19,31,.30)}
+      body.cm-scene-on #cm-radical-dashboard .cm-pcard{background:linear-gradient(160deg,rgba(7,30,46,.66),rgba(3,17,28,.74))}
+      body.cm-scene-on #cm-radical-dashboard .cm-toolbar .cm-search input,body.cm-scene-on #cm-radical-dashboard .cm-filter-btn{background:rgba(6,26,42,.7)}
       body.cm-scene-on #cm-radical-dashboard .cm-kpi{background:rgba(4,22,36,.55)!important}
       body.cm-scene-on #cm-radical-dashboard .cm-crit-side{background:rgba(3,19,31,.42)!important}
       @media (prefers-reduced-transparency:reduce){body.cm-scene-on #cm-radical-dashboard .cm-panel{background:linear-gradient(180deg,rgba(5,29,45,.96),rgba(2,14,25,.99))!important;backdrop-filter:none}}`;
