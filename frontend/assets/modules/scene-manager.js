@@ -90,6 +90,7 @@
       let pref = read();
       if (pref === 'on') pref = 'journey';                                  // compatibilidad con la versión anterior
       if (!pref) pref = (reduce || isMobile()) ? 'off' : (registry.has('journey') ? 'journey' : [...registry.keys()][0] || 'off');
+      if (pref !== 'off' && !registry.has(pref)) { pref = (reduce || isMobile()) ? 'off' : (registry.has('journey') ? 'journey' : [...registry.keys()][0] || 'off'); save(pref); }   // escenario retirado: se usa el predeterminado
       if (pref !== 'off' && registry.has(pref)) startScene(pref);
       emit(); return cur || 'off';
     }
